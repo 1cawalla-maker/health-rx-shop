@@ -14,16 +14,254 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      consultations: {
+        Row: {
+          consultation_type: Database["public"]["Enums"]["consultation_type"]
+          created_at: string
+          doctor_id: string | null
+          id: string
+          notes: string | null
+          patient_id: string
+          scheduled_at: string
+          status: Database["public"]["Enums"]["consultation_status"]
+          updated_at: string
+        }
+        Insert: {
+          consultation_type?: Database["public"]["Enums"]["consultation_type"]
+          created_at?: string
+          doctor_id?: string | null
+          id?: string
+          notes?: string | null
+          patient_id: string
+          scheduled_at: string
+          status?: Database["public"]["Enums"]["consultation_status"]
+          updated_at?: string
+        }
+        Update: {
+          consultation_type?: Database["public"]["Enums"]["consultation_type"]
+          created_at?: string
+          doctor_id?: string | null
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          scheduled_at?: string
+          status?: Database["public"]["Enums"]["consultation_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      doctor_profiles: {
+        Row: {
+          bio: string | null
+          created_at: string
+          id: string
+          qualifications: string | null
+          registration_number: string | null
+          specialty: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string
+          id?: string
+          qualifications?: string | null
+          registration_number?: string | null
+          specialty?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string
+          id?: string
+          qualifications?: string | null
+          registration_number?: string | null
+          specialty?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      patient_profiles: {
+        Row: {
+          additional_notes: string | null
+          allergies: string | null
+          created_at: string
+          current_conditions: string | null
+          id: string
+          medications: string | null
+          smoking_history: string | null
+          updated_at: string
+          user_id: string
+          vaping_history: string | null
+        }
+        Insert: {
+          additional_notes?: string | null
+          allergies?: string | null
+          created_at?: string
+          current_conditions?: string | null
+          id?: string
+          medications?: string | null
+          smoking_history?: string | null
+          updated_at?: string
+          user_id: string
+          vaping_history?: string | null
+        }
+        Update: {
+          additional_notes?: string | null
+          allergies?: string | null
+          created_at?: string
+          current_conditions?: string | null
+          id?: string
+          medications?: string | null
+          smoking_history?: string | null
+          updated_at?: string
+          user_id?: string
+          vaping_history?: string | null
+        }
+        Relationships: []
+      }
+      prescriptions: {
+        Row: {
+          allowed_strength_max: number | null
+          allowed_strength_min: number | null
+          created_at: string
+          doctor_id: string | null
+          expires_at: string | null
+          file_url: string | null
+          id: string
+          issued_at: string | null
+          max_units_per_month: number | null
+          max_units_per_order: number | null
+          patient_id: string
+          prescription_type: Database["public"]["Enums"]["prescription_type"]
+          product_category: string | null
+          review_reason: string | null
+          status: Database["public"]["Enums"]["prescription_status"]
+          updated_at: string
+        }
+        Insert: {
+          allowed_strength_max?: number | null
+          allowed_strength_min?: number | null
+          created_at?: string
+          doctor_id?: string | null
+          expires_at?: string | null
+          file_url?: string | null
+          id?: string
+          issued_at?: string | null
+          max_units_per_month?: number | null
+          max_units_per_order?: number | null
+          patient_id: string
+          prescription_type: Database["public"]["Enums"]["prescription_type"]
+          product_category?: string | null
+          review_reason?: string | null
+          status?: Database["public"]["Enums"]["prescription_status"]
+          updated_at?: string
+        }
+        Update: {
+          allowed_strength_max?: number | null
+          allowed_strength_min?: number | null
+          created_at?: string
+          doctor_id?: string | null
+          expires_at?: string | null
+          file_url?: string | null
+          id?: string
+          issued_at?: string | null
+          max_units_per_month?: number | null
+          max_units_per_order?: number | null
+          patient_id?: string
+          prescription_type?: Database["public"]["Enums"]["prescription_type"]
+          product_category?: string | null
+          review_reason?: string | null
+          status?: Database["public"]["Enums"]["prescription_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          date_of_birth: string | null
+          full_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date_of_birth?: string | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date_of_birth?: string | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          status: Database["public"]["Enums"]["user_status"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          status?: Database["public"]["Enums"]["user_status"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: Database["public"]["Enums"]["user_status"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_active_prescription: {
+        Args: { _patient_id: string }
+        Returns: boolean
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_approved_doctor: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "patient" | "doctor" | "admin"
+      consultation_status: "requested" | "confirmed" | "completed" | "cancelled"
+      consultation_type: "video" | "phone"
+      prescription_status: "pending_review" | "active" | "rejected" | "expired"
+      prescription_type: "uploaded" | "issued"
+      user_status: "approved" | "pending_approval" | "deactivated"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +388,13 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["patient", "doctor", "admin"],
+      consultation_status: ["requested", "confirmed", "completed", "cancelled"],
+      consultation_type: ["video", "phone"],
+      prescription_status: ["pending_review", "active", "rejected", "expired"],
+      prescription_type: ["uploaded", "issued"],
+      user_status: ["approved", "pending_approval", "deactivated"],
+    },
   },
 } as const
