@@ -153,7 +153,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: err as Error };
     }
   };
-
+const signOut = async () => {
+  await supabase.auth.signOut();
+  setUser(null);
+  setSession(null);
+  setUserRole(null);
+};
   const resetPassword = async (email: string) => {
   try {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
