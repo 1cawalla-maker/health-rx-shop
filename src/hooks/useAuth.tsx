@@ -154,23 +154,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setUserRole(null);
-  };
-
   const resetPassword = async (email: string) => {
-    try {
-      redirectTo: `https://health-rx-shop.vercel.app/auth?mode=reset`
-        redirectTo: `${window.location.origin}/auth?mode=reset`
-      });
-      return { error };
-    } catch (err) {
-      return { error: err as Error };
-    }
-  };
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://health-rx-shop.vercel.app/auth?mode=reset'
+    });
+
+    return { error };
+  } catch (err) {
+    return { error: err as Error };
+  }
+};
 
   return (
     <AuthContext.Provider value={{
