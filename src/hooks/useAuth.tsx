@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchUserRole = async (userId: string) => {
     try {
       const { data, error } = await supabase
-        .from('user_roles')
+        .from('profiles')
         .select('role, status')
         .eq('user_id', userId)
         .maybeSingle();
@@ -112,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .from('profiles')
           .insert({
             user_id: data.user.id,
+            full_name: fullName,
             role: role,
             status: status
           });
@@ -162,7 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const resetPassword = async (email: string) => {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `https://health-rx-shop.vercel.app/auth?mode=reset`
         redirectTo: `${window.location.origin}/auth?mode=reset`
       });
       return { error };
