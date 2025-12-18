@@ -90,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string, role: AppRole) => {
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      const redirectUrl = 'https://health-rx-shop.vercel.app/';
       
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -109,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const status: UserStatus = role === 'doctor' ? 'pending_approval' : 'approved';
         
         const { error: roleError } = await supabase
-          .from('user_roles')
+          .from('profiles')
           .insert({
             user_id: data.user.id,
             role: role,
