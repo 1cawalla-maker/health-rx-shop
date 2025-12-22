@@ -5,17 +5,21 @@ import {
   Stethoscope,
   LayoutDashboard,
   Calendar,
+  CalendarDays,
   FileText,
   Menu,
   X,
   LogOut,
-  User
+  User,
+  Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/doctor/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/doctor/consultations', label: 'Consultations', icon: Calendar },
+  { href: '/doctor/bookings', label: 'Bookings', icon: Calendar },
+  { href: '/doctor/calendar', label: 'Calendar', icon: CalendarDays },
+  { href: '/doctor/patients', label: 'Patients', icon: Users },
   { href: '/doctor/prescriptions', label: 'Prescriptions', icon: FileText },
 ];
 
