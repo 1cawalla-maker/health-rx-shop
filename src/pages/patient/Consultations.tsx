@@ -13,7 +13,7 @@ interface Consultation {
   id: string;
   scheduled_at: string;
   consultation_type: 'video' | 'phone';
-  status: 'requested' | 'confirmed' | 'completed' | 'cancelled';
+  status: string;
   notes: string | null;
   created_at: string;
 }

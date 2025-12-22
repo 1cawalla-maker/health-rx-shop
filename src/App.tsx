@@ -31,12 +31,19 @@ import PatientConsultations from "./pages/patient/Consultations";
 import UploadPrescription from "./pages/patient/UploadPrescription";
 import PatientPrescriptions from "./pages/patient/Prescriptions";
 import PatientShop from "./pages/patient/Shop";
+import PatientIntake from "./pages/patient/Intake";
+import PatientAccount from "./pages/patient/Account";
 
 // Doctor pages
 import DoctorDashboard from "./pages/doctor/Dashboard";
 import DoctorPending from "./pages/doctor/Pending";
 import DoctorConsultations from "./pages/doctor/Consultations";
 import DoctorPrescriptions from "./pages/doctor/Prescriptions";
+import DoctorCalendar from "./pages/doctor/Calendar";
+import DoctorBookings from "./pages/doctor/Bookings";
+import DoctorBookingDetail from "./pages/doctor/BookingDetail";
+import DoctorPatients from "./pages/doctor/Patients";
+import DoctorPatientDetail from "./pages/doctor/PatientDetail";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -70,16 +77,23 @@ const App = () => (
               <Route path="dashboard" element={<PatientDashboard />} />
               <Route path="book" element={<BookConsultation />} />
               <Route path="consultations" element={<PatientConsultations />} />
+              <Route path="intake/:bookingId" element={<PatientIntake />} />
               <Route path="upload-prescription" element={<UploadPrescription />} />
               <Route path="prescriptions" element={<PatientPrescriptions />} />
               <Route path="shop" element={<PatientShop />} />
+              <Route path="account" element={<PatientAccount />} />
             </Route>
 
             {/* Doctor routes */}
             <Route path="/doctor/pending" element={<DoctorPending />} />
             <Route path="/doctor" element={<ProtectedRoute allowedRoles={['doctor']}><DoctorLayout /></ProtectedRoute>}>
               <Route path="dashboard" element={<DoctorDashboard />} />
+              <Route path="calendar" element={<DoctorCalendar />} />
+              <Route path="bookings" element={<DoctorBookings />} />
+              <Route path="booking/:id" element={<DoctorBookingDetail />} />
               <Route path="consultations" element={<DoctorConsultations />} />
+              <Route path="patients" element={<DoctorPatients />} />
+              <Route path="patient/:id" element={<DoctorPatientDetail />} />
               <Route path="prescriptions" element={<DoctorPrescriptions />} />
             </Route>
 

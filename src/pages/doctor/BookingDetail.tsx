@@ -1,0 +1,462 @@
+import { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { 
+  Loader2, User, Phone, Calendar, Clock, FileText, 
+  Upload, CheckCircle, AlertCircle, ChevronLeft, Pill
+} from 'lucide-react';
+import { BookingStatusBadge } from '@/components/bookings/BookingStatusBadge';
+import type { BookingStatus, IntakeForm, ConsultationNote, BookingFile } from '@/types/database';
+
+export default function DoctorBookingDetail() {
+  const { id: bookingId } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [booking, setBooking] = useState<any>(null);
+  const [patientProfile, setPatientProfile] = useState<any>(null);
+  const [intakeForm, setIntakeForm] = useState<IntakeForm | null>(null);
+  const [notes, setNotes] = useState<ConsultationNote[]>([]);
+  const [files, setFiles] = useState<BookingFile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newNote, setNewNote] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
+
+  useEffect(() => {
+    if (user && bookingId) {
+      fetchBookingDetails();
+    }
+  }, [user, bookingId]);
+
+  const fetchBookingDetails = async () => {
+    if (!bookingId) return;
+
+    // Fetch booking
+    const { data: bookingData, error: bookingError } = await supabase
+      .from('consultations')
+      .select('*')
+      .eq('id', bookingId)
+      .single();
+
+    if (bookingError || !bookingData) {
+      navigate('/doctor/bookings');
+      return;
+    }
+
+    setBooking(bookingData);
+
+    // Fetch patient profile
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', bookingData.patient_id)
+      .single();
+
+    setPatientProfile(profileData);
+
+    // Fetch intake form
+    const { data: intakeData } = await supabase
+      .from('intake_forms')
+      .select('*')
+      .eq('booking_id', bookingId)
+      .single();
+
+    setIntakeForm(intakeData as IntakeForm | null);
+
+    // Fetch notes
+    const { data: notesData } = await supabase
+      .from('consultation_notes')
+      .select('*')
+      .eq('booking_id', bookingId)
+      .order('created_at', { ascending: false });
+
+    setNotes((notesData || []) as ConsultationNote[]);
+
+    // Fetch files
+    const { data: filesData } = await supabase
+      .from('booking_files')
+      .select('*')
+      .eq('booking_id', bookingId)
+      .order('uploaded_at', { ascending: false });
+
+    setFiles((filesData || []) as BookingFile[]);
+    setLoading(false);
+  };
+
+  const updateStatus = async (newStatus: BookingStatus) => {
+    if (!user || !bookingId) return;
+
+    const updates: any = { 
+      status: newStatus, 
+      updated_at: new Date().toISOString() 
+    };
+
+    // Assign doctor if not already assigned
+    if (!booking.doctor_id) {
+      updates.doctor_id = user.id;
+    }
+
+    const { error } = await supabase
+      .from('consultations')
+      .update(updates)
+      .eq('id', bookingId);
+
+    if (error) {
+      toast.error('Failed to update status');
+    } else {
+      toast.success('Status updated');
+      fetchBookingDetails();
+    }
+  };
+
+  const saveNote = async () => {
+    if (!user || !bookingId || !newNote.trim()) return;
+
+    setSavingNote(true);
+    const { error } = await supabase
+      .from('consultation_notes')
+      .insert({
+        booking_id: bookingId,
+        doctor_id: user.id,
+        notes: newNote.trim(),
+        internal_only: true
+      });
+
+    setSavingNote(false);
+
+    if (error) {
+      toast.error('Failed to save note');
+    } else {
+      toast.success('Note saved');
+      setNewNote('');
+      fetchBookingDetails();
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user || !bookingId || !booking) return;
+
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Only PDF, JPG, and PNG files are allowed');
+      return;
+    }
+
+    setUploadingFile(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${booking.patient_id}/${bookingId}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('booking-files')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Save file metadata
+      const { error: dbError } = await supabase
+        .from('booking_files')
+        .insert({
+          booking_id: bookingId,
+          patient_id: booking.patient_id,
+          doctor_id: user.id,
+          storage_path: fileName,
+          file_name: file.name,
+          file_type: file.type,
+          file_size: file.size
+        });
+
+      if (dbError) throw dbError;
+
+      // Update booking status
+      await updateStatus('script_uploaded');
+      toast.success('Prescription uploaded successfully');
+      fetchBookingDetails();
+    } catch (err) {
+      console.error('Upload error:', err);
+      toast.error('Failed to upload file');
+    } finally {
+      setUploadingFile(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!booking) {
+    return (
+      <Card>
+        <CardContent className="pt-6 text-center">
+          <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+          <h2 className="font-display text-xl font-bold mb-2">Booking Not Found</h2>
+          <Button onClick={() => navigate('/doctor/bookings')}>Go to Bookings</Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <ChevronLeft className="h-5 w-5" />
+        </Button>
+        <div className="flex-1">
+          <h1 className="font-display text-2xl font-bold text-foreground">Booking Details</h1>
+          <p className="text-muted-foreground text-sm">ID: {bookingId}</p>
+        </div>
+        <BookingStatusBadge status={booking.status} />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Main content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Patient Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Patient Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label className="text-muted-foreground">Name</Label>
+                <p className="font-medium">{patientProfile?.full_name || 'Not provided'}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Phone</Label>
+                <p className="font-medium">{patientProfile?.phone || intakeForm?.phone_number || 'Not provided'}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Date of Birth</Label>
+                <p className="font-medium">
+                  {patientProfile?.date_of_birth 
+                    ? format(new Date(patientProfile.date_of_birth), 'MMM d, yyyy')
+                    : 'Not provided'}
+                </p>
+              </div>
+              <div>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to={`/doctor/patient/${booking.patient_id}`}>View Full History</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Intake Form */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Pill className="h-5 w-5" />
+                Intake Form
+              </CardTitle>
+              <CardDescription>
+                {intakeForm ? 'Completed on ' + format(new Date(intakeForm.completed_at!), 'MMM d, yyyy') : 'Not yet completed'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {intakeForm ? (
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-muted-foreground">Symptoms</Label>
+                    <p className="mt-1">{intakeForm.symptoms || 'None provided'}</p>
+                  </div>
+                  <Separator />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <Label className="text-muted-foreground">Medical History</Label>
+                      <p className="mt-1">{intakeForm.medical_history || 'None'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Allergies</Label>
+                      <p className="mt-1">{intakeForm.allergies || 'None'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Current Medications</Label>
+                      <p className="mt-1">{intakeForm.current_medications || 'None'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Preferred Pharmacy</Label>
+                      <p className="mt-1">{intakeForm.preferred_pharmacy || 'Not specified'}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-4 text-muted-foreground">
+                  <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+                  <p>Patient has not completed the intake form yet</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Consultation Notes */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Consultation Notes</CardTitle>
+              <CardDescription>Internal notes (not visible to patient)</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Textarea
+                  placeholder="Add a consultation note..."
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  rows={3}
+                />
+                <Button onClick={saveNote} disabled={savingNote || !newNote.trim()}>
+                  {savingNote ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Note'}
+                </Button>
+              </div>
+              {notes.length > 0 && (
+                <div className="space-y-3 pt-4 border-t">
+                  {notes.map((note) => (
+                    <div key={note.id} className="p-3 bg-muted rounded-lg">
+                      <p className="text-sm">{note.notes}</p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {format(new Date(note.created_at), 'MMM d, yyyy at h:mm a')}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Booking Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Booking Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <span>{format(new Date(booking.scheduled_at), 'MMMM d, yyyy')}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span>{format(new Date(booking.scheduled_at), 'h:mm a')}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                <span className="capitalize">{booking.consultation_type} Consultation</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {booking.status === 'requested' && (
+                <Button className="w-full" onClick={() => updateStatus('confirmed')}>
+                  Confirm Booking
+                </Button>
+              )}
+              {booking.status === 'confirmed' && (
+                <Button className="w-full" onClick={() => updateStatus('intake_pending')}>
+                  Request Intake
+                </Button>
+              )}
+              {(booking.status === 'ready_for_call' || booking.status === 'confirmed') && (
+                <Button className="w-full" onClick={() => updateStatus('called')}>
+                  Mark as Called
+                </Button>
+              )}
+              {(booking.status === 'called' || booking.status === 'ready_for_call') && (
+                <>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    className="hidden"
+                  />
+                  <Button 
+                    className="w-full" 
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingFile}
+                  >
+                    {uploadingFile ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Upload className="h-4 w-4 mr-2" />
+                    )}
+                    Upload Prescription
+                  </Button>
+                </>
+              )}
+              {(booking.status === 'script_uploaded' || booking.status === 'called') && (
+                <Button className="w-full" variant="default" onClick={() => updateStatus('completed')}>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Complete Consultation
+                </Button>
+              )}
+              {booking.status !== 'cancelled' && booking.status !== 'completed' && (
+                <Button 
+                  className="w-full" 
+                  variant="destructive"
+                  onClick={() => updateStatus('cancelled')}
+                >
+                  Cancel Booking
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Files */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Files
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {files.length > 0 ? (
+                <div className="space-y-2">
+                  {files.map((file) => (
+                    <div key={file.id} className="flex items-center gap-2 p-2 bg-muted rounded">
+                      <FileText className="h-4 w-4" />
+                      <span className="text-sm truncate flex-1">{file.file_name}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No files uploaded</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}

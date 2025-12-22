@@ -14,41 +14,193 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: unknown
+          metadata: Json | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: unknown
+          metadata?: Json | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: unknown
+          metadata?: Json | null
+        }
+        Relationships: []
+      }
+      booking_files: {
+        Row: {
+          booking_id: string
+          doctor_id: string | null
+          file_name: string
+          file_size: number | null
+          file_type: string
+          id: string
+          patient_id: string
+          storage_path: string
+          uploaded_at: string
+        }
+        Insert: {
+          booking_id: string
+          doctor_id?: string | null
+          file_name: string
+          file_size?: number | null
+          file_type: string
+          id?: string
+          patient_id: string
+          storage_path: string
+          uploaded_at?: string
+        }
+        Update: {
+          booking_id?: string
+          doctor_id?: string | null
+          file_name?: string
+          file_size?: number | null
+          file_type?: string
+          id?: string
+          patient_id?: string
+          storage_path?: string
+          uploaded_at?: string
+        }
+        Relationships: []
+      }
+      consultation_notes: {
+        Row: {
+          booking_id: string
+          created_at: string
+          doctor_id: string
+          id: string
+          internal_only: boolean | null
+          notes: string
+          updated_at: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          doctor_id: string
+          id?: string
+          internal_only?: boolean | null
+          notes: string
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          doctor_id?: string
+          id?: string
+          internal_only?: boolean | null
+          notes?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       consultations: {
         Row: {
           consultation_type: Database["public"]["Enums"]["consultation_type"]
           created_at: string
           doctor_id: string | null
+          end_time: string | null
           id: string
           notes: string | null
           patient_id: string
+          reason_for_visit: string | null
           scheduled_at: string
           status: Database["public"]["Enums"]["consultation_status"]
+          timezone: string | null
           updated_at: string
         }
         Insert: {
           consultation_type?: Database["public"]["Enums"]["consultation_type"]
           created_at?: string
           doctor_id?: string | null
+          end_time?: string | null
           id?: string
           notes?: string | null
           patient_id: string
+          reason_for_visit?: string | null
           scheduled_at: string
           status?: Database["public"]["Enums"]["consultation_status"]
+          timezone?: string | null
           updated_at?: string
         }
         Update: {
           consultation_type?: Database["public"]["Enums"]["consultation_type"]
           created_at?: string
           doctor_id?: string | null
+          end_time?: string | null
           id?: string
           notes?: string | null
           patient_id?: string
+          reason_for_visit?: string | null
           scheduled_at?: string
           status?: Database["public"]["Enums"]["consultation_status"]
+          timezone?: string | null
           updated_at?: string
         }
         Relationships: []
+      }
+      doctor_availability: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          doctor_id: string
+          end_time: string
+          id: string
+          is_available: boolean | null
+          start_time: string
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          doctor_id: string
+          end_time: string
+          id?: string
+          is_available?: boolean | null
+          start_time: string
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          doctor_id?: string
+          end_time?: string
+          id?: string
+          is_available?: boolean | null
+          start_time?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_availability_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       doctor_profiles: {
         Row: {
@@ -79,6 +231,120 @@ export type Database = {
           registration_number?: string | null
           specialty?: string | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      doctors: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          provider_number: string | null
+          specialties: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          provider_number?: string | null
+          specialties?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          provider_number?: string | null
+          specialties?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      intake_forms: {
+        Row: {
+          allergies: string | null
+          answers: Json | null
+          booking_id: string
+          completed_at: string | null
+          consent_given: boolean
+          created_at: string
+          current_medications: string | null
+          id: string
+          medical_history: string | null
+          patient_id: string
+          phone_number: string
+          preferred_pharmacy: string | null
+          symptoms: string | null
+          updated_at: string
+        }
+        Insert: {
+          allergies?: string | null
+          answers?: Json | null
+          booking_id: string
+          completed_at?: string | null
+          consent_given?: boolean
+          created_at?: string
+          current_medications?: string | null
+          id?: string
+          medical_history?: string | null
+          patient_id: string
+          phone_number: string
+          preferred_pharmacy?: string | null
+          symptoms?: string | null
+          updated_at?: string
+        }
+        Update: {
+          allergies?: string | null
+          answers?: Json | null
+          booking_id?: string
+          completed_at?: string | null
+          consent_given?: boolean
+          created_at?: string
+          current_medications?: string | null
+          id?: string
+          medical_history?: string | null
+          patient_id?: string
+          phone_number?: string
+          preferred_pharmacy?: string | null
+          symptoms?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          is_read: boolean | null
+          metadata: Json | null
+          title: string
+          type: string | null
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          metadata?: Json | null
+          title: string
+          type?: string | null
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          metadata?: Json | null
+          title?: string
+          type?: string | null
           user_id?: string
         }
         Relationships: []
@@ -238,6 +504,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_doctor_id: { Args: { _user_id: string }; Returns: string }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -254,10 +521,26 @@ export type Database = {
         Returns: boolean
       }
       is_approved_doctor: { Args: { _user_id: string }; Returns: boolean }
+      is_booking_doctor: {
+        Args: { _booking_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_doctor_assigned_to_patient: {
+        Args: { _doctor_id: string; _patient_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "patient" | "doctor" | "admin"
-      consultation_status: "requested" | "confirmed" | "completed" | "cancelled"
+      consultation_status:
+        | "requested"
+        | "confirmed"
+        | "completed"
+        | "cancelled"
+        | "intake_pending"
+        | "ready_for_call"
+        | "called"
+        | "script_uploaded"
       consultation_type: "video" | "phone"
       prescription_status: "pending_review" | "active" | "rejected" | "expired"
       prescription_type: "uploaded" | "issued"
@@ -390,7 +673,16 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["patient", "doctor", "admin"],
-      consultation_status: ["requested", "confirmed", "completed", "cancelled"],
+      consultation_status: [
+        "requested",
+        "confirmed",
+        "completed",
+        "cancelled",
+        "intake_pending",
+        "ready_for_call",
+        "called",
+        "script_uploaded",
+      ],
       consultation_type: ["video", "phone"],
       prescription_status: ["pending_review", "active", "rejected", "expired"],
       prescription_type: ["uploaded", "issued"],
