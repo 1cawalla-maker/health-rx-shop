@@ -9,13 +9,16 @@ import {
   Menu,
   X,
   LogOut,
-  Settings
+  Settings,
+  Calendar
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/users', label: 'User Management', icon: Users },
+  { href: '/admin/doctors', label: 'Doctors', icon: Stethoscope },
+  { href: '/admin/bookings', label: 'Bookings', icon: Calendar },
+  { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/prescriptions', label: 'Prescriptions', icon: FileText },
 ];
 

@@ -47,6 +47,8 @@ import DoctorPatientDetail from "./pages/doctor/PatientDetail";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/Dashboard";
+import AdminDoctors from "./pages/admin/Doctors";
+import AdminBookings from "./pages/admin/Bookings";
 import AdminUsers from "./pages/admin/Users";
 import AdminPrescriptions from "./pages/admin/Prescriptions";
 
@@ -100,6 +102,8 @@ const App = () => (
             {/* Admin routes */}
             <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminLayout /></ProtectedRoute>}>
               <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="doctors" element={<AdminDoctors />} />
+              <Route path="bookings" element={<AdminBookings />} />
               <Route path="users" element={<AdminUsers />} />
               <Route path="prescriptions" element={<AdminPrescriptions />} />
             </Route>
