@@ -5,6 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import type { Database } from '@/integrations/supabase/types';
+
+type UserStatus = Database['public']['Enums']['user_status'];
 
 export default function AdminUsers() {
   const [users, setUsers] = useState<any[]>([]);
@@ -18,7 +21,7 @@ export default function AdminUsers() {
     setLoading(false);
   };
 
-  const updateStatus = async (id: string, status: string) => {
+  const updateStatus = async (id: string, status: UserStatus) => {
     await supabase.from('user_roles').update({ status }).eq('id', id);
     toast.success('User updated');
     fetchUsers();

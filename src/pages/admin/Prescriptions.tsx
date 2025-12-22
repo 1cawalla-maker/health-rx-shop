@@ -5,6 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import type { Database } from '@/integrations/supabase/types';
+
+type PrescriptionStatus = Database['public']['Enums']['prescription_status'];
 
 export default function AdminPrescriptions() {
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
@@ -13,13 +16,16 @@ export default function AdminPrescriptions() {
   useEffect(() => { fetchPrescriptions(); }, []);
 
   const fetchPrescriptions = async () => {
-    const { data } = await supabase.from('prescriptions').select('*, profiles!prescriptions_patient_id_fkey(full_name)').order('created_at', { ascending: false });
+    const { data } = await supabase.from('prescriptions').select('*').order('created_at', { ascending: false });
     setPrescriptions(data || []);
     setLoading(false);
   };
 
-  const updateStatus = async (id: string, status: string) => {
-    await supabase.from('prescriptions').update({ status, issued_at: status === 'active' ? new Date().toISOString() : null }).eq('id', id);
+  const updateStatus = async (id: string, status: PrescriptionStatus) => {
+    await supabase.from('prescriptions').update({ 
+      status, 
+      issued_at: status === 'active' ? new Date().toISOString() : null 
+    }).eq('id', id);
     toast.success('Prescription updated');
     fetchPrescriptions();
   };
@@ -35,7 +41,7 @@ export default function AdminPrescriptions() {
             <CardContent className="pt-6">
               <div className="flex justify-between items-center">
                 <div>
-                  <p className="font-medium">{p.profiles?.full_name || 'Patient'}</p>
+                  <p className="font-medium">Patient ID: {p.patient_id.slice(0, 8)}...</p>
                   <p className="text-sm text-muted-foreground capitalize">{p.prescription_type}</p>
                 </div>
                 <div className="flex items-center gap-2">
