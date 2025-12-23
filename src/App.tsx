@@ -12,6 +12,8 @@ import HowItWorks from "./pages/HowItWorks";
 import Pricing from "./pages/Pricing";
 import About from "./pages/About";
 import FAQ from "./pages/FAQ";
+import FAQPage from "./pages/FAQPage";
+import EligibilityQuiz from "./pages/EligibilityQuiz";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Disclaimer from "./pages/Disclaimer";
@@ -33,6 +35,8 @@ import PatientPrescriptions from "./pages/patient/Prescriptions";
 import PatientShop from "./pages/patient/Shop";
 import PatientIntake from "./pages/patient/Intake";
 import PatientAccount from "./pages/patient/Account";
+import PatientCheckout from "./pages/patient/Checkout";
+import PatientOrders from "./pages/patient/Orders";
 
 // Doctor pages
 import DoctorDashboard from "./pages/doctor/Dashboard";
@@ -44,6 +48,8 @@ import DoctorBookings from "./pages/doctor/Bookings";
 import DoctorBookingDetail from "./pages/doctor/BookingDetail";
 import DoctorPatients from "./pages/doctor/Patients";
 import DoctorPatientDetail from "./pages/doctor/PatientDetail";
+import DoctorConsultationView from "./pages/doctor/ConsultationView";
+import DoctorEarnings from "./pages/doctor/Earnings";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/Dashboard";
