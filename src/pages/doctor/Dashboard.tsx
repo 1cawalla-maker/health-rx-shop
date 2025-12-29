@@ -28,13 +28,13 @@ export default function DoctorDashboard() {
   }, []);
 
   const fetchData = async () => {
-    // Fetch upcoming bookings from consultation_bookings
+    // Fetch upcoming consultations
     const { data: bookings } = await supabase
-      .from('consultation_bookings')
+      .from('consultations')
       .select('*')
-      .in('status', ['booked', 'in_progress'])
-      .gte('scheduled_date', new Date().toISOString().split('T')[0])
-      .order('scheduled_date', { ascending: true })
+      .in('status', ['requested', 'confirmed', 'intake_pending', 'ready_for_call'])
+      .gte('scheduled_at', new Date().toISOString())
+      .order('scheduled_at', { ascending: true })
       .limit(5);
     
     // Fetch patient names
@@ -54,9 +54,9 @@ export default function DoctorDashboard() {
       id: b.id,
       patient_id: b.patient_id,
       status: b.status,
-      scheduled_date: b.scheduled_date,
-      time_window_start: b.time_window_start,
-      time_window_end: b.time_window_end,
+      scheduled_date: b.scheduled_at.split('T')[0],
+      time_window_start: new Date(b.scheduled_at).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }),
+      time_window_end: b.end_time ? new Date(b.end_time).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }) : '',
       patient_name: profileMap.get(b.patient_id)?.name || 'Patient',
       patient_phone: profileMap.get(b.patient_id)?.phone || null,
     }));
