@@ -355,6 +355,7 @@ export type Database = {
           containers_allowed: number
           created_at: string
           daily_max_pouches: number
+          decline_reason: string | null
           doctor_id: string
           expires_at: string
           id: string
@@ -374,6 +375,7 @@ export type Database = {
           containers_allowed: number
           created_at?: string
           daily_max_pouches: number
+          decline_reason?: string | null
           doctor_id: string
           expires_at: string
           id?: string
@@ -393,6 +395,7 @@ export type Database = {
           containers_allowed?: number
           created_at?: string
           daily_max_pouches?: number
+          decline_reason?: string | null
           doctor_id?: string
           expires_at?: string
           id?: string
@@ -855,7 +858,7 @@ export type Database = {
         | "called"
         | "script_uploaded"
       consultation_type: "video" | "phone"
-      issued_prescription_status: "active" | "expired" | "revoked"
+      issued_prescription_status: "active" | "expired" | "revoked" | "declined"
       nicotine_strength: "3mg" | "6mg" | "9mg" | "12mg"
       prescription_status: "pending_review" | "active" | "rejected" | "expired"
       prescription_type: "uploaded" | "issued"
@@ -1009,7 +1012,7 @@ export const Constants = {
         "script_uploaded",
       ],
       consultation_type: ["video", "phone"],
-      issued_prescription_status: ["active", "expired", "revoked"],
+      issued_prescription_status: ["active", "expired", "revoked", "declined"],
       nicotine_strength: ["3mg", "6mg", "9mg", "12mg"],
       prescription_status: ["pending_review", "active", "rejected", "expired"],
       prescription_type: ["uploaded", "issued"],

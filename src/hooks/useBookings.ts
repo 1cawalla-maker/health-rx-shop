@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import type { BookingWithPatient, BookingStatus } from '@/types/database';
+import type { BookingWithPatient, ConsultationStatus } from '@/types/database';
 
+// This hook uses the legacy 'consultations' table
 export function useBookings(options?: {
-  status?: BookingStatus[];
+  status?: ConsultationStatus[];
   doctorId?: string;
   patientId?: string;
   includePatient?: boolean;
@@ -70,7 +71,7 @@ export function useBookings(options?: {
     fetchBookings();
   }, [fetchBookings]);
 
-  const updateBookingStatus = async (bookingId: string, status: BookingStatus) => {
+  const updateBookingStatus = async (bookingId: string, status: ConsultationStatus) => {
     const { error } = await supabase
       .from('consultations')
       .update({ status, updated_at: new Date().toISOString() })
