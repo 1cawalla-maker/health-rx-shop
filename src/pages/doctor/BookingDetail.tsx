@@ -16,7 +16,15 @@ import {
 } from 'lucide-react';
 import { BookingStatusBadge } from '@/components/bookings/BookingStatusBadge';
 import { PatientEligibilitySummary } from '@/components/doctor/PatientEligibilitySummary';
+import { PrescriptionForm } from '@/components/doctor/PrescriptionForm';
 import type { BookingStatus, IntakeForm, ConsultationNote, BookingFile } from '@/types/database';
+
+interface DoctorInfo {
+  id: string;
+  fullName: string;
+  ahpraNumber: string | null;
+  providerNumber: string | null;
+}
 
 export default function DoctorBookingDetail() {
   const { id: bookingId } = useParams<{ id: string }>();
@@ -26,13 +34,17 @@ export default function DoctorBookingDetail() {
 
   const [booking, setBooking] = useState<any>(null);
   const [patientProfile, setPatientProfile] = useState<any>(null);
+  const [patientMedicalProfile, setPatientMedicalProfile] = useState<any>(null);
   const [intakeForm, setIntakeForm] = useState<IntakeForm | null>(null);
   const [notes, setNotes] = useState<ConsultationNote[]>([]);
   const [files, setFiles] = useState<BookingFile[]>([]);
+  const [existingPrescription, setExistingPrescription] = useState<any>(null);
+  const [doctorInfo, setDoctorInfo] = useState<DoctorInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [newNote, setNewNote] = useState('');
   const [savingNote, setSavingNote] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [showPrescriptionForm, setShowPrescriptionForm] = useState(false);
 
   useEffect(() => {
     if (user && bookingId) {
@@ -41,62 +53,117 @@ export default function DoctorBookingDetail() {
   }, [user, bookingId]);
 
   const fetchBookingDetails = async () => {
-    if (!bookingId) return;
+    if (!bookingId || !user) return;
 
-    // Fetch booking
-    const { data: bookingData, error: bookingError } = await supabase
-      .from('consultations')
-      .select('*')
-      .eq('id', bookingId)
-      .single();
+    try {
+      // Fetch booking from consultation_bookings (not consultations)
+      const { data: bookingData, error: bookingError } = await supabase
+        .from('consultation_bookings')
+        .select('*')
+        .eq('id', bookingId)
+        .maybeSingle();
 
-    if (bookingError || !bookingData) {
-      navigate('/doctor/bookings');
-      return;
+      if (bookingError) {
+        console.error('Booking fetch error:', bookingError);
+        toast.error('Failed to load booking');
+        return;
+      }
+
+      if (!bookingData) {
+        toast.error('Booking not found');
+        navigate('/doctor/bookings');
+        return;
+      }
+
+      setBooking(bookingData);
+
+      // Fetch doctor info
+      const { data: doctorData } = await supabase
+        .from('doctors')
+        .select('id, ahpra_number, provider_number, user_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (doctorData) {
+        // Get doctor's full name from profiles
+        const { data: doctorProfileData } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        setDoctorInfo({
+          id: doctorData.id,
+          fullName: doctorProfileData?.full_name || '',
+          ahpraNumber: doctorData.ahpra_number,
+          providerNumber: doctorData.provider_number,
+        });
+      }
+
+      // Fetch patient profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', bookingData.patient_id)
+        .maybeSingle();
+
+      setPatientProfile(profileData);
+
+      // Fetch patient medical profile
+      const { data: medicalProfileData } = await supabase
+        .from('patient_profiles')
+        .select('*')
+        .eq('user_id', bookingData.patient_id)
+        .maybeSingle();
+
+      setPatientMedicalProfile(medicalProfileData);
+
+      // Fetch intake form
+      const { data: intakeData } = await supabase
+        .from('intake_forms')
+        .select('*')
+        .eq('booking_id', bookingId)
+        .maybeSingle();
+
+      setIntakeForm(intakeData as IntakeForm | null);
+
+      // Fetch notes
+      const { data: notesData } = await supabase
+        .from('consultation_notes')
+        .select('*')
+        .eq('booking_id', bookingId)
+        .order('created_at', { ascending: false });
+
+      setNotes((notesData || []) as ConsultationNote[]);
+
+      // Fetch files
+      const { data: filesData } = await supabase
+        .from('booking_files')
+        .select('*')
+        .eq('booking_id', bookingId)
+        .order('uploaded_at', { ascending: false });
+
+      setFiles((filesData || []) as BookingFile[]);
+
+      // Check for existing prescription
+      const { data: prescriptionData } = await supabase
+        .from('doctor_issued_prescriptions')
+        .select('*')
+        .eq('booking_id', bookingId)
+        .maybeSingle();
+
+      setExistingPrescription(prescriptionData);
+
+    } catch (err) {
+      console.error('Error fetching booking details:', err);
+      toast.error('Failed to load booking details');
+    } finally {
+      setLoading(false);
     }
-
-    setBooking(bookingData);
-
-    // Fetch patient profile
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', bookingData.patient_id)
-      .single();
-
-    setPatientProfile(profileData);
-
-    // Fetch intake form
-    const { data: intakeData } = await supabase
-      .from('intake_forms')
-      .select('*')
-      .eq('booking_id', bookingId)
-      .single();
-
-    setIntakeForm(intakeData as IntakeForm | null);
-
-    // Fetch notes
-    const { data: notesData } = await supabase
-      .from('consultation_notes')
-      .select('*')
-      .eq('booking_id', bookingId)
-      .order('created_at', { ascending: false });
-
-    setNotes((notesData || []) as ConsultationNote[]);
-
-    // Fetch files
-    const { data: filesData } = await supabase
-      .from('booking_files')
-      .select('*')
-      .eq('booking_id', bookingId)
-      .order('uploaded_at', { ascending: false });
-
-    setFiles((filesData || []) as BookingFile[]);
-    setLoading(false);
   };
 
   const updateStatus = async (newStatus: BookingStatus) => {
-    if (!user || !bookingId) return;
+    if (!user || !bookingId || !doctorInfo) return;
 
     const updates: any = { 
       status: newStatus, 
@@ -105,11 +172,11 @@ export default function DoctorBookingDetail() {
 
     // Assign doctor if not already assigned
     if (!booking.doctor_id) {
-      updates.doctor_id = user.id;
+      updates.doctor_id = doctorInfo.id;
     }
 
     const { error } = await supabase
-      .from('consultations')
+      .from('consultation_bookings')
       .update(updates)
       .eq('id', bookingId);
 
@@ -147,7 +214,7 @@ export default function DoctorBookingDetail() {
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !user || !bookingId || !booking) return;
+    if (!file || !user || !bookingId || !booking || !doctorInfo) return;
 
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
     if (!allowedTypes.includes(file.type)) {
@@ -173,7 +240,7 @@ export default function DoctorBookingDetail() {
         .insert({
           booking_id: bookingId,
           patient_id: booking.patient_id,
-          doctor_id: user.id,
+          doctor_id: doctorInfo.id,
           storage_path: fileName,
           file_name: file.name,
           file_type: file.type,
@@ -182,9 +249,7 @@ export default function DoctorBookingDetail() {
 
       if (dbError) throw dbError;
 
-      // Update booking status
-      await updateStatus('script_uploaded');
-      toast.success('Prescription uploaded successfully');
+      toast.success('File uploaded successfully');
       fetchBookingDetails();
     } catch (err) {
       console.error('Upload error:', err);
@@ -195,6 +260,10 @@ export default function DoctorBookingDetail() {
         fileInputRef.current.value = '';
       }
     }
+  };
+
+  const handlePrescriptionComplete = () => {
+    navigate('/doctor/bookings');
   };
 
   if (loading) {
@@ -216,6 +285,13 @@ export default function DoctorBookingDetail() {
       </Card>
     );
   }
+
+  const canShowPrescriptionForm = 
+    booking.status !== 'completed' && 
+    booking.status !== 'cancelled' && 
+    booking.status !== 'pending_payment' &&
+    !existingPrescription &&
+    doctorInfo;
 
   return (
     <div className="space-y-6">
@@ -266,6 +342,43 @@ export default function DoctorBookingDetail() {
             </CardContent>
           </Card>
 
+          {/* Medical Profile */}
+          {patientMedicalProfile && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Medical Profile</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label className="text-muted-foreground">Smoking History</Label>
+                  <p className="mt-1">{patientMedicalProfile.smoking_history || 'Not disclosed'}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Vaping History</Label>
+                  <p className="mt-1">{patientMedicalProfile.vaping_history || 'Not disclosed'}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Current Conditions</Label>
+                  <p className="mt-1">{patientMedicalProfile.current_conditions || 'None disclosed'}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Allergies</Label>
+                  <p className="mt-1">{patientMedicalProfile.allergies || 'None disclosed'}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Medications</Label>
+                  <p className="mt-1">{patientMedicalProfile.medications || 'None disclosed'}</p>
+                </div>
+                {patientMedicalProfile.additional_notes && (
+                  <div className="sm:col-span-2">
+                    <Label className="text-muted-foreground">Additional Notes</Label>
+                    <p className="mt-1">{patientMedicalProfile.additional_notes}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Pre-Consultation Questionnaire */}
           <PatientEligibilitySummary patientId={booking.patient_id} />
 
@@ -277,7 +390,7 @@ export default function DoctorBookingDetail() {
                 Intake Form
               </CardTitle>
               <CardDescription>
-                {intakeForm ? 'Completed on ' + format(new Date(intakeForm.completed_at!), 'MMM d, yyyy') : 'Not yet completed'}
+                {intakeForm?.completed_at ? 'Completed on ' + format(new Date(intakeForm.completed_at), 'MMM d, yyyy') : 'Not yet completed'}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -315,6 +428,63 @@ export default function DoctorBookingDetail() {
               )}
             </CardContent>
           </Card>
+
+          {/* Prescription Form (if eligible) */}
+          {canShowPrescriptionForm && (showPrescriptionForm || booking.status === 'in_progress') && doctorInfo && (
+            <PrescriptionForm
+              bookingId={bookingId!}
+              patientId={booking.patient_id}
+              doctorId={doctorInfo.id}
+              doctorInfo={{
+                fullName: doctorInfo.fullName,
+                ahpraNumber: doctorInfo.ahpraNumber,
+                providerNumber: doctorInfo.providerNumber,
+              }}
+              patientInfo={{
+                fullName: patientProfile?.full_name || '',
+                dateOfBirth: patientProfile?.date_of_birth,
+              }}
+              onComplete={handlePrescriptionComplete}
+            />
+          )}
+
+          {/* Existing Prescription */}
+          {existingPrescription && (
+            <Card className="border-success/30 bg-success/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-success">
+                  <CheckCircle className="h-5 w-5" />
+                  Prescription Issued
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-3 sm:grid-cols-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Reference</span>
+                  <span className="font-mono">{existingPrescription.reference_id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Strength</span>
+                  <span>{existingPrescription.nicotine_strength}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Usage Tier</span>
+                  <span className="capitalize">{existingPrescription.usage_tier}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Containers</span>
+                  <span>{existingPrescription.containers_allowed}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Issued</span>
+                  <span>{format(new Date(existingPrescription.issued_at), 'MMM d, yyyy')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Expires</span>
+                  <span>{format(new Date(existingPrescription.expires_at), 'MMM d, yyyy')}</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Consultation Notes */}
           <Card>
@@ -360,15 +530,17 @@ export default function DoctorBookingDetail() {
             <CardContent className="space-y-4">
               <div className="flex items-center gap-3">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span>{format(new Date(booking.scheduled_at), 'MMMM d, yyyy')}</span>
+                <span>{format(new Date(booking.scheduled_date), 'MMMM d, yyyy')}</span>
               </div>
               <div className="flex items-center gap-3">
                 <Clock className="h-4 w-4 text-muted-foreground" />
-                <span>{format(new Date(booking.scheduled_at), 'h:mm a')}</span>
+                <span>
+                  {booking.time_window_start?.slice(0, 5)} - {booking.time_window_end?.slice(0, 5)}
+                </span>
               </div>
               <div className="flex items-center gap-3">
                 <Phone className="h-4 w-4 text-muted-foreground" />
-                <span className="capitalize">{booking.consultation_type} Consultation</span>
+                <span>Phone Consultation</span>
               </div>
             </CardContent>
           </Card>
@@ -379,22 +551,18 @@ export default function DoctorBookingDetail() {
               <CardTitle>Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {booking.status === 'requested' && (
-                <Button className="w-full" onClick={() => updateStatus('confirmed')}>
-                  Confirm Booking
+              {booking.status === 'booked' && (
+                <Button className="w-full" onClick={() => updateStatus('in_progress')}>
+                  Start Consultation
                 </Button>
               )}
-              {booking.status === 'confirmed' && (
-                <Button className="w-full" onClick={() => updateStatus('intake_pending')}>
-                  Request Intake
+              {booking.status === 'in_progress' && !showPrescriptionForm && !existingPrescription && (
+                <Button className="w-full" onClick={() => setShowPrescriptionForm(true)}>
+                  <Pill className="h-4 w-4 mr-2" />
+                  Issue Prescription
                 </Button>
               )}
-              {(booking.status === 'ready_for_call' || booking.status === 'confirmed') && (
-                <Button className="w-full" onClick={() => updateStatus('called')}>
-                  Mark as Called
-                </Button>
-              )}
-              {(booking.status === 'called' || booking.status === 'ready_for_call') && (
+              {(booking.status === 'in_progress' || booking.status === 'booked') && (
                 <>
                   <input
                     type="file"
@@ -414,11 +582,11 @@ export default function DoctorBookingDetail() {
                     ) : (
                       <Upload className="h-4 w-4 mr-2" />
                     )}
-                    Upload Prescription
+                    Upload File
                   </Button>
                 </>
               )}
-              {(booking.status === 'script_uploaded' || booking.status === 'called') && (
+              {booking.status === 'in_progress' && existingPrescription && (
                 <Button className="w-full" variant="default" onClick={() => updateStatus('completed')}>
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Complete Consultation

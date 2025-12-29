@@ -21,14 +21,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { BookingStatusBadge } from '@/components/bookings/BookingStatusBadge';
-import type { BookingStatus } from '@/types/database';
+import type { ConsultationStatus } from '@/types/database';
 
 interface Booking {
   id: string;
   patient_id: string;
   doctor_id: string | null;
   scheduled_at: string;
-  status: BookingStatus;
+  status: ConsultationStatus;
   consultation_type: 'video' | 'phone';
   reason_for_visit: string | null;
   patient_profile?: {
@@ -75,7 +75,7 @@ export default function AdminBookings() {
 
       const bookingsWithProfiles = bookingsData.map(b => ({
         ...b,
-        status: b.status as BookingStatus,
+        status: b.status as ConsultationStatus,
         patient_profile: profiles?.find(p => p.user_id === b.patient_id),
       }));
 
@@ -119,7 +119,7 @@ export default function AdminBookings() {
     fetchData();
   };
 
-  const updateBookingStatus = async (bookingId: string, status: BookingStatus) => {
+  const updateBookingStatus = async (bookingId: string, status: ConsultationStatus) => {
     await supabase
       .from('consultations')
       .update({ status })

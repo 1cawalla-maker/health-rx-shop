@@ -1,11 +1,32 @@
 import { Badge } from '@/components/ui/badge';
-import type { BookingStatus } from '@/types/database';
+import type { BookingStatus, ConsultationStatus } from '@/types/database';
+
+// Unified status type that handles both consultation_bookings and consultations tables
+type AnyBookingStatus = BookingStatus | ConsultationStatus | string;
 
 interface BookingStatusBadgeProps {
-  status: BookingStatus;
+  status: AnyBookingStatus;
 }
 
-const statusConfig: Record<BookingStatus, { label: string; className: string }> = {
+const statusConfig: Record<string, { label: string; className: string }> = {
+  // consultation_bookings statuses
+  pending_payment: {
+    label: 'Pending Payment',
+    className: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20'
+  },
+  booked: {
+    label: 'Booked',
+    className: 'bg-blue-500/10 text-blue-600 border-blue-500/20'
+  },
+  in_progress: {
+    label: 'In Progress',
+    className: 'bg-purple-500/10 text-purple-600 border-purple-500/20'
+  },
+  no_answer: {
+    label: 'No Answer',
+    className: 'bg-orange-500/10 text-orange-600 border-orange-500/20'
+  },
+  // consultations table statuses (legacy)
   requested: {
     label: 'Requested',
     className: 'bg-blue-500/10 text-blue-600 border-blue-500/20'
@@ -30,6 +51,7 @@ const statusConfig: Record<BookingStatus, { label: string; className: string }> 
     label: 'Script Uploaded',
     className: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20'
   },
+  // Shared statuses
   completed: {
     label: 'Completed',
     className: 'bg-success/10 text-success border-success/20'

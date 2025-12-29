@@ -1,6 +1,16 @@
 // Extended types for the telehealth platform
 
+// BookingStatus for consultation_bookings table (matches database enum)
 export type BookingStatus = 
+  | 'pending_payment'
+  | 'booked'
+  | 'in_progress'
+  | 'completed'
+  | 'cancelled'
+  | 'no_answer';
+
+// Legacy status for consultations table
+export type ConsultationStatus = 
   | 'requested' 
   | 'confirmed' 
   | 'intake_pending' 
