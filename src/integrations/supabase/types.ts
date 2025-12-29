@@ -83,6 +83,101 @@ export type Database = {
         }
         Relationships: []
       }
+      call_attempts: {
+        Row: {
+          attempt_number: number
+          attempted_at: string
+          booking_id: string
+          doctor_id: string
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          attempt_number: number
+          attempted_at?: string
+          booking_id: string
+          doctor_id: string
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          attempt_number?: number
+          attempted_at?: string
+          booking_id?: string
+          doctor_id?: string
+          id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_attempts_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "consultation_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consultation_bookings: {
+        Row: {
+          amount_paid: number | null
+          created_at: string
+          doctor_id: string | null
+          doctor_notes: string | null
+          id: string
+          paid_at: string | null
+          patient_id: string
+          reason_for_visit: string | null
+          scheduled_date: string
+          slot_id: string | null
+          status: Database["public"]["Enums"]["booking_status"]
+          stripe_checkout_session_id: string | null
+          stripe_payment_intent_id: string | null
+          time_window_end: string
+          time_window_start: string
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          amount_paid?: number | null
+          created_at?: string
+          doctor_id?: string | null
+          doctor_notes?: string | null
+          id?: string
+          paid_at?: string | null
+          patient_id: string
+          reason_for_visit?: string | null
+          scheduled_date: string
+          slot_id?: string | null
+          status?: Database["public"]["Enums"]["booking_status"]
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          time_window_end: string
+          time_window_start: string
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_paid?: number | null
+          created_at?: string
+          doctor_id?: string | null
+          doctor_notes?: string | null
+          id?: string
+          paid_at?: string | null
+          patient_id?: string
+          reason_for_visit?: string | null
+          scheduled_date?: string
+          slot_id?: string | null
+          status?: Database["public"]["Enums"]["booking_status"]
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          time_window_end?: string
+          time_window_start?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       consultation_notes: {
         Row: {
           booking_id: string
@@ -209,6 +304,119 @@ export type Database = {
           },
         ]
       }
+      doctor_availability_slots: {
+        Row: {
+          availability_type: Database["public"]["Enums"]["availability_type"]
+          created_at: string
+          day_of_week: number | null
+          doctor_id: string
+          end_time: string
+          id: string
+          is_active: boolean
+          max_bookings: number
+          specific_date: string | null
+          start_time: string
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          availability_type?: Database["public"]["Enums"]["availability_type"]
+          created_at?: string
+          day_of_week?: number | null
+          doctor_id: string
+          end_time: string
+          id?: string
+          is_active?: boolean
+          max_bookings?: number
+          specific_date?: string | null
+          start_time: string
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          availability_type?: Database["public"]["Enums"]["availability_type"]
+          created_at?: string
+          day_of_week?: number | null
+          doctor_id?: string
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          max_bookings?: number
+          specific_date?: string | null
+          start_time?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      doctor_issued_prescriptions: {
+        Row: {
+          booking_id: string
+          containers_allowed: number
+          created_at: string
+          daily_max_pouches: number
+          doctor_id: string
+          expires_at: string
+          id: string
+          issued_at: string
+          nicotine_strength: Database["public"]["Enums"]["nicotine_strength"]
+          patient_id: string
+          pdf_storage_path: string | null
+          reference_id: string
+          status: Database["public"]["Enums"]["issued_prescription_status"]
+          supply_days: number
+          total_pouches: number
+          updated_at: string
+          usage_tier: Database["public"]["Enums"]["usage_tier"]
+        }
+        Insert: {
+          booking_id: string
+          containers_allowed: number
+          created_at?: string
+          daily_max_pouches: number
+          doctor_id: string
+          expires_at: string
+          id?: string
+          issued_at?: string
+          nicotine_strength: Database["public"]["Enums"]["nicotine_strength"]
+          patient_id: string
+          pdf_storage_path?: string | null
+          reference_id: string
+          status?: Database["public"]["Enums"]["issued_prescription_status"]
+          supply_days?: number
+          total_pouches: number
+          updated_at?: string
+          usage_tier: Database["public"]["Enums"]["usage_tier"]
+        }
+        Update: {
+          booking_id?: string
+          containers_allowed?: number
+          created_at?: string
+          daily_max_pouches?: number
+          doctor_id?: string
+          expires_at?: string
+          id?: string
+          issued_at?: string
+          nicotine_strength?: Database["public"]["Enums"]["nicotine_strength"]
+          patient_id?: string
+          pdf_storage_path?: string | null
+          reference_id?: string
+          status?: Database["public"]["Enums"]["issued_prescription_status"]
+          supply_days?: number
+          total_pouches?: number
+          updated_at?: string
+          usage_tier?: Database["public"]["Enums"]["usage_tier"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_issued_prescriptions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "consultation_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       doctor_profiles: {
         Row: {
           ahpra_number: string | null
@@ -247,28 +455,34 @@ export type Database = {
       }
       doctors: {
         Row: {
+          ahpra_number: string | null
           created_at: string
           id: string
           is_active: boolean | null
           provider_number: string | null
+          registration_complete: boolean | null
           specialties: string[] | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          ahpra_number?: string | null
           created_at?: string
           id?: string
           is_active?: boolean | null
           provider_number?: string | null
+          registration_complete?: boolean | null
           specialties?: string[] | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          ahpra_number?: string | null
           created_at?: string
           id?: string
           is_active?: boolean | null
           provider_number?: string | null
+          registration_complete?: boolean | null
           specialties?: string[] | null
           updated_at?: string
           user_id?: string
@@ -559,10 +773,40 @@ export type Database = {
       }
     }
     Functions: {
+      calculate_prescription_quantities: {
+        Args: { _usage_tier: Database["public"]["Enums"]["usage_tier"] }
+        Returns: {
+          containers_allowed: number
+          daily_max_pouches: number
+          total_pouches: number
+        }[]
+      }
+      complete_doctor_registration: {
+        Args: {
+          _ahpra_number: string
+          _provider_number: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      get_available_slots: {
+        Args: { _date: string; _timezone?: string }
+        Returns: {
+          available_capacity: number
+          doctor_id: string
+          end_time: string
+          slot_id: string
+          start_time: string
+        }[]
+      }
       get_doctor_id: { Args: { _user_id: string }; Returns: string }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_active_issued_prescription: {
+        Args: { _patient_id: string }
+        Returns: boolean
       }
       has_active_prescription: {
         Args: { _patient_id: string }
@@ -587,6 +831,14 @@ export type Database = {
     }
     Enums: {
       app_role: "patient" | "doctor" | "admin"
+      availability_type: "recurring" | "one_off" | "blocked"
+      booking_status:
+        | "pending_payment"
+        | "booked"
+        | "in_progress"
+        | "completed"
+        | "cancelled"
+        | "no_answer"
       consultation_status:
         | "requested"
         | "confirmed"
@@ -597,8 +849,11 @@ export type Database = {
         | "called"
         | "script_uploaded"
       consultation_type: "video" | "phone"
+      issued_prescription_status: "active" | "expired" | "revoked"
+      nicotine_strength: "3mg" | "6mg" | "9mg" | "12mg"
       prescription_status: "pending_review" | "active" | "rejected" | "expired"
       prescription_type: "uploaded" | "issued"
+      usage_tier: "light" | "moderate" | "heavy"
       user_status: "approved" | "pending_approval" | "deactivated"
     }
     CompositeTypes: {
@@ -728,6 +983,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["patient", "doctor", "admin"],
+      availability_type: ["recurring", "one_off", "blocked"],
+      booking_status: [
+        "pending_payment",
+        "booked",
+        "in_progress",
+        "completed",
+        "cancelled",
+        "no_answer",
+      ],
       consultation_status: [
         "requested",
         "confirmed",
@@ -739,8 +1003,11 @@ export const Constants = {
         "script_uploaded",
       ],
       consultation_type: ["video", "phone"],
+      issued_prescription_status: ["active", "expired", "revoked"],
+      nicotine_strength: ["3mg", "6mg", "9mg", "12mg"],
       prescription_status: ["pending_review", "active", "rejected", "expired"],
       prescription_type: ["uploaded", "issued"],
+      usage_tier: ["light", "moderate", "heavy"],
       user_status: ["approved", "pending_approval", "deactivated"],
     },
   },
