@@ -1,23 +1,41 @@
-import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Upload, FileText, Loader2, CheckCircle, AlertCircle, X } from 'lucide-react';
+import { Upload, FileText, Loader2, CheckCircle, AlertCircle, X, Clock, XCircle } from 'lucide-react';
+import { prescriptionUploadService } from '@/services/prescriptionUploadService';
+import type { PrescriptionUploadRecord } from '@/types/services';
+import { prescriptionStatusLabels, prescriptionStatusColors } from '@/types/enums';
+import { format } from 'date-fns';
 
 const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export default function UploadPrescription() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [myUploads, setMyUploads] = useState<PrescriptionUploadRecord[]>([]);
+  const [loadingUploads, setLoadingUploads] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      fetchMyUploads();
+    }
+  }, [user]);
+
+  const fetchMyUploads = async () => {
+    if (!user) return;
+    setLoadingUploads(true);
+    const uploads = await prescriptionUploadService.getPatientUploads(user.id);
+    setMyUploads(uploads);
+    setLoadingUploads(false);
+  };
 
   const validateFile = (file: File): string | null => {
     if (!ALLOWED_TYPES.includes(file.type)) {
@@ -70,39 +88,23 @@ export default function UploadPrescription() {
     setIsUploading(true);
 
     try {
-      // Upload file to storage
-      const fileExt = selectedFile.name.split('.').pop();
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      const result = await prescriptionUploadService.createUpload(
+        user.id,
+        null,
+        user.email || null,
+        selectedFile
+      );
 
-      const { error: uploadError } = await supabase.storage
-        .from('prescriptions')
-        .upload(fileName, selectedFile);
-
-      if (uploadError) {
-        throw uploadError;
+      if (result.success) {
+        toast.success('Prescription uploaded successfully!');
+        setSelectedFile(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        fetchMyUploads();
+      } else {
+        throw new Error(result.error);
       }
-
-      // Get the file URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('prescriptions')
-        .getPublicUrl(fileName);
-
-      // Create prescription record
-      const { error: dbError } = await supabase
-        .from('prescriptions')
-        .insert({
-          patient_id: user.id,
-          prescription_type: 'uploaded',
-          status: 'pending_review',
-          file_url: fileName
-        });
-
-      if (dbError) {
-        throw dbError;
-      }
-
-      toast.success('Prescription uploaded successfully!');
-      navigate('/patient/prescriptions');
     } catch (error) {
       console.error('Upload error:', error);
       toast.error('Failed to upload prescription. Please try again.');
@@ -115,6 +117,19 @@ export default function UploadPrescription() {
     setSelectedFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pending_review':
+        return <Clock className="h-4 w-4" />;
+      case 'approved':
+        return <CheckCircle className="h-4 w-4" />;
+      case 'rejected':
+        return <XCircle className="h-4 w-4" />;
+      default:
+        return <FileText className="h-4 w-4" />;
     }
   };
 
@@ -220,6 +235,51 @@ export default function UploadPrescription() {
         </CardContent>
       </Card>
 
+      {/* My Uploads */}
+      <Card>
+        <CardHeader>
+          <CardTitle>My Uploads</CardTitle>
+          <CardDescription>Track the status of your prescription uploads</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loadingUploads ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : myUploads.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">
+              You haven't uploaded any prescriptions yet.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {myUploads.map((upload) => (
+                <div 
+                  key={upload.id} 
+                  className="flex items-center justify-between p-4 border rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-8 w-8 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">{upload.fileName || 'Prescription'}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Uploaded {format(new Date(upload.createdAt), 'dd MMM yyyy')}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge 
+                    variant={prescriptionStatusColors[upload.status]}
+                    className="flex items-center gap-1"
+                  >
+                    {getStatusIcon(upload.status)}
+                    {prescriptionStatusLabels[upload.status]}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Info Card */}
       <Card className="bg-primary/5 border-primary/20">
         <CardHeader>
@@ -231,10 +291,10 @@ export default function UploadPrescription() {
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           <p>After uploading your prescription:</p>
           <ol className="list-decimal list-inside space-y-2">
-            <li>A doctor will review your prescription within 24-48 hours</li>
-            <li>You'll be notified once the review is complete</li>
+            <li>An admin will review your prescription within 24-48 hours</li>
+            <li>You'll see the status update on this page</li>
             <li>If approved, the shop will be unlocked for you to order products</li>
-            <li>If additional information is needed, we'll contact you</li>
+            <li>If rejected, you'll see the reason and can upload a new document</li>
           </ol>
           <p className="mt-4 text-xs">
             Note: Prescriptions must be from a registered Australian medical practitioner 
