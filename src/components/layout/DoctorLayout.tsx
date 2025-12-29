@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Calendar,
   CalendarDays,
+  Clock,
   FileText,
   Menu,
   X,
@@ -19,6 +20,7 @@ const navItems = [
   { href: '/doctor/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/doctor/bookings', label: 'Bookings', icon: Calendar },
   { href: '/doctor/calendar', label: 'Calendar', icon: CalendarDays },
+  { href: '/doctor/availability', label: 'Availability', icon: Clock },
   { href: '/doctor/patients', label: 'Patients', icon: Users },
   { href: '/doctor/prescriptions', label: 'Prescriptions', icon: FileText },
 ];
