@@ -8,10 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2, FileText, Download, CheckCircle, XCircle, Search, Filter, Eye } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { prescriptionUploadService } from '@/services/prescriptionUploadService';
-import type { PrescriptionUploadRecord, PrescriptionApprovalData } from '@/types/services';
-import type { PrescriptionUploadStatus } from '@/types/enums';
-import { prescriptionStatusLabels, prescriptionStatusColors } from '@/types/enums';
+import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import {
   Dialog,
   DialogContent,
@@ -22,15 +20,50 @@ import {
 } from "@/components/ui/dialog";
 import { format } from 'date-fns';
 
+type PrescriptionStatus = Database['public']['Enums']['prescription_status'];
+
+interface PrescriptionRecord {
+  id: string;
+  patient_id: string;
+  prescription_type: string;
+  status: PrescriptionStatus;
+  file_url: string | null;
+  allowed_strength_min: number | null;
+  allowed_strength_max: number | null;
+  max_units_per_order: number | null;
+  max_units_per_month: number | null;
+  review_reason: string | null;
+  issued_at: string | null;
+  expires_at: string | null;
+  created_at: string;
+  updated_at: string;
+  patient_name?: string | null;
+  patient_email?: string | null;
+}
+
+const statusLabels: Record<PrescriptionStatus, string> = {
+  pending_review: 'Pending Review',
+  active: 'Approved',
+  rejected: 'Rejected',
+  expired: 'Expired',
+};
+
+const statusColors: Record<PrescriptionStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+  pending_review: 'secondary',
+  active: 'default',
+  rejected: 'destructive',
+  expired: 'outline',
+};
+
 export default function AdminPrescriptionUploads() {
-  const [prescriptions, setPrescriptions] = useState<PrescriptionUploadRecord[]>([]);
+  const [prescriptions, setPrescriptions] = useState<PrescriptionRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<PrescriptionUploadStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<PrescriptionStatus | 'all'>('all');
   
   // Approval modal state
-  const [approvalPrescription, setApprovalPrescription] = useState<PrescriptionUploadRecord | null>(null);
-  const [approvalData, setApprovalData] = useState<PrescriptionApprovalData>({
+  const [approvalPrescription, setApprovalPrescription] = useState<PrescriptionRecord | null>(null);
+  const [approvalData, setApprovalData] = useState({
     allowedStrengthMin: 3,
     allowedStrengthMax: 12,
     maxUnitsPerOrder: 10,
@@ -39,7 +72,7 @@ export default function AdminPrescriptionUploads() {
   const [approvalLoading, setApprovalLoading] = useState(false);
 
   // Rejection modal state
-  const [rejectionPrescription, setRejectionPrescription] = useState<PrescriptionUploadRecord | null>(null);
+  const [rejectionPrescription, setRejectionPrescription] = useState<PrescriptionRecord | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [rejectionLoading, setRejectionLoading] = useState(false);
 
@@ -52,33 +85,102 @@ export default function AdminPrescriptionUploads() {
 
   const fetchPrescriptions = async () => {
     setLoading(true);
-    const filter = statusFilter === 'all' ? undefined : statusFilter;
-    const data = await prescriptionUploadService.listUploads(filter);
-    setPrescriptions(data);
+    
+    let query = supabase
+      .from('prescriptions')
+      .select('*')
+      .eq('prescription_type', 'uploaded')
+      .order('created_at', { ascending: false });
+    
+    if (statusFilter !== 'all') {
+      query = query.eq('status', statusFilter);
+    }
+    
+    const { data: prescriptionsData, error } = await query;
+    
+    if (error) {
+      console.error('Error fetching prescriptions:', error);
+      toast.error('Failed to load prescriptions');
+      setLoading(false);
+      return;
+    }
+
+    // Fetch patient profiles for names
+    const patientIds = [...new Set((prescriptionsData || []).map(p => p.patient_id))];
+    
+    let profilesMap: Record<string, { full_name: string | null }> = {};
+    if (patientIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .in('user_id', patientIds);
+      
+      profilesMap = (profiles || []).reduce((acc, p) => {
+        acc[p.user_id] = { full_name: p.full_name };
+        return acc;
+      }, {} as Record<string, { full_name: string | null }>);
+    }
+
+    // Combine data
+    const combinedData: PrescriptionRecord[] = (prescriptionsData || []).map(p => ({
+      ...p,
+      patient_name: profilesMap[p.patient_id]?.full_name || null,
+      patient_email: null, // Email not stored in profiles
+    }));
+
+    setPrescriptions(combinedData);
     setLoading(false);
   };
 
-  const handleViewFile = async (prescription: PrescriptionUploadRecord) => {
-    const url = await prescriptionUploadService.getFileDownloadUrl(prescription.id);
-    if (url) {
-      setViewingFile({ url, name: prescription.fileName || 'Prescription' });
-    } else {
-      toast.error('Could not load file');
+  const handleViewFile = async (prescription: PrescriptionRecord) => {
+    if (!prescription.file_url) {
+      toast.error('No file available');
+      return;
     }
+
+    const { data, error } = await supabase.storage
+      .from('prescriptions')
+      .createSignedUrl(prescription.file_url, 300); // 5 min expiry
+
+    if (error || !data?.signedUrl) {
+      toast.error('Could not load file');
+      return;
+    }
+
+    setViewingFile({ 
+      url: data.signedUrl, 
+      name: prescription.file_url.split('/').pop() || 'Prescription' 
+    });
   };
 
   const handleApprove = async () => {
     if (!approvalPrescription) return;
     
     setApprovalLoading(true);
-    const result = await prescriptionUploadService.approveUpload(approvalPrescription.id, approvalData);
     
-    if (result.success) {
-      toast.success('Prescription approved successfully');
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 90); // 90 days validity
+
+    const { error } = await supabase
+      .from('prescriptions')
+      .update({
+        status: 'active',
+        allowed_strength_min: approvalData.allowedStrengthMin,
+        allowed_strength_max: approvalData.allowedStrengthMax,
+        max_units_per_order: approvalData.maxUnitsPerOrder,
+        max_units_per_month: approvalData.maxUnitsPerMonth,
+        issued_at: new Date().toISOString(),
+        expires_at: expiresAt.toISOString(),
+      })
+      .eq('id', approvalPrescription.id);
+    
+    if (error) {
+      toast.error('Failed to approve prescription');
+      console.error('Approval error:', error);
+    } else {
+      toast.success('Prescription approved successfully! Customer can now access the shop.');
       fetchPrescriptions();
       setApprovalPrescription(null);
-    } else {
-      toast.error(result.error || 'Failed to approve');
     }
     
     setApprovalLoading(false);
@@ -91,17 +193,23 @@ export default function AdminPrescriptionUploads() {
     }
     
     setRejectionLoading(true);
-    const result = await prescriptionUploadService.rejectUpload(rejectionPrescription.id, { 
-      reviewReason: rejectionReason 
-    });
     
-    if (result.success) {
+    const { error } = await supabase
+      .from('prescriptions')
+      .update({
+        status: 'rejected',
+        review_reason: rejectionReason,
+      })
+      .eq('id', rejectionPrescription.id);
+    
+    if (error) {
+      toast.error('Failed to reject prescription');
+      console.error('Rejection error:', error);
+    } else {
       toast.success('Prescription rejected');
       fetchPrescriptions();
       setRejectionPrescription(null);
       setRejectionReason('');
-    } else {
-      toast.error(result.error || 'Failed to reject');
     }
     
     setRejectionLoading(false);
@@ -111,9 +219,9 @@ export default function AdminPrescriptionUploads() {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
-      p.patientName?.toLowerCase().includes(query) ||
-      p.patientEmail?.toLowerCase().includes(query) ||
-      p.fileName?.toLowerCase().includes(query)
+      p.patient_name?.toLowerCase().includes(query) ||
+      p.patient_id.toLowerCase().includes(query) ||
+      p.file_url?.toLowerCase().includes(query)
     );
   });
 
@@ -129,7 +237,7 @@ export default function AdminPrescriptionUploads() {
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-3xl font-bold">Prescription Uploads</h1>
-        <p className="text-muted-foreground mt-1">Review and approve patient prescription uploads</p>
+        <p className="text-muted-foreground mt-1">Review and approve patient prescription uploads to grant shop access</p>
       </div>
 
       {/* Filters */}
@@ -137,13 +245,13 @@ export default function AdminPrescriptionUploads() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by patient name, email..."
+            placeholder="Search by patient name..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
           />
         </div>
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as PrescriptionUploadStatus | 'all')}>
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as PrescriptionStatus | 'all')}>
           <SelectTrigger className="w-full sm:w-48">
             <Filter className="h-4 w-4 mr-2" />
             <SelectValue placeholder="Filter by status" />
@@ -151,7 +259,7 @@ export default function AdminPrescriptionUploads() {
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="pending_review">Pending Review</SelectItem>
-            <SelectItem value="approved">Approved</SelectItem>
+            <SelectItem value="active">Approved</SelectItem>
             <SelectItem value="rejected">Rejected</SelectItem>
             <SelectItem value="expired">Expired</SelectItem>
           </SelectContent>
@@ -174,56 +282,56 @@ export default function AdminPrescriptionUploads() {
                   <div>
                     <CardTitle className="text-lg flex items-center gap-2">
                       <FileText className="h-5 w-5 text-primary" />
-                      {prescription.patientName || 'Unknown Patient'}
+                      {prescription.patient_name || `Patient ${prescription.patient_id.slice(0, 8)}...`}
                     </CardTitle>
-                    <CardDescription>{prescription.patientEmail}</CardDescription>
+                    <CardDescription>ID: {prescription.patient_id.slice(0, 12)}...</CardDescription>
                   </div>
-                  <Badge variant={prescriptionStatusColors[prescription.status]}>
-                    {prescriptionStatusLabels[prescription.status]}
+                  <Badge variant={statusColors[prescription.status]}>
+                    {statusLabels[prescription.status]}
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">File Name</p>
-                    <p className="font-medium truncate">{prescription.fileName || 'Unknown'}</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">File</p>
+                    <p className="font-medium truncate">{prescription.file_url?.split('/').pop() || 'No file'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Uploaded</p>
-                    <p className="font-medium">{format(new Date(prescription.createdAt), 'dd MMM yyyy')}</p>
+                    <p className="font-medium">{format(new Date(prescription.created_at), 'dd MMM yyyy')}</p>
                   </div>
-                  {prescription.status === 'approved' && prescription.expiresAt && (
+                  {prescription.status === 'active' && prescription.expires_at && (
                     <div>
                       <p className="text-xs text-muted-foreground uppercase tracking-wide">Expires</p>
-                      <p className="font-medium">{format(new Date(prescription.expiresAt), 'dd MMM yyyy')}</p>
+                      <p className="font-medium">{format(new Date(prescription.expires_at), 'dd MMM yyyy')}</p>
                     </div>
                   )}
                 </div>
 
                 {/* Approval limits for approved prescriptions */}
-                {prescription.status === 'approved' && (
+                {prescription.status === 'active' && (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4 p-3 bg-muted/50 rounded-lg">
                     <div>
                       <p className="text-xs text-muted-foreground">Strength Range</p>
-                      <p className="font-medium">{prescription.allowedStrengthMin}-{prescription.allowedStrengthMax}mg</p>
+                      <p className="font-medium">{prescription.allowed_strength_min}-{prescription.allowed_strength_max}mg</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Per Order</p>
-                      <p className="font-medium">{prescription.maxUnitsPerOrder} units</p>
+                      <p className="font-medium">{prescription.max_units_per_order} units</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Per Month</p>
-                      <p className="font-medium">{prescription.maxUnitsPerMonth} units</p>
+                      <p className="font-medium">{prescription.max_units_per_month} units</p>
                     </div>
                   </div>
                 )}
 
                 {/* Rejection reason */}
-                {prescription.status === 'rejected' && prescription.reviewReason && (
+                {prescription.status === 'rejected' && prescription.review_reason && (
                   <div className="mb-4 p-3 bg-destructive/10 rounded-lg">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Rejection Reason</p>
-                    <p className="text-sm">{prescription.reviewReason}</p>
+                    <p className="text-sm">{prescription.review_reason}</p>
                   </div>
                 )}
 
@@ -280,7 +388,7 @@ export default function AdminPrescriptionUploads() {
           <DialogHeader>
             <DialogTitle>Approve Prescription</DialogTitle>
             <DialogDescription>
-              Set the allowed limits for this prescription. These will be enforced when the patient orders products.
+              Set the allowed limits for this prescription. Once approved, the customer will have access to the shop.
             </DialogDescription>
           </DialogHeader>
           
@@ -390,24 +498,19 @@ export default function AdminPrescriptionUploads() {
           </DialogHeader>
           <div className="flex-1 overflow-auto">
             {viewingFile?.url && (
-              viewingFile.url.startsWith('data:image') ? (
+              viewingFile.name.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
                 <img src={viewingFile.url} alt="Prescription" className="max-w-full h-auto" />
-              ) : viewingFile.url.startsWith('data:application/pdf') ? (
-                <div className="text-center py-8">
-                  <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground mb-4">PDF Preview not available in mock mode</p>
-                  <Button asChild>
-                    <a href={viewingFile.url} download={viewingFile.name}>
-                      <Download className="h-4 w-4 mr-2" />
-                      Download PDF
-                    </a>
-                  </Button>
-                </div>
+              ) : viewingFile.name.match(/\.pdf$/i) ? (
+                <iframe 
+                  src={viewingFile.url} 
+                  className="w-full h-[60vh]" 
+                  title="PDF Preview"
+                />
               ) : (
                 <div className="text-center py-8">
                   <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
                   <Button asChild>
-                    <a href={viewingFile.url} download={viewingFile.name}>
+                    <a href={viewingFile.url} download={viewingFile.name} target="_blank" rel="noopener noreferrer">
                       <Download className="h-4 w-4 mr-2" />
                       Download File
                     </a>
