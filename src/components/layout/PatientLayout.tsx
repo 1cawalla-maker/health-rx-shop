@@ -30,6 +30,7 @@ const navItems = [
 export function PatientLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [hasActivePrescription, setHasActivePrescription] = useState(false);
+  const [hasPendingPrescription, setHasPendingPrescription] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
@@ -49,6 +50,7 @@ export function PatientLayout() {
     
     if (issuedData === true) {
       setHasActivePrescription(true);
+      setHasPendingPrescription(false);
       return;
     }
     
@@ -64,9 +66,21 @@ export function PatientLayout() {
 
     if (uploadedData && uploadedData.length > 0) {
       setHasActivePrescription(true);
-    } else {
-      setHasActivePrescription(false);
+      setHasPendingPrescription(false);
+      return;
     }
+    
+    // Check for pending uploaded prescriptions awaiting admin approval
+    const { data: pendingData } = await supabase
+      .from('prescriptions')
+      .select('id')
+      .eq('patient_id', user.id)
+      .eq('status', 'pending_review')
+      .eq('prescription_type', 'uploaded')
+      .limit(1);
+
+    setHasActivePrescription(false);
+    setHasPendingPrescription(pendingData && pendingData.length > 0);
   };
 
   const handleSignOut = async () => {
@@ -164,7 +178,7 @@ export function PatientLayout() {
       {/* Main Content */}
       <main className="flex-1 min-h-screen pt-16 lg:pt-0">
         <div className="p-6 lg:p-8">
-          <Outlet context={{ hasActivePrescription, checkActivePrescription }} />
+          <Outlet context={{ hasActivePrescription, hasPendingPrescription, checkActivePrescription }} />
         </div>
       </main>
     </div>
