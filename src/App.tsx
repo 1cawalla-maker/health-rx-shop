@@ -54,9 +54,11 @@ import DoctorEarnings from "./pages/doctor/Earnings";
 // Admin pages
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminDoctors from "./pages/admin/Doctors";
+import AdminDoctorApprovals from "./pages/admin/DoctorApprovals";
 import AdminBookings from "./pages/admin/Bookings";
 import AdminUsers from "./pages/admin/Users";
 import AdminPrescriptions from "./pages/admin/Prescriptions";
+import AdminPrescriptionUploads from "./pages/admin/PrescriptionUploads";
 
 const queryClient = new QueryClient();
 
@@ -109,9 +111,11 @@ const App = () => (
             <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminLayout /></ProtectedRoute>}>
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="doctors" element={<AdminDoctors />} />
+              <Route path="doctor-approvals" element={<AdminDoctorApprovals />} />
               <Route path="bookings" element={<AdminBookings />} />
               <Route path="users" element={<AdminUsers />} />
               <Route path="prescriptions" element={<AdminPrescriptions />} />
+              <Route path="prescription-uploads" element={<AdminPrescriptionUploads />} />
             </Route>
 
             {/* Catch-all */}
