@@ -7,11 +7,15 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAuth, AppRole } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import { Stethoscope, User, Mail, Lock, ArrowRight, Loader2, Phone, MapPin, FileText } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { Stethoscope, User, Mail, Lock, ArrowRight, Loader2, Phone, MapPin, FileText, CalendarIcon } from 'lucide-react';
 import { persistQuizToProfile, getQuizFromSession } from '@/services/eligibilityService';
 
 const emailSchema = z.string().email('Please enter a valid email address');
@@ -56,6 +60,10 @@ export default function Auth() {
   const [selectedRole, setSelectedRole] = useState<AppRole>('patient');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+
+  // Patient-specific fields
+  const [patientPhone, setPatientPhone] = useState('+61');
+  const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>();
 
   // Doctor-specific fields
   const [phoneNumber, setPhoneNumber] = useState('+61');
@@ -117,6 +125,15 @@ export default function Auth() {
       nameSchema.parse(fullName);
       emailSchema.parse(email);
       passwordSchema.parse(password);
+      
+      if (selectedRole === 'patient') {
+        phoneSchema.parse(patientPhone);
+        if (!dateOfBirth) throw new Error('Please select your date of birth');
+        // Check patient is at least 18
+        const today = new Date();
+        const age = today.getFullYear() - dateOfBirth.getFullYear();
+        if (age < 18) throw new Error('You must be at least 18 years old to sign up');
+      }
       
       if (selectedRole === 'doctor') {
         phoneSchema.parse(phoneNumber);
@@ -202,9 +219,18 @@ export default function Auth() {
       toast.success('Account created! Your application is pending approval.');
       navigate('/doctor/pending');
     } else {
-      // For patients, persist quiz data if available
+      // For patients, persist quiz data and profile info
       const { data: { user: newPatientUser } } = await supabase.auth.getUser();
       if (newPatientUser) {
+        // Update profile with phone and DOB
+        await supabase
+          .from('profiles')
+          .update({ 
+            phone: patientPhone,
+            date_of_birth: dateOfBirth ? format(dateOfBirth, 'yyyy-MM-dd') : null
+          })
+          .eq('user_id', newPatientUser.id);
+          
         await persistQuizToProfile(newPatientUser.id);
       }
       
@@ -467,6 +493,72 @@ export default function Auth() {
                             Minimum 6 characters
                           </p>
                         </div>
+
+                        {/* Patient-specific fields */}
+                        {selectedRole === 'patient' && (
+                          <>
+                            <div className="pt-2 border-t border-border">
+                              <p className="text-sm font-medium text-primary mb-3">
+                                Contact & Personal Details
+                              </p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="patient-phone">Phone Number</Label>
+                              <div className="relative">
+                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  id="patient-phone"
+                                  type="tel"
+                                  placeholder="+61412345678"
+                                  className="pl-10"
+                                  value={patientPhone}
+                                  onChange={(e) => setPatientPhone(e.target.value)}
+                                  required
+                                />
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                Format: +61XXXXXXXXX (Australian mobile)
+                              </p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label>Date of Birth</Label>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      "w-full justify-start text-left font-normal",
+                                      !dateOfBirth && "text-muted-foreground"
+                                    )}
+                                  >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {dateOfBirth ? format(dateOfBirth, "PPP") : "Select your date of birth"}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar
+                                    mode="single"
+                                    selected={dateOfBirth}
+                                    onSelect={setDateOfBirth}
+                                    disabled={(date) =>
+                                      date > new Date() || date < new Date("1900-01-01")
+                                    }
+                                    initialFocus
+                                    className={cn("p-3 pointer-events-auto")}
+                                    captionLayout="dropdown-buttons"
+                                    fromYear={1920}
+                                    toYear={new Date().getFullYear()}
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                              <p className="text-xs text-muted-foreground">
+                                You must be at least 18 years old
+                              </p>
+                            </div>
+                          </>
+                        )}
 
                         {/* Doctor-specific fields */}
                         {selectedRole === 'doctor' && (
