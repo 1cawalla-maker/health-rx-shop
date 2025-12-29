@@ -17,7 +17,7 @@ import {
 import { BookingStatusBadge } from '@/components/bookings/BookingStatusBadge';
 import { PatientEligibilitySummary } from '@/components/doctor/PatientEligibilitySummary';
 import { PrescriptionForm } from '@/components/doctor/PrescriptionForm';
-import type { BookingStatus, IntakeForm, ConsultationNote, BookingFile } from '@/types/database';
+import type { ConsultationStatus, IntakeForm, ConsultationNote, BookingFile } from '@/types/database';
 
 interface DoctorInfo {
   id: string;
@@ -162,7 +162,7 @@ export default function DoctorBookingDetail() {
     }
   };
 
-  const updateStatus = async (newStatus: BookingStatus) => {
+  const updateStatus = async (newStatus: ConsultationStatus) => {
     if (!user || !bookingId || !doctorInfo) return;
 
     const updates: any = { 
@@ -530,17 +530,18 @@ export default function DoctorBookingDetail() {
             <CardContent className="space-y-4">
               <div className="flex items-center gap-3">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span>{format(new Date(booking.scheduled_date), 'MMMM d, yyyy')}</span>
+                <span>{booking.scheduled_at ? format(new Date(booking.scheduled_at), 'MMMM d, yyyy') : 'Not scheduled'}</span>
               </div>
               <div className="flex items-center gap-3">
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 <span>
-                  {booking.time_window_start?.slice(0, 5)} - {booking.time_window_end?.slice(0, 5)}
+                  {booking.scheduled_at ? format(new Date(booking.scheduled_at), 'h:mm a') : 'N/A'}
+                  {booking.end_time ? ` - ${format(new Date(booking.end_time), 'h:mm a')}` : ''}
                 </span>
               </div>
               <div className="flex items-center gap-3">
                 <Phone className="h-4 w-4 text-muted-foreground" />
-                <span>Phone Consultation</span>
+                <span className="capitalize">{booking.consultation_type || 'Phone'} Consultation</span>
               </div>
             </CardContent>
           </Card>
@@ -551,18 +552,18 @@ export default function DoctorBookingDetail() {
               <CardTitle>Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {booking.status === 'booked' && (
-                <Button className="w-full" onClick={() => updateStatus('in_progress')}>
+              {(booking.status === 'requested' || booking.status === 'confirmed' || booking.status === 'ready_for_call') && (
+                <Button className="w-full" onClick={() => updateStatus('called')}>
                   Start Consultation
                 </Button>
               )}
-              {booking.status === 'in_progress' && !showPrescriptionForm && !existingPrescription && (
+              {booking.status === 'called' && !showPrescriptionForm && !existingPrescription && (
                 <Button className="w-full" onClick={() => setShowPrescriptionForm(true)}>
                   <Pill className="h-4 w-4 mr-2" />
                   Issue Prescription
                 </Button>
               )}
-              {(booking.status === 'in_progress' || booking.status === 'booked') && (
+              {(booking.status === 'called' || booking.status === 'ready_for_call') && (
                 <>
                   <input
                     type="file"
@@ -586,7 +587,7 @@ export default function DoctorBookingDetail() {
                   </Button>
                 </>
               )}
-              {booking.status === 'in_progress' && existingPrescription && (
+              {(booking.status === 'called' || booking.status === 'script_uploaded') && existingPrescription && (
                 <Button className="w-full" variant="default" onClick={() => updateStatus('completed')}>
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Complete Consultation
