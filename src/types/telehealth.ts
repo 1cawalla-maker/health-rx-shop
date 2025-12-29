@@ -15,7 +15,7 @@ export type BookingStatus =
 
 export type AvailabilityType = 'recurring' | 'one_off' | 'blocked';
 
-export type IssuedPrescriptionStatus = 'active' | 'expired' | 'revoked';
+export type IssuedPrescriptionStatus = 'active' | 'expired' | 'revoked' | 'declined';
 
 // Display labels
 export const bookingStatusLabels: Record<BookingStatus, string> = {
@@ -37,13 +37,13 @@ export const nicotineStrengthLabels: Record<NicotineStrength, string> = {
 export const usageTierLabels: Record<UsageTier, string> = {
   light: 'Light (≤5/day)',
   moderate: 'Moderate (≤10/day)',
-  heavy: 'Heavy (≤15/day)',
+  heavy: 'Heavy (≤20/day)',
 };
 
 export const usageTierDailyMax: Record<UsageTier, number> = {
   light: 5,
   moderate: 10,
-  heavy: 15,
+  heavy: 20,
 };
 
 // Calculate prescription quantities (mirrors database function)

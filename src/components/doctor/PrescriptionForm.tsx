@@ -37,7 +37,7 @@ const USAGE_TIERS: UsageTier[] = ['light', 'moderate', 'heavy'];
 
 const USAGE_TIER_DESCRIPTIONS: Record<UsageTier, string> = {
   light: 'Up to 5 pouches per day',
-  moderate: 'Up to 12 pouches per day',
+  moderate: 'Up to 10 pouches per day',
   heavy: 'Up to 20 pouches per day',
 };
 
