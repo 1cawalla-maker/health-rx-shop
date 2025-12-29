@@ -56,9 +56,9 @@ export default function DoctorBookingDetail() {
     if (!bookingId || !user) return;
 
     try {
-      // Fetch booking from consultation_bookings (not consultations)
+      // Fetch booking from consultations table
       const { data: bookingData, error: bookingError } = await supabase
-        .from('consultation_bookings')
+        .from('consultations')
         .select('*')
         .eq('id', bookingId)
         .maybeSingle();
@@ -172,11 +172,11 @@ export default function DoctorBookingDetail() {
 
     // Assign doctor if not already assigned
     if (!booking.doctor_id) {
-      updates.doctor_id = doctorInfo.id;
+      updates.doctor_id = user.id;
     }
 
     const { error } = await supabase
-      .from('consultation_bookings')
+      .from('consultations')
       .update(updates)
       .eq('id', bookingId);
 
