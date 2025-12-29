@@ -185,12 +185,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.error('Error creating patient profile:', patientError);
           }
         } else if (role === 'doctor') {
-          const { error: doctorError } = await supabase
+          // Create doctors table record
+          const { error: doctorsError } = await supabase
+            .from('doctors')
+            .insert({ 
+              user_id: data.user.id,
+              is_active: false,
+              registration_complete: false
+            });
+          
+          if (doctorsError && import.meta.env.DEV) {
+            console.error('Error creating doctors record:', doctorsError);
+          }
+
+          // Create doctor_profiles record
+          const { error: doctorProfileError } = await supabase
             .from('doctor_profiles')
             .insert({ user_id: data.user.id });
           
-          if (doctorError && import.meta.env.DEV) {
-            console.error('Error creating doctor profile:', doctorError);
+          if (doctorProfileError && import.meta.env.DEV) {
+            console.error('Error creating doctor profile:', doctorProfileError);
           }
         }
 

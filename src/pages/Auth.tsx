@@ -5,15 +5,40 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth, AppRole } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import { Stethoscope, User, Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
+import { Stethoscope, User, Mail, Lock, ArrowRight, Loader2, Phone, MapPin, FileText } from 'lucide-react';
 
 const emailSchema = z.string().email('Please enter a valid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
 const nameSchema = z.string().min(2, 'Name must be at least 2 characters');
+const phoneSchema = z.string().regex(/^\+61\d{9}$/, 'Phone must be in format +61XXXXXXXXX');
+const ahpraSchema = z.string().regex(/^MED\d{10}$/, 'AHPRA number must be MED followed by 10 digits');
+const providerSchema = z.string().min(6, 'Provider number must be at least 6 characters');
+
+const AUSTRALIAN_STATES = [
+  { value: 'NSW', label: 'New South Wales' },
+  { value: 'VIC', label: 'Victoria' },
+  { value: 'QLD', label: 'Queensland' },
+  { value: 'WA', label: 'Western Australia' },
+  { value: 'SA', label: 'South Australia' },
+  { value: 'TAS', label: 'Tasmania' },
+  { value: 'ACT', label: 'Australian Capital Territory' },
+  { value: 'NT', label: 'Northern Territory' },
+];
+
+const SPECIALTIES = [
+  'General Practitioner',
+  'Addiction Medicine Specialist',
+  'Respiratory Medicine',
+  'Internal Medicine',
+  'Psychiatrist',
+  'Other',
+];
 
 export default function Auth() {
   const [searchParams] = useSearchParams();
@@ -23,12 +48,20 @@ export default function Auth() {
   const initialMode = searchParams.get('mode') || 'login';
   const [activeTab, setActiveTab] = useState(initialMode === 'signup' ? 'signup' : 'login');
   
+  // Common fields
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [selectedRole, setSelectedRole] = useState<AppRole>('patient');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+
+  // Doctor-specific fields
+  const [phoneNumber, setPhoneNumber] = useState('+61');
+  const [ahpraNumber, setAhpraNumber] = useState('');
+  const [providerNumber, setProviderNumber] = useState('');
+  const [practiceLocation, setPracticeLocation] = useState('');
+  const [specialty, setSpecialty] = useState('');
 
   useEffect(() => {
     if (!loading && user && userRole) {
@@ -83,30 +116,92 @@ export default function Auth() {
       nameSchema.parse(fullName);
       emailSchema.parse(email);
       passwordSchema.parse(password);
+      
+      if (selectedRole === 'doctor') {
+        phoneSchema.parse(phoneNumber);
+        ahpraSchema.parse(ahpraNumber);
+        providerSchema.parse(providerNumber);
+        if (!practiceLocation) throw new Error('Please select your practice location');
+        if (!specialty) throw new Error('Please select your specialty');
+      }
     } catch (err) {
       if (err instanceof z.ZodError) {
         toast.error(err.errors[0].message);
         return;
       }
+      if (err instanceof Error) {
+        toast.error(err.message);
+        return;
+      }
     }
 
     setIsSubmitting(true);
+    
+    // First create the base account
     const { error } = await signUp(email, password, fullName, selectedRole);
-    setIsSubmitting(false);
 
     if (error) {
+      setIsSubmitting(false);
       if (error.message.includes('User already registered')) {
         toast.error('An account with this email already exists. Please log in instead.');
       } else {
         toast.error(error.message);
       }
-    } else {
-      if (selectedRole === 'doctor') {
-        toast.success('Account created! Your application is pending approval.');
-        navigate('/doctor/pending');
-      } else {
-        toast.success('Account created successfully!');
+      return;
+    }
+
+    // If doctor, save additional info
+    if (selectedRole === 'doctor') {
+      // Get the user we just created
+      const { data: { user: newUser } } = await supabase.auth.getUser();
+      
+      if (newUser) {
+        // Update doctors table with additional info
+        const { error: doctorError } = await supabase
+          .from('doctors')
+          .upsert({
+            user_id: newUser.id,
+            ahpra_number: ahpraNumber,
+            provider_number: providerNumber,
+            practice_location: practiceLocation,
+            phone: phoneNumber,
+            specialties: [specialty],
+            is_active: false,
+            registration_complete: false
+          }, { onConflict: 'user_id' });
+
+        if (doctorError) {
+          console.error('Error saving doctor details:', doctorError);
+        }
+
+        // Update doctor_profiles with specialty
+        const { error: profileError } = await supabase
+          .from('doctor_profiles')
+          .upsert({
+            user_id: newUser.id,
+            specialty: specialty,
+            ahpra_number: ahpraNumber
+          }, { onConflict: 'user_id' });
+
+        if (profileError) {
+          console.error('Error saving doctor profile:', profileError);
+        }
+
+        // Update main profile with phone
+        await supabase
+          .from('profiles')
+          .update({ phone: phoneNumber })
+          .eq('user_id', newUser.id);
       }
+    }
+
+    setIsSubmitting(false);
+
+    if (selectedRole === 'doctor') {
+      toast.success('Account created! Your application is pending approval.');
+      navigate('/doctor/pending');
+    } else {
+      toast.success('Account created successfully!');
     }
   };
 
@@ -148,7 +243,7 @@ export default function Auth() {
     <PublicLayout>
       <section className="py-16 md:py-24 gradient-section">
         <div className="container">
-          <div className="max-w-md mx-auto">
+          <div className={`mx-auto ${selectedRole === 'doctor' && activeTab === 'signup' ? 'max-w-lg' : 'max-w-md'}`}>
             <div className="bg-card rounded-2xl border border-border p-8 shadow-elegant">
               {showForgotPassword ? (
                 <>
@@ -284,6 +379,30 @@ export default function Auth() {
 
                     <TabsContent value="signup">
                       <form onSubmit={handleSignup} className="space-y-4">
+                        {/* Role Selection */}
+                        <div className="space-y-3">
+                          <Label>I am a...</Label>
+                          <RadioGroup
+                            value={selectedRole}
+                            onValueChange={(value) => setSelectedRole(value as AppRole)}
+                            className="grid grid-cols-2 gap-4"
+                          >
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="patient" id="patient" />
+                              <Label htmlFor="patient" className="font-normal cursor-pointer">
+                                Patient
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="doctor" id="doctor" />
+                              <Label htmlFor="doctor" className="font-normal cursor-pointer">
+                                Doctor
+                              </Label>
+                            </div>
+                          </RadioGroup>
+                        </div>
+
+                        {/* Common fields */}
                         <div className="space-y-2">
                           <Label htmlFor="signup-name">Full Name</Label>
                           <div className="relative">
@@ -291,7 +410,7 @@ export default function Auth() {
                             <Input
                               id="signup-name"
                               type="text"
-                              placeholder="John Doe"
+                              placeholder="Dr. John Smith"
                               className="pl-10"
                               value={fullName}
                               onChange={(e) => setFullName(e.target.value)}
@@ -335,32 +454,101 @@ export default function Auth() {
                           </p>
                         </div>
 
-                        <div className="space-y-3">
-                          <Label>I am a...</Label>
-                          <RadioGroup
-                            value={selectedRole}
-                            onValueChange={(value) => setSelectedRole(value as AppRole)}
-                            className="grid grid-cols-2 gap-4"
-                          >
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="patient" id="patient" />
-                              <Label htmlFor="patient" className="font-normal cursor-pointer">
-                                Patient
-                              </Label>
+                        {/* Doctor-specific fields */}
+                        {selectedRole === 'doctor' && (
+                          <>
+                            <div className="pt-2 border-t border-border">
+                              <p className="text-sm font-medium text-primary mb-3">
+                                Professional Details
+                              </p>
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="doctor" id="doctor" />
-                              <Label htmlFor="doctor" className="font-normal cursor-pointer">
-                                Doctor
-                              </Label>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="phone">Phone Number</Label>
+                              <div className="relative">
+                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  id="phone"
+                                  type="tel"
+                                  placeholder="+61412345678"
+                                  className="pl-10"
+                                  value={phoneNumber}
+                                  onChange={(e) => setPhoneNumber(e.target.value)}
+                                  required
+                                />
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                Format: +61XXXXXXXXX
+                              </p>
                             </div>
-                          </RadioGroup>
-                          {selectedRole === 'doctor' && (
-                            <p className="text-xs text-muted-foreground bg-muted p-2 rounded">
-                              Doctor accounts require approval before activation.
-                            </p>
-                          )}
-                        </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="ahpra">AHPRA Number</Label>
+                                <div className="relative">
+                                  <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                  <Input
+                                    id="ahpra"
+                                    placeholder="MED0001234567"
+                                    className="pl-10"
+                                    value={ahpraNumber}
+                                    onChange={(e) => setAhpraNumber(e.target.value.toUpperCase())}
+                                    required
+                                  />
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="provider">Provider Number</Label>
+                                <Input
+                                  id="provider"
+                                  placeholder="123456AB"
+                                  value={providerNumber}
+                                  onChange={(e) => setProviderNumber(e.target.value.toUpperCase())}
+                                  required
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label>Primary Practice Location</Label>
+                              <Select value={practiceLocation} onValueChange={setPracticeLocation}>
+                                <SelectTrigger>
+                                  <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+                                  <SelectValue placeholder="Select state/territory" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {AUSTRALIAN_STATES.map((state) => (
+                                    <SelectItem key={state.value} value={state.value}>
+                                      {state.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label>Specialty</Label>
+                              <Select value={specialty} onValueChange={setSpecialty}>
+                                <SelectTrigger>
+                                  <Stethoscope className="h-4 w-4 mr-2 text-muted-foreground" />
+                                  <SelectValue placeholder="Select specialty" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {SPECIALTIES.map((spec) => (
+                                    <SelectItem key={spec} value={spec}>
+                                      {spec}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="text-xs text-muted-foreground bg-muted p-3 rounded-lg">
+                              <p className="font-medium mb-1">Note:</p>
+                              <p>Your credentials will be verified before your account is activated. You'll receive an email once approved.</p>
+                            </div>
+                          </>
+                        )}
 
                         <Button 
                           type="submit" 
@@ -372,7 +560,7 @@ export default function Auth() {
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
                             <>
-                              Create Account
+                              {selectedRole === 'doctor' ? 'Submit Application' : 'Create Account'}
                               <ArrowRight className="h-4 w-4" />
                             </>
                           )}
