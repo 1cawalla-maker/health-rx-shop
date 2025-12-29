@@ -83,6 +83,7 @@ const App = () => (
             <Route path="/disclaimer" element={<Disclaimer />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/eligibility" element={<EligibilityQuiz />} />
 
             {/* Patient routes */}
             <Route path="/patient" element={<ProtectedRoute allowedRoles={['patient']}><PatientLayout /></ProtectedRoute>}>

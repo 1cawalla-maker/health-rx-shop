@@ -15,6 +15,7 @@ import {
   Upload, CheckCircle, AlertCircle, ChevronLeft, Pill
 } from 'lucide-react';
 import { BookingStatusBadge } from '@/components/bookings/BookingStatusBadge';
+import { PatientEligibilitySummary } from '@/components/doctor/PatientEligibilitySummary';
 import type { BookingStatus, IntakeForm, ConsultationNote, BookingFile } from '@/types/database';
 
 export default function DoctorBookingDetail() {
@@ -264,6 +265,9 @@ export default function DoctorBookingDetail() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Pre-Consultation Questionnaire */}
+          <PatientEligibilitySummary patientId={booking.patient_id} />
 
           {/* Intake Form */}
           <Card>

@@ -12,6 +12,7 @@ import {
   ClipboardList, MessageSquare, Phone, Video 
 } from 'lucide-react';
 import { BookingStatusBadge } from '@/components/bookings/BookingStatusBadge';
+import { PatientEligibilitySummary } from '@/components/doctor/PatientEligibilitySummary';
 
 export default function DoctorPatientDetail() {
   const { id: patientId } = useParams<{ id: string }>();
@@ -87,6 +88,9 @@ export default function DoctorPatientDetail() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Pre-Consultation Questionnaire */}
+      {patientId && <PatientEligibilitySummary patientId={patientId} />}
 
       {/* Tabs for history */}
       <Tabs defaultValue="timeline" className="w-full">
