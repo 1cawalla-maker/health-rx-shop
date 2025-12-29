@@ -19,17 +19,35 @@ export default function DoctorDashboard() {
   const fetchData = async () => {
     const { data: consultations } = await supabase
       .from('consultations')
-      .select('*, profiles!consultations_patient_id_fkey(full_name)')
+      .select('*')
       .in('status', ['requested', 'confirmed'])
       .order('scheduled_at', { ascending: true })
       .limit(5);
+    
+    // Fetch patient names separately
+    const patientIds = consultations?.map(c => c.patient_id).filter(Boolean) || [];
+    const { data: profiles } = patientIds.length > 0 
+      ? await supabase.from('profiles').select('user_id, full_name').in('user_id', patientIds)
+      : { data: [] };
+    
+    const profileMap = new Map<string, string>();
+    profiles?.forEach(p => {
+      if (p.user_id && p.full_name) {
+        profileMap.set(p.user_id, p.full_name);
+      }
+    });
+    
+    const consultationsWithNames = consultations?.map(c => ({
+      ...c,
+      patient_name: profileMap.get(c.patient_id) || 'Patient'
+    })) || [];
 
     const { count: pendingCount } = await supabase
       .from('prescriptions')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'pending_review');
 
-    setRecentConsultations(consultations || []);
+    setRecentConsultations(consultationsWithNames);
     setStats({
       consultations: consultations?.length || 0,
       pendingPrescriptions: pendingCount || 0
@@ -81,7 +99,7 @@ export default function DoctorDashboard() {
               {recentConsultations.map((c) => (
                 <div key={c.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div>
-                    <p className="font-medium">{c.profiles?.full_name || 'Patient'}</p>
+                    <p className="font-medium">{c.patient_name}</p>
                     <p className="text-sm text-muted-foreground">{format(new Date(c.scheduled_at), 'MMM d, h:mm a')}</p>
                   </div>
                   <Badge variant="outline" className="capitalize">{c.status}</Badge>
