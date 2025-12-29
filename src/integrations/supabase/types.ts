@@ -197,6 +197,13 @@ export type Database = {
             foreignKeyName: "doctor_availability_doctor_id_fkey"
             columns: ["doctor_id"]
             isOneToOne: false
+            referencedRelation: "admin_user_overview"
+            referencedColumns: ["doctor_id"]
+          },
+          {
+            foreignKeyName: "doctor_availability_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
             referencedRelation: "doctors"
             referencedColumns: ["id"]
           },
@@ -204,6 +211,7 @@ export type Database = {
       }
       doctor_profiles: {
         Row: {
+          ahpra_number: string | null
           bio: string | null
           created_at: string
           id: string
@@ -214,6 +222,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ahpra_number?: string | null
           bio?: string | null
           created_at?: string
           id?: string
@@ -224,6 +233,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          ahpra_number?: string | null
           bio?: string | null
           created_at?: string
           id?: string
@@ -501,7 +511,52 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      admin_prescription_overview: {
+        Row: {
+          allowed_strength_max: number | null
+          allowed_strength_min: number | null
+          created_at: string | null
+          doctor_id: string | null
+          expires_at: string | null
+          file_url: string | null
+          issued_at: string | null
+          max_units_per_month: number | null
+          max_units_per_order: number | null
+          patient_dob: string | null
+          patient_id: string | null
+          patient_name: string | null
+          patient_phone: string | null
+          prescription_id: string | null
+          prescription_type:
+            | Database["public"]["Enums"]["prescription_type"]
+            | null
+          review_reason: string | null
+          status: Database["public"]["Enums"]["prescription_status"] | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
+      admin_user_overview: {
+        Row: {
+          date_of_birth: string | null
+          doctor_id: string | null
+          doctor_is_active: boolean | null
+          full_name: string | null
+          phone: string | null
+          profile_created_at: string | null
+          provider_number: string | null
+          qualifications: string | null
+          registration_number: string | null
+          role: Database["public"]["Enums"]["app_role"] | null
+          role_created_at: string | null
+          role_id: string | null
+          specialties: string[] | null
+          specialty: string | null
+          status: Database["public"]["Enums"]["user_status"] | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_doctor_id: { Args: { _user_id: string }; Returns: string }
