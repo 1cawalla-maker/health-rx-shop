@@ -43,15 +43,26 @@ export function PatientLayout() {
   const checkActivePrescription = async () => {
     if (!user) return;
     
-    const { data, error } = await supabase
+    // Check for doctor-issued prescriptions (from platform consultations)
+    const { data: issuedData } = await supabase
+      .rpc('has_active_issued_prescription', { _patient_id: user.id });
+    
+    if (issuedData === true) {
+      setHasActivePrescription(true);
+      return;
+    }
+    
+    // Check for admin-approved uploaded prescriptions
+    const { data: uploadedData } = await supabase
       .from('prescriptions')
       .select('id')
       .eq('patient_id', user.id)
       .eq('status', 'active')
+      .eq('prescription_type', 'uploaded')
       .or('expires_at.is.null,expires_at.gt.now()')
       .limit(1);
 
-    if (!error && data && data.length > 0) {
+    if (uploadedData && uploadedData.length > 0) {
       setHasActivePrescription(true);
     } else {
       setHasActivePrescription(false);
