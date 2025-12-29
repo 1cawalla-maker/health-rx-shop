@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { Stethoscope, User, Mail, Lock, ArrowRight, Loader2, Phone, MapPin, FileText } from 'lucide-react';
+import { persistQuizToProfile, getQuizFromSession } from '@/services/eligibilityService';
 
 const emailSchema = z.string().email('Please enter a valid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
@@ -201,7 +202,20 @@ export default function Auth() {
       toast.success('Account created! Your application is pending approval.');
       navigate('/doctor/pending');
     } else {
-      toast.success('Account created successfully!');
+      // For patients, persist quiz data if available
+      const { data: { user: newPatientUser } } = await supabase.auth.getUser();
+      if (newPatientUser) {
+        await persistQuizToProfile(newPatientUser.id);
+      }
+      
+      // Check if coming from eligibility with upload action
+      const actionParam = searchParams.get('action');
+      if (actionParam === 'upload') {
+        toast.success('Account created! Now upload your prescription.');
+        navigate('/patient/upload-prescription');
+      } else {
+        toast.success('Account created successfully!');
+      }
     }
   };
 

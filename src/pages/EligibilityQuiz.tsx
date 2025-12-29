@@ -7,127 +7,82 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { 
-  CheckCircle, 
-  AlertTriangle, 
   ArrowRight, 
   ArrowLeft, 
   Shield,
-  Info
+  Info,
+  UserPlus,
+  FileUp,
+  XCircle,
+  Stethoscope
 } from 'lucide-react';
-
-interface Question {
-  id: string;
-  question: string;
-  options: { value: string; label: string; flag?: 'warning' | 'block' }[];
-}
-
-const questions: Question[] = [
-  {
-    id: 'age',
-    question: 'Are you 18 years of age or older?',
-    options: [
-      { value: 'yes', label: 'Yes, I am 18 or older' },
-      { value: 'no', label: 'No, I am under 18', flag: 'block' }
-    ]
-  },
-  {
-    id: 'nicotine_use',
-    question: 'What is your current or past nicotine use?',
-    options: [
-      { value: 'current_smoker', label: 'I currently smoke cigarettes' },
-      { value: 'former_smoker', label: 'I used to smoke but have quit' },
-      { value: 'current_vaper', label: 'I currently use vapes or e-cigarettes' },
-      { value: 'other_nicotine', label: 'I use other nicotine products' },
-      { value: 'never', label: 'I have never used nicotine products', flag: 'warning' }
-    ]
-  },
-  {
-    id: 'quit_intention',
-    question: 'Are you looking to reduce or quit smoking/vaping?',
-    options: [
-      { value: 'quit', label: 'Yes, I want to quit entirely' },
-      { value: 'reduce', label: 'Yes, I want to reduce my usage' },
-      { value: 'switch', label: 'I want to switch to a less harmful option' },
-      { value: 'no', label: 'No, I am not looking to change my habits' }
-    ]
-  },
-  {
-    id: 'pregnancy',
-    question: 'Are you pregnant, breastfeeding, or planning to become pregnant?',
-    options: [
-      { value: 'no', label: 'No' },
-      { value: 'yes', label: 'Yes', flag: 'warning' }
-    ]
-  },
-  {
-    id: 'heart_condition',
-    question: 'Do you have any heart conditions, high blood pressure, or have had a stroke?',
-    options: [
-      { value: 'no', label: 'No' },
-      { value: 'yes_managed', label: 'Yes, but it is well managed with medication' },
-      { value: 'yes_unmanaged', label: 'Yes, and it is not well controlled', flag: 'warning' }
-    ]
-  },
-  {
-    id: 'diabetes',
-    question: 'Do you have diabetes?',
-    options: [
-      { value: 'no', label: 'No' },
-      { value: 'yes_managed', label: 'Yes, but it is well managed' },
-      { value: 'yes_unmanaged', label: 'Yes, and it is not well controlled', flag: 'warning' }
-    ]
-  },
-  {
-    id: 'australian_resident',
-    question: 'Are you an Australian resident with a valid Australian address?',
-    options: [
-      { value: 'yes', label: 'Yes' },
-      { value: 'no', label: 'No', flag: 'block' }
-    ]
-  }
-];
+import { 
+  eligibilityQuestions, 
+  consentItems, 
+  saveQuizToSession, 
+  calculateQuizResult 
+} from '@/services/eligibilityService';
+import type { EligibilityAnswers, EligibilityQuizResult } from '@/types/eligibility';
 
 export default function EligibilityQuiz() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [result, setResult] = useState<'suitable' | 'may_not_suitable' | 'not_eligible' | null>(null);
+  const [answers, setAnswers] = useState<Partial<EligibilityAnswers>>({});
+  const [otherReason, setOtherReason] = useState('');
+  const [consents, setConsents] = useState({
+    consent_nicotine_risk: false,
+    consent_no_guarantee: false,
+    consent_doctor_discussion: false
+  });
+  const [result, setResult] = useState<'eligible' | 'may_not_suitable' | 'not_eligible' | null>(null);
+  const [showConsent, setShowConsent] = useState(false);
 
-  const currentQuestion = questions[currentStep];
-  const progress = ((currentStep + 1) / questions.length) * 100;
+  const totalSteps = eligibilityQuestions.length + 1; // +1 for consent step
+  const currentQuestion = eligibilityQuestions[currentStep];
+  const progress = ((currentStep + 1) / totalSteps) * 100;
 
   const handleAnswer = (value: string) => {
-    setAnswers(prev => ({ ...prev, [currentQuestion.id]: value }));
+    if (currentQuestion) {
+      setAnswers(prev => ({ 
+        ...prev, 
+        [currentQuestion.id]: value 
+      }));
+    }
   };
 
   const handleNext = () => {
+    if (!currentQuestion) return;
+
     const selectedOption = currentQuestion.options.find(
       opt => opt.value === answers[currentQuestion.id]
     );
     
-    // Check for blocking conditions
+    // Check for blocking conditions immediately
     if (selectedOption?.flag === 'block') {
       setResult('not_eligible');
       return;
     }
 
-    if (currentStep < questions.length - 1) {
+    // If "other" is selected for reason, save the text
+    if (currentQuestion.id === 'pouch_reason' && answers.pouch_reason === 'other') {
+      setAnswers(prev => ({ ...prev, pouch_reason_other: otherReason }));
+    }
+
+    if (currentStep < eligibilityQuestions.length - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
-      // Calculate result
-      const hasWarnings = questions.some(q => {
-        const answer = answers[q.id];
-        const option = q.options.find(opt => opt.value === answer);
-        return option?.flag === 'warning';
-      });
-      
-      setResult(hasWarnings ? 'may_not_suitable' : 'suitable');
+      // Move to consent step
+      setShowConsent(true);
     }
   };
 
   const handleBack = () => {
-    if (currentStep > 0) {
+    if (showConsent) {
+      setShowConsent(false);
+    } else if (currentStep > 0) {
       setCurrentStep(prev => prev - 1);
     }
   };
@@ -135,41 +90,84 @@ export default function EligibilityQuiz() {
   const handleStartOver = () => {
     setCurrentStep(0);
     setAnswers({});
+    setOtherReason('');
+    setConsents({
+      consent_nicotine_risk: false,
+      consent_no_guarantee: false,
+      consent_doctor_discussion: false
+    });
     setResult(null);
+    setShowConsent(false);
   };
 
-  const handleContinueToBooking = () => {
-    // Store quiz responses in sessionStorage for later association with user record
-    sessionStorage.setItem('eligibility_responses', JSON.stringify({
-      answers,
-      result,
+  const handleSubmitConsent = () => {
+    // Validate all consents are checked
+    if (!consents.consent_nicotine_risk || !consents.consent_no_guarantee || !consents.consent_doctor_discussion) {
+      return;
+    }
+
+    // Calculate result
+    const quizResult = calculateQuizResult(answers);
+    
+    // Save to session storage
+    const fullAnswers: EligibilityAnswers = {
+      nicotine_use: answers.nicotine_use!,
+      previous_nrt_use: answers.previous_nrt_use!,
+      nicotine_intensity: answers.nicotine_intensity!,
+      pouch_reason: answers.pouch_reason!,
+      pouch_reason_other: answers.pouch_reason_other,
+      medical_safety: answers.medical_safety!,
+      age_confirmation: answers.age_confirmation!,
+      consent_nicotine_risk: consents.consent_nicotine_risk,
+      consent_no_guarantee: consents.consent_no_guarantee,
+      consent_doctor_discussion: consents.consent_doctor_discussion
+    };
+
+    const quizData: EligibilityQuizResult = {
+      answers: fullAnswers,
+      result: quizResult,
       completedAt: new Date().toISOString()
-    }));
+    };
+
+    saveQuizToSession(quizData);
+    setResult(quizResult);
+  };
+
+  const handleContinueToSignup = () => {
     navigate('/auth?mode=signup&from=eligibility');
   };
 
+  const handleUploadPrescription = () => {
+    navigate('/auth?mode=signup&from=eligibility&action=upload');
+  };
+
+  const allConsentsChecked = consents.consent_nicotine_risk && 
+    consents.consent_no_guarantee && 
+    consents.consent_doctor_discussion;
+
+  // Result screen
   if (result) {
-    return (
-      <PublicLayout>
-        <section className="py-16 md:py-24 gradient-section min-h-[70vh]">
-          <div className="container max-w-2xl">
-            {result === 'not_eligible' ? (
+    if (result === 'not_eligible') {
+      return (
+        <PublicLayout>
+          <section className="py-16 md:py-24 gradient-section min-h-[70vh]">
+            <div className="container max-w-2xl">
               <Card className="border-destructive/50">
                 <CardHeader className="text-center">
                   <div className="flex justify-center mb-4">
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
-                      <AlertTriangle className="h-8 w-8 text-destructive" />
+                      <XCircle className="h-8 w-8 text-destructive" />
                     </div>
                   </div>
-                  <CardTitle className="text-2xl">Not Eligible at This Time</CardTitle>
+                  <CardTitle className="text-2xl">Unable to Proceed</CardTitle>
                   <CardDescription className="text-base">
-                    Based on your responses, you are not eligible for our service.
+                    Based on your responses, we are unable to offer our service at this time.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <Alert>
                     <Info className="h-4 w-4" />
-                    <AlertTitle>Why am I not eligible?</AlertTitle>
+                    <AlertTitle>Why am I seeing this?</AlertTitle>
                     <AlertDescription>
                       Our service is only available to Australian residents aged 18 and over. 
                       This is a legal requirement for nicotine product prescriptions in Australia.
@@ -185,118 +183,182 @@ export default function EligibilityQuiz() {
                   </div>
                 </CardContent>
               </Card>
-            ) : result === 'may_not_suitable' ? (
-              <Card className="border-warning/50">
-                <CardHeader className="text-center">
-                  <div className="flex justify-center mb-4">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-warning/10">
-                      <AlertTriangle className="h-8 w-8 text-warning" />
-                    </div>
+            </div>
+          </section>
+        </PublicLayout>
+      );
+    }
+
+    // Eligible or may_not_suitable - show neutral outcome screen
+    return (
+      <PublicLayout>
+        <section className="py-16 md:py-24 gradient-section min-h-[70vh]">
+          <div className="container max-w-2xl">
+            <Card>
+              <CardHeader className="text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                    <Stethoscope className="h-8 w-8 text-primary" />
                   </div>
-                  <CardTitle className="text-2xl">You May Still Be Suitable</CardTitle>
-                  <CardDescription className="text-base">
-                    Based on your responses, there are some factors that require a doctor's assessment.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertTitle>What does this mean?</AlertTitle>
+                </div>
+                <CardTitle className="text-2xl">Questionnaire Complete</CardTitle>
+                <CardDescription className="text-base mt-2">
+                  Based on your responses, a doctor can assess whether nicotine pouches 
+                  may be appropriate for you.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {result === 'may_not_suitable' && (
+                  <Alert className="border-warning/50 bg-warning/5">
+                    <Info className="h-4 w-4 text-warning" />
+                    <AlertTitle className="text-warning">Additional Assessment Required</AlertTitle>
                     <AlertDescription>
-                      Some of your answers indicate conditions that require careful consideration by a doctor. 
-                      You can still proceed with booking a consultation, and the doctor will make a clinical 
-                      decision based on your full medical history.
+                      Some of your responses indicate factors that will need careful consideration 
+                      by a doctor. This doesn't mean you're ineligible—it means a thorough 
+                      consultation is especially important for your situation.
                     </AlertDescription>
                   </Alert>
-                  <Alert className="bg-muted border-muted">
-                    <Shield className="h-4 w-4" />
-                    <AlertDescription className="text-sm">
-                      <strong>Disclaimer:</strong> This questionnaire is for screening purposes only and does not 
-                      constitute medical advice. A qualified doctor will assess your suitability during your consultation.
-                    </AlertDescription>
-                  </Alert>
-                  <div className="flex gap-4 justify-center pt-4">
-                    <Button variant="outline" onClick={handleStartOver}>
-                      Start Over
+                )}
+
+                <div className="bg-muted/50 rounded-lg p-5 space-y-4">
+                  <h4 className="font-display font-semibold text-foreground">Choose how to proceed:</h4>
+                  
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Button 
+                      onClick={handleContinueToSignup}
+                      className="h-auto py-4 flex-col gap-2"
+                      variant="default"
+                    >
+                      <UserPlus className="h-5 w-5" />
+                      <span className="font-medium">Create Account & Book</span>
+                      <span className="text-xs opacity-80 font-normal">
+                        Book a consultation with a doctor
+                      </span>
                     </Button>
-                    <Button onClick={handleContinueToBooking}>
-                      Continue to Book
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="border-success/50">
-                <CardHeader className="text-center">
-                  <div className="flex justify-center mb-4">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-success/10">
-                      <CheckCircle className="h-8 w-8 text-success" />
-                    </div>
-                  </div>
-                  <CardTitle className="text-2xl">You Appear Likely to Be Suitable</CardTitle>
-                  <CardDescription className="text-base">
-                    Based on your responses, you may be a good candidate for nicotine pouch therapy.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-                    <h4 className="font-medium">Next Steps:</h4>
-                    <ol className="space-y-2 text-sm text-muted-foreground">
-                      <li className="flex items-start gap-2">
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium shrink-0">1</span>
-                        Create an account or log in
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium shrink-0">2</span>
-                        Complete your medical intake form
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium shrink-0">3</span>
-                        Book a 1-hour consultation slot
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium shrink-0">4</span>
-                        Speak with a doctor by phone
-                      </li>
-                    </ol>
-                  </div>
-                  <Alert className="bg-muted border-muted">
-                    <Shield className="h-4 w-4" />
-                    <AlertDescription className="text-sm">
-                      <strong>Disclaimer:</strong> This questionnaire is for screening purposes only and does not 
-                      constitute medical advice. Final suitability will be determined by a qualified doctor 
-                      during your consultation.
-                    </AlertDescription>
-                  </Alert>
-                  <div className="flex gap-4 justify-center pt-4">
-                    <Button variant="outline" asChild>
-                      <Link to="/">Return Home</Link>
-                    </Button>
-                    <Button onClick={handleContinueToBooking}>
-                      Continue to Book
-                      <ArrowRight className="ml-2 h-4 w-4" />
+                    
+                    <Button 
+                      onClick={handleUploadPrescription}
+                      className="h-auto py-4 flex-col gap-2"
+                      variant="outline"
+                    >
+                      <FileUp className="h-5 w-5" />
+                      <span className="font-medium">Upload Prescription</span>
+                      <span className="text-xs opacity-80 font-normal">
+                        I already have a valid prescription
+                      </span>
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                </div>
+
+                <Alert className="bg-muted border-muted">
+                  <Shield className="h-4 w-4" />
+                  <AlertDescription className="text-sm">
+                    <strong>Disclaimer:</strong> This questionnaire is for pre-screening purposes only 
+                    and does not constitute medical advice. A qualified doctor will make the final 
+                    assessment during your consultation.
+                  </AlertDescription>
+                </Alert>
+
+                <div className="flex justify-center pt-2">
+                  <Button variant="ghost" onClick={handleStartOver}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Start Over
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </section>
       </PublicLayout>
     );
   }
 
+  // Consent step
+  if (showConsent) {
+    return (
+      <PublicLayout>
+        <section className="py-16 md:py-24 gradient-section min-h-[70vh]">
+          <div className="container max-w-2xl">
+            <div className="text-center mb-8">
+              <h1 className="font-display text-3xl font-bold text-foreground mb-2">
+                Understanding & Consent
+              </h1>
+              <p className="text-muted-foreground">
+                Please confirm you understand the following before proceeding.
+              </p>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm text-muted-foreground">
+                    Final Step
+                  </span>
+                  <span className="text-sm font-medium text-primary">
+                    {Math.round(((eligibilityQuestions.length + 1) / totalSteps) * 100)}% complete
+                  </span>
+                </div>
+                <Progress value={100} className="h-2" />
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  {consentItems.map((item) => (
+                    <div key={item.id} className="flex items-start space-x-3 p-4 rounded-lg border bg-muted/30">
+                      <Checkbox
+                        id={item.id}
+                        checked={consents[item.id as keyof typeof consents]}
+                        onCheckedChange={(checked) => 
+                          setConsents(prev => ({ ...prev, [item.id]: checked === true }))
+                        }
+                        className="mt-0.5"
+                      />
+                      <Label 
+                        htmlFor={item.id} 
+                        className="text-sm leading-relaxed cursor-pointer"
+                      >
+                        {item.label}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-between pt-4">
+                  <Button variant="outline" onClick={handleBack}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back
+                  </Button>
+                  <Button
+                    onClick={handleSubmitConsent}
+                    disabled={!allConsentsChecked}
+                  >
+                    Continue
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <p className="text-xs text-muted-foreground text-center mt-6">
+              This screening tool is for informational purposes only and does not constitute medical advice. 
+              All clinical decisions are made by qualified doctors during your consultation.
+            </p>
+          </div>
+        </section>
+      </PublicLayout>
+    );
+  }
+
+  // Question steps
   return (
     <PublicLayout>
       <section className="py-16 md:py-24 gradient-section min-h-[70vh]">
         <div className="container max-w-2xl">
           <div className="text-center mb-8">
             <h1 className="font-display text-3xl font-bold text-foreground mb-2">
-              Check Your Eligibility
+              Pre-Consultation Questionnaire
             </h1>
             <p className="text-muted-foreground">
-              Answer a few quick questions to see if nicotine pouch therapy might be suitable for you.
+              Answer a few questions to help us understand your needs.
             </p>
           </div>
 
@@ -304,7 +366,7 @@ export default function EligibilityQuiz() {
             <CardHeader>
               <div className="flex items-center justify-between mb-4">
                 <span className="text-sm text-muted-foreground">
-                  Question {currentStep + 1} of {questions.length}
+                  Question {currentStep + 1} of {eligibilityQuestions.length}
                 </span>
                 <span className="text-sm font-medium text-primary">
                   {Math.round(progress)}% complete
@@ -318,19 +380,31 @@ export default function EligibilityQuiz() {
               </CardTitle>
 
               <RadioGroup
-                value={answers[currentQuestion.id] || ''}
+                value={answers[currentQuestion.id] as string || ''}
                 onValueChange={handleAnswer}
                 className="space-y-3"
               >
                 {currentQuestion.options.map(option => (
-                  <div key={option.value} className="flex items-center space-x-3">
-                    <RadioGroupItem value={option.value} id={option.value} />
-                    <Label 
-                      htmlFor={option.value} 
-                      className="flex-1 cursor-pointer py-2"
-                    >
-                      {option.label}
-                    </Label>
+                  <div key={option.value}>
+                    <div className="flex items-center space-x-3">
+                      <RadioGroupItem value={option.value} id={option.value} />
+                      <Label 
+                        htmlFor={option.value} 
+                        className="flex-1 cursor-pointer py-2"
+                      >
+                        {option.label}
+                      </Label>
+                    </div>
+                    {option.showTextInput && answers[currentQuestion.id] === option.value && (
+                      <div className="ml-6 mt-2">
+                        <Input
+                          placeholder="Please specify..."
+                          value={otherReason}
+                          onChange={(e) => setOtherReason(e.target.value)}
+                          className="max-w-sm"
+                        />
+                      </div>
+                    )}
                   </div>
                 ))}
               </RadioGroup>
@@ -348,7 +422,7 @@ export default function EligibilityQuiz() {
                   onClick={handleNext}
                   disabled={!answers[currentQuestion.id]}
                 >
-                  {currentStep === questions.length - 1 ? 'See Results' : 'Next'}
+                  Next
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
