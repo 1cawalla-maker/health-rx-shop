@@ -41,9 +41,11 @@ import PatientOrders from "./pages/patient/Orders";
 // Doctor pages
 import DoctorDashboard from "./pages/doctor/Dashboard";
 import DoctorPending from "./pages/doctor/Pending";
+import DoctorRegistration from "./pages/doctor/Registration";
 import DoctorConsultations from "./pages/doctor/Consultations";
 import DoctorPrescriptions from "./pages/doctor/Prescriptions";
 import DoctorCalendar from "./pages/doctor/Calendar";
+import DoctorAvailability from "./pages/doctor/Availability";
 import DoctorBookings from "./pages/doctor/Bookings";
 import DoctorBookingDetail from "./pages/doctor/BookingDetail";
 import DoctorPatients from "./pages/doctor/Patients";
@@ -96,9 +98,11 @@ const App = () => (
 
             {/* Doctor routes */}
             <Route path="/doctor/pending" element={<DoctorPending />} />
+            <Route path="/doctor/registration" element={<DoctorRegistration />} />
             <Route path="/doctor" element={<ProtectedRoute allowedRoles={['doctor']}><DoctorLayout /></ProtectedRoute>}>
               <Route path="dashboard" element={<DoctorDashboard />} />
               <Route path="calendar" element={<DoctorCalendar />} />
+              <Route path="availability" element={<DoctorAvailability />} />
               <Route path="bookings" element={<DoctorBookings />} />
               <Route path="booking/:id" element={<DoctorBookingDetail />} />
               <Route path="consultations" element={<DoctorConsultations />} />
