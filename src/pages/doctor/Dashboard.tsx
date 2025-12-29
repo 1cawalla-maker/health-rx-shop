@@ -4,12 +4,23 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, FileText, Users, Clock, Loader2 } from 'lucide-react';
+import { Calendar, FileText, Loader2, User, Phone } from 'lucide-react';
 import { format } from 'date-fns';
+
+interface BookingWithPatient {
+  id: string;
+  patient_id: string;
+  status: string;
+  scheduled_date: string;
+  time_window_start: string;
+  time_window_end: string;
+  patient_name: string;
+  patient_phone: string | null;
+}
 
 export default function DoctorDashboard() {
   const [stats, setStats] = useState({ consultations: 0, pendingPrescriptions: 0 });
-  const [recentConsultations, setRecentConsultations] = useState<any[]>([]);
+  const [recentBookings, setRecentBookings] = useState<BookingWithPatient[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -17,39 +28,48 @@ export default function DoctorDashboard() {
   }, []);
 
   const fetchData = async () => {
-    const { data: consultations } = await supabase
-      .from('consultations')
+    // Fetch upcoming bookings from consultation_bookings
+    const { data: bookings } = await supabase
+      .from('consultation_bookings')
       .select('*')
-      .in('status', ['requested', 'confirmed'])
-      .order('scheduled_at', { ascending: true })
+      .in('status', ['booked', 'in_progress'])
+      .gte('scheduled_date', new Date().toISOString().split('T')[0])
+      .order('scheduled_date', { ascending: true })
       .limit(5);
     
-    // Fetch patient names separately
-    const patientIds = consultations?.map(c => c.patient_id).filter(Boolean) || [];
+    // Fetch patient names
+    const patientIds = bookings?.map(b => b.patient_id).filter(Boolean) || [];
     const { data: profiles } = patientIds.length > 0 
-      ? await supabase.from('profiles').select('user_id, full_name').in('user_id', patientIds)
+      ? await supabase.from('profiles').select('user_id, full_name, phone').in('user_id', patientIds)
       : { data: [] };
     
-    const profileMap = new Map<string, string>();
+    const profileMap = new Map<string, { name: string; phone: string | null }>();
     profiles?.forEach(p => {
-      if (p.user_id && p.full_name) {
-        profileMap.set(p.user_id, p.full_name);
+      if (p.user_id) {
+        profileMap.set(p.user_id, { name: p.full_name || 'Patient', phone: p.phone });
       }
     });
     
-    const consultationsWithNames = consultations?.map(c => ({
-      ...c,
-      patient_name: profileMap.get(c.patient_id) || 'Patient'
-    })) || [];
+    const bookingsWithNames: BookingWithPatient[] = (bookings || []).map(b => ({
+      id: b.id,
+      patient_id: b.patient_id,
+      status: b.status,
+      scheduled_date: b.scheduled_date,
+      time_window_start: b.time_window_start,
+      time_window_end: b.time_window_end,
+      patient_name: profileMap.get(b.patient_id)?.name || 'Patient',
+      patient_phone: profileMap.get(b.patient_id)?.phone || null,
+    }));
 
+    // Fetch pending prescriptions count
     const { count: pendingCount } = await supabase
       .from('prescriptions')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'pending_review');
 
-    setRecentConsultations(consultationsWithNames);
+    setRecentBookings(bookingsWithNames);
     setStats({
-      consultations: consultations?.length || 0,
+      consultations: bookings?.length || 0,
       pendingPrescriptions: pendingCount || 0
     });
     setLoading(false);
@@ -94,16 +114,31 @@ export default function DoctorDashboard() {
       <Card>
         <CardHeader><CardTitle>Upcoming Consultations</CardTitle></CardHeader>
         <CardContent>
-          {recentConsultations.length > 0 ? (
+          {recentBookings.length > 0 ? (
             <div className="space-y-3">
-              {recentConsultations.map((c) => (
-                <div key={c.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">{c.patient_name}</p>
-                    <p className="text-sm text-muted-foreground">{format(new Date(c.scheduled_at), 'MMM d, h:mm a')}</p>
+              {recentBookings.map((booking) => (
+                <Link 
+                  key={booking.id} 
+                  to={`/doctor/booking/${booking.id}`}
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <p className="font-medium">{booking.patient_name}</p>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(booking.scheduled_date), 'MMM d, yyyy')} • {booking.time_window_start} - {booking.time_window_end}
+                    </p>
+                    {booking.patient_phone && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Phone className="h-3 w-3" />
+                        <span>{booking.patient_phone}</span>
+                      </div>
+                    )}
                   </div>
-                  <Badge variant="outline" className="capitalize">{c.status}</Badge>
-                </div>
+                  <Badge variant="outline" className="capitalize">{booking.status.replace('_', ' ')}</Badge>
+                </Link>
               ))}
             </div>
           ) : (
