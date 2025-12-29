@@ -459,6 +459,8 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean | null
+          phone: string | null
+          practice_location: string | null
           provider_number: string | null
           registration_complete: boolean | null
           specialties: string[] | null
@@ -470,6 +472,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean | null
+          phone?: string | null
+          practice_location?: string | null
           provider_number?: string | null
           registration_complete?: boolean | null
           specialties?: string[] | null
@@ -481,6 +485,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean | null
+          phone?: string | null
+          practice_location?: string | null
           provider_number?: string | null
           registration_complete?: boolean | null
           specialties?: string[] | null

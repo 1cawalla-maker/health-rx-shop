@@ -202,7 +202,7 @@ export default function AdminDoctorsApproval() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
                   <div>
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">AHPRA Number</p>
                     <p className="font-medium">{doctor.ahpraNumber || 'Not provided'}</p>
@@ -214,6 +214,10 @@ export default function AdminDoctorsApproval() {
                   <div>
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Phone</p>
                     <p className="font-medium">{doctor.phone || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Practice Location</p>
+                    <p className="font-medium">{doctor.practiceLocation || 'Not provided'}</p>
                   </div>
                 </div>
                 

@@ -10,6 +10,8 @@ export interface DoctorRecord {
   providerNumber: string | null;
   ahpraNumber: string | null;
   specialties: string[];
+  practiceLocation: string | null;
+  specialty: string | null;
   status: DoctorApprovalStatus;
   isActive: boolean;
   createdAt: string;
