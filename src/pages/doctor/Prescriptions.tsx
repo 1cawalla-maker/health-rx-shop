@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, FileText, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 interface IssuedPrescription {
   id: string;
@@ -31,16 +32,15 @@ export default function DoctorPrescriptions() {
   const [prescriptions, setPrescriptions] = useState<IssuedPrescription[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { 
+  useEffect(() => {
     if (user) {
-      fetchPrescriptions(); 
+      fetchPrescriptions();
     }
   }, [user]);
 
   const fetchPrescriptions = async () => {
     if (!user) return;
-    
-    // Fetch only doctor-issued prescriptions by this doctor
+
     const { data, error } = await supabase
       .from('doctor_issued_prescriptions')
       .select('*')
@@ -54,22 +54,21 @@ export default function DoctorPrescriptions() {
       return;
     }
 
-    // Fetch patient names
-    const patientIds = data?.map(p => p.patient_id).filter(Boolean) || [];
+    const patientIds = data?.map((p) => p.patient_id).filter(Boolean) || [];
     const { data: profiles } = patientIds.length > 0
       ? await supabase.from('profiles').select('user_id, full_name').in('user_id', patientIds)
       : { data: [] };
-    
+
     const profileMap = new Map<string, string>();
-    profiles?.forEach(p => {
+    profiles?.forEach((p) => {
       if (p.user_id && p.full_name) {
         profileMap.set(p.user_id, p.full_name);
       }
     });
 
-    const prescriptionsWithNames = data?.map(p => ({
+    const prescriptionsWithNames = data?.map((p) => ({
       ...p,
-      patient_name: profileMap.get(p.patient_id) || 'Patient'
+      patient_name: profileMap.get(p.patient_id) || 'Patient',
     })) || [];
 
     setPrescriptions(prescriptionsWithNames);
@@ -78,28 +77,42 @@ export default function DoctorPrescriptions() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'default';
-      case 'expired': return 'secondary';
-      case 'revoked': return 'destructive';
-      default: return 'outline';
+      case 'active':
+        return 'default';
+      case 'expired':
+        return 'secondary';
+      case 'revoked':
+        return 'destructive';
+      default:
+        return 'outline';
     }
   };
 
   const downloadPdf = async (prescription: IssuedPrescription) => {
-    if (!prescription.pdf_storage_path) return;
-    
     try {
+      // Older prescriptions were stored as HTML; regenerate once so we have a real PDF.
+      const currentPath = prescription.pdf_storage_path;
+      if (!currentPath || !currentPath.toLowerCase().endsWith('.pdf')) {
+        const { error: regenError } = await supabase.functions.invoke('generate-prescription-pdf', {
+          body: { prescriptionId: prescription.id },
+        });
+        if (regenError) throw regenError;
+      }
+
       const { data, error } = await supabase.functions.invoke('get-prescription-file', {
-        body: { filePath: prescription.pdf_storage_path }
+        body: { prescriptionId: prescription.id },
       });
 
       if (error) throw error;
-      
+
       if (data?.signedUrl) {
         window.open(data.signedUrl, '_blank');
+      } else {
+        toast.error('Could not generate a download link');
       }
     } catch (err) {
       console.error('Download error:', err);
+      toast.error('Failed to download prescription');
     }
   };
 
@@ -115,9 +128,7 @@ export default function DoctorPrescriptions() {
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-3xl font-bold">My Issued Prescriptions</h1>
-        <p className="text-muted-foreground mt-1">
-          Prescriptions you have issued during consultations
-        </p>
+        <p className="text-muted-foreground mt-1">Prescriptions you have issued during consultations</p>
       </div>
 
       <div className="space-y-4">
@@ -126,9 +137,7 @@ export default function DoctorPrescriptions() {
             <CardContent className="pt-6 text-center text-muted-foreground">
               <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
               <p>You haven't issued any prescriptions yet.</p>
-              <p className="text-sm mt-2">
-                Prescriptions are created during consultations with patients.
-              </p>
+              <p className="text-sm mt-2">Prescriptions are created during consultations with patients.</p>
             </CardContent>
           </Card>
         ) : (
@@ -141,9 +150,7 @@ export default function DoctorPrescriptions() {
                       <FileText className="h-5 w-5 text-primary" />
                       {prescription.patient_name}
                     </CardTitle>
-                    <CardDescription>
-                      Ref: {prescription.reference_id}
-                    </CardDescription>
+                    <CardDescription>Ref: {prescription.reference_id}</CardDescription>
                   </div>
                   <Badge variant={getStatusColor(prescription.status)} className="capitalize">
                     {prescription.status}
@@ -169,7 +176,7 @@ export default function DoctorPrescriptions() {
                     <p className="font-medium">{prescription.supply_days} days</p>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4 p-3 bg-muted/50 rounded-lg">
                   <div>
                     <p className="text-xs text-muted-foreground">Issued</p>
@@ -185,17 +192,10 @@ export default function DoctorPrescriptions() {
                   </div>
                 </div>
 
-                {prescription.pdf_storage_path && (
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="gap-1"
-                    onClick={() => downloadPdf(prescription)}
-                  >
-                    <Download className="h-4 w-4" />
-                    Download PDF
-                  </Button>
-                )}
+                <Button size="sm" variant="outline" className="gap-1" onClick={() => downloadPdf(prescription)}>
+                  <Download className="h-4 w-4" />
+                  Download PDF
+                </Button>
               </CardContent>
             </Card>
           ))
