@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { 
   Loader2, User, Phone, Calendar, Clock, 
-  CheckCircle, AlertCircle, ChevronLeft, Pill, ChevronDown, XCircle, Lock
+  CheckCircle, AlertCircle, ChevronLeft, Pill, ChevronDown, XCircle, Lock, Download
 } from 'lucide-react';
 import { BookingStatusBadge } from '@/components/bookings/BookingStatusBadge';
 import type { ConsultationStatus } from '@/types/database';
@@ -467,23 +467,49 @@ export default function DoctorBookingDetail() {
                   Prescription Issued
                 </CardTitle>
               </CardHeader>
-              <CardContent className="grid gap-3 sm:grid-cols-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Reference</span>
-                  <span className="font-mono">{existingPrescription.reference_id}</span>
+              <CardContent className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Reference</span>
+                    <span className="font-mono">{existingPrescription.reference_id}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Strength</span>
+                    <span>{existingPrescription.nicotine_strength}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Usage Tier</span>
+                    <span className="capitalize">{existingPrescription.usage_tier}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Expires</span>
+                    <span>{format(new Date(existingPrescription.expires_at), 'dd MMM yyyy')}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Strength</span>
-                  <span>{existingPrescription.nicotine_strength}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Usage Tier</span>
-                  <span className="capitalize">{existingPrescription.usage_tier}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Expires</span>
-                  <span>{format(new Date(existingPrescription.expires_at), 'dd MMM yyyy')}</span>
-                </div>
+                {existingPrescription.pdf_storage_path && (
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="gap-1"
+                    onClick={async () => {
+                      try {
+                        const { data, error } = await supabase.functions.invoke('get-prescription-file', {
+                          body: { filePath: existingPrescription.pdf_storage_path }
+                        });
+                        if (error) throw error;
+                        if (data?.signedUrl) {
+                          window.open(data.signedUrl, '_blank');
+                        }
+                      } catch (err) {
+                        console.error('Download error:', err);
+                        toast.error('Failed to download prescription');
+                      }
+                    }}
+                  >
+                    <Download className="h-4 w-4" />
+                    Download PDF
+                  </Button>
+                )}
               </CardContent>
             </Card>
           )}
