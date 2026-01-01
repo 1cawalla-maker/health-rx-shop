@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { 
   Loader2, User, Phone, Calendar, Clock, 
-  CheckCircle, AlertCircle, ChevronLeft, Pill, ChevronDown, XCircle, Lock, Download
+  CheckCircle, AlertCircle, ChevronLeft, Pill, ChevronDown, XCircle, Lock, FileText
 } from 'lucide-react';
 import { BookingStatusBadge } from '@/components/bookings/BookingStatusBadge';
 import type { ConsultationStatus } from '@/types/database';
@@ -21,6 +21,7 @@ import type { NicotineStrength, UsageTier } from '@/types/telehealth';
 import { calculatePrescriptionQuantities, nicotineStrengthLabels } from '@/types/telehealth';
 import { getPatientEligibilityQuiz } from '@/services/eligibilityService';
 import type { EligibilityQuizResult } from '@/types/eligibility';
+import { PdfViewerDialog } from '@/components/prescription/PdfViewerDialog';
 
 interface DoctorInfo {
   id: string;
@@ -71,6 +72,7 @@ export default function DoctorBookingDetail() {
   const [showDeclineForm, setShowDeclineForm] = useState(false);
   const [declineReason, setDeclineReason] = useState('');
   const [isDeclining, setIsDeclining] = useState(false);
+  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
 
   useEffect(() => {
     if (user && bookingId) {
@@ -487,38 +489,23 @@ export default function DoctorBookingDetail() {
                   </div>
                 </div>
                 {existingPrescription.pdf_storage_path && (
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="gap-1"
-                    onClick={async () => {
-                      try {
-                        const currentPath = existingPrescription.pdf_storage_path as string | null;
-
-                        // Older prescriptions were stored as HTML; regenerate once so we have a real PDF.
-                        if (!currentPath || !currentPath.toLowerCase().endsWith('.pdf')) {
-                          const { error: regenError } = await supabase.functions.invoke('generate-prescription-pdf', {
-                            body: { prescriptionId: existingPrescription.id },
-                          });
-                          if (regenError) throw regenError;
-                        }
-
-                        const { data, error } = await supabase.functions.invoke('get-prescription-file', {
-                          body: { prescriptionId: existingPrescription.id },
-                        });
-                        if (error) throw error;
-                        if (data?.signedUrl) {
-                          window.open(data.signedUrl, '_blank');
-                        }
-                      } catch (err) {
-                        console.error('Download error:', err);
-                        toast.error('Failed to download prescription');
-                      }
-                    }}
-                  >
-                    <Download className="h-4 w-4" />
-                    Download PDF
-                  </Button>
+                  <>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="gap-1"
+                      onClick={() => setPdfDialogOpen(true)}
+                    >
+                      <FileText className="h-4 w-4" />
+                      View PDF
+                    </Button>
+                    <PdfViewerDialog
+                      open={pdfDialogOpen}
+                      onOpenChange={setPdfDialogOpen}
+                      storagePath={existingPrescription.pdf_storage_path}
+                      title={`Prescription ${existingPrescription.reference_id}`}
+                    />
+                  </>
                 )}
               </CardContent>
             </Card>
