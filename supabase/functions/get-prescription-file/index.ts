@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
     }
 
     // Get request body
-    const { prescriptionId, filePath, type } = await req.json()
+    const { prescriptionId, filePath, storagePath: storagePathParam, type } = await req.json()
 
     let storagePath: string | null = null
     let bucketName = 'prescription-pdfs'
@@ -112,16 +112,31 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
-    } else if (filePath) {
-      // For security: only admins can request arbitrary file paths
-      if (userRole !== 'admin') {
-        return new Response(JSON.stringify({ error: 'Admin access required for raw file paths' }), {
-          status: 403,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        })
+    } else if (filePath || storagePathParam) {
+      // Accept either filePath or storagePath parameter
+      const pathToUse = filePath || storagePathParam
+
+      // Doctors can access paths for prescriptions they've issued
+      // Check if the path belongs to a prescription this doctor issued
+      if (userRole === 'doctor') {
+        const { data: doctorId } = await supabase.rpc('get_doctor_id', { _user_id: user.id })
+        
+        const { data: prescriptionCheck } = await supabase
+          .from('doctor_issued_prescriptions')
+          .select('id')
+          .eq('pdf_storage_path', pathToUse)
+          .eq('doctor_id', doctorId)
+          .maybeSingle()
+        
+        if (!prescriptionCheck) {
+          return new Response(JSON.stringify({ error: 'Access denied - prescription not found for this doctor' }), {
+            status: 403,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          })
+        }
       }
 
-      storagePath = filePath
+      storagePath = pathToUse
       if (type === 'uploaded') {
         bucketName = 'prescriptions'
       }
