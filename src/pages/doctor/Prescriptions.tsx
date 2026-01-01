@@ -85,6 +85,24 @@ export default function DoctorPrescriptions() {
     }
   };
 
+  const downloadPdf = async (prescription: IssuedPrescription) => {
+    if (!prescription.pdf_storage_path) return;
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('get-prescription-file', {
+        body: { filePath: prescription.pdf_storage_path }
+      });
+
+      if (error) throw error;
+      
+      if (data?.signedUrl) {
+        window.open(data.signedUrl, '_blank');
+      }
+    } catch (err) {
+      console.error('Download error:', err);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center py-12">
@@ -168,7 +186,12 @@ export default function DoctorPrescriptions() {
                 </div>
 
                 {prescription.pdf_storage_path && (
-                  <Button size="sm" variant="outline" className="gap-1">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="gap-1"
+                    onClick={() => downloadPdf(prescription)}
+                  >
                     <Download className="h-4 w-4" />
                     Download PDF
                   </Button>
