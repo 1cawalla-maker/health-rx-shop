@@ -53,27 +53,48 @@ Deno.serve(async (req) => {
     }
 
     // Get request body
-    const { prescriptionId, filePath } = await req.json()
+    const { prescriptionId, filePath, type } = await req.json()
 
     let storagePath: string | null = null
+    let bucketName = 'prescription-pdfs' // Default to doctor-issued prescriptions
 
     if (prescriptionId) {
-      // Get the file path from prescription record
-      const { data: prescription, error: prescError } = await supabase
-        .from('prescriptions')
-        .select('file_url')
+      // First try doctor_issued_prescriptions table
+      const { data: issuedPrescription, error: issuedError } = await supabase
+        .from('doctor_issued_prescriptions')
+        .select('pdf_storage_path')
         .eq('id', prescriptionId)
-        .single()
+        .maybeSingle()
 
-      if (prescError || !prescription?.file_url) {
+      if (issuedPrescription?.pdf_storage_path) {
+        storagePath = issuedPrescription.pdf_storage_path
+        bucketName = 'prescription-pdfs'
+      } else {
+        // Fall back to uploaded prescriptions table
+        const { data: uploadedPrescription, error: uploadedError } = await supabase
+          .from('prescriptions')
+          .select('file_url')
+          .eq('id', prescriptionId)
+          .maybeSingle()
+
+        if (uploadedPrescription?.file_url) {
+          storagePath = uploadedPrescription.file_url
+          bucketName = 'prescriptions'
+        }
+      }
+
+      if (!storagePath) {
         return new Response(
           JSON.stringify({ error: 'Prescription not found or no file attached' }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
-      storagePath = prescription.file_url
     } else if (filePath) {
       storagePath = filePath
+      // Use type to determine bucket if provided
+      if (type === 'uploaded') {
+        bucketName = 'prescriptions'
+      }
     } else {
       return new Response(
         JSON.stringify({ error: 'prescriptionId or filePath required' }),
@@ -88,10 +109,12 @@ Deno.serve(async (req) => {
       )
     }
 
+    console.log(`Fetching from bucket: ${bucketName}, path: ${storagePath}`)
+
     // Generate signed URL (valid for 1 hour)
     const { data: signedUrlData, error: signedUrlError } = await supabase
       .storage
-      .from('prescriptions')
+      .from(bucketName)
       .createSignedUrl(storagePath, 3600)
 
     if (signedUrlError) {
