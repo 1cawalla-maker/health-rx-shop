@@ -493,8 +493,18 @@ export default function DoctorBookingDetail() {
                     className="gap-1"
                     onClick={async () => {
                       try {
+                        const currentPath = existingPrescription.pdf_storage_path as string | null;
+
+                        // Older prescriptions were stored as HTML; regenerate once so we have a real PDF.
+                        if (!currentPath || !currentPath.toLowerCase().endsWith('.pdf')) {
+                          const { error: regenError } = await supabase.functions.invoke('generate-prescription-pdf', {
+                            body: { prescriptionId: existingPrescription.id },
+                          });
+                          if (regenError) throw regenError;
+                        }
+
                         const { data, error } = await supabase.functions.invoke('get-prescription-file', {
-                          body: { filePath: existingPrescription.pdf_storage_path }
+                          body: { prescriptionId: existingPrescription.id },
                         });
                         if (error) throw error;
                         if (data?.signedUrl) {
