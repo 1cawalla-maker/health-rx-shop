@@ -31,7 +31,7 @@ const capitalize = (s?: string | null) => {
 const generatePrescriptionPdfBytes = async (prescription: any, patient: any, doctor: any) => {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595.28, 841.89]); // A4
-  const { height } = page.getSize();
+  const { height, width } = page.getSize();
 
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -39,13 +39,14 @@ const generatePrescriptionPdfBytes = async (prescription: any, patient: any, doc
   const brand = rgb(0.31, 0.27, 0.90); // Indigo-ish
   const text = rgb(0.10, 0.10, 0.10);
   const muted = rgb(0.45, 0.45, 0.45);
+  const lightGray = rgb(0.85, 0.85, 0.85);
 
   const marginX = 50;
   let y = height - 60;
 
   const drawH1 = (t: string) => {
-    page.drawText(t, { x: marginX, y, size: 18, font: fontBold, color: brand });
-    y -= 26;
+    page.drawText(t, { x: marginX, y, size: 20, font: fontBold, color: brand });
+    y -= 28;
   };
 
   const drawMuted = (t: string) => {
@@ -54,8 +55,15 @@ const generatePrescriptionPdfBytes = async (prescription: any, patient: any, doc
   };
 
   const drawSectionTitle = (t: string) => {
-    y -= 8;
-    page.drawText(t.toUpperCase(), { x: marginX, y, size: 10, font: fontBold, color: muted });
+    y -= 10;
+    page.drawText(t.toUpperCase(), { x: marginX, y, size: 11, font: fontBold, color: brand });
+    y -= 4;
+    page.drawLine({
+      start: { x: marginX, y },
+      end: { x: width - marginX, y },
+      thickness: 0.5,
+      color: lightGray,
+    });
     y -= 16;
   };
 
@@ -65,61 +73,135 @@ const generatePrescriptionPdfBytes = async (prescription: any, patient: any, doc
   };
 
   const drawKV = (k: string, v: string) => {
-    page.drawText(`${k}:`, { x: marginX, y, size: 12, font: fontBold, color: text });
-    page.drawText(v || "—", { x: marginX + 150, y, size: 12, font, color: text });
-    y -= 16;
+    page.drawText(`${k}:`, { x: marginX, y, size: 11, font: fontBold, color: text });
+    page.drawText(v || "—", { x: marginX + 160, y, size: 11, font, color: text });
+    y -= 18;
   };
 
+  // Header
   drawH1("NicoPatch Telehealth");
   drawMuted("Authorised Nicotine Prescription");
-  drawMuted(`Reference: ${prescription.reference_id}`);
+  y -= 6;
 
-  y -= 10;
+  // Reference & Status Box
+  page.drawRectangle({
+    x: marginX,
+    y: y - 30,
+    width: width - 2 * marginX,
+    height: 40,
+    color: rgb(0.96, 0.96, 0.98),
+    borderColor: lightGray,
+    borderWidth: 1,
+  });
+  y -= 8;
+  page.drawText(`Reference: ${prescription.reference_id}`, {
+    x: marginX + 12,
+    y,
+    size: 12,
+    font: fontBold,
+    color: text,
+  });
+  page.drawText(`Status: ${capitalize(prescription.status)}`, {
+    x: width - marginX - 140,
+    y,
+    size: 12,
+    font: fontBold,
+    color: prescription.status === 'active' ? rgb(0.13, 0.55, 0.13) : muted,
+  });
+  y -= 40;
 
+  // Patient Details
   drawSectionTitle("Patient Details");
   drawLine(patient?.full_name ? String(patient.full_name) : "Patient");
-  if (patient?.date_of_birth) drawLine(`DOB: ${formatDateAU(patient.date_of_birth)}`);
+  if (patient?.date_of_birth) drawLine(`Date of Birth: ${formatDateAU(patient.date_of_birth)}`);
   if (patient?.phone) drawLine(`Phone: ${String(patient.phone)}`);
 
-  y -= 6;
-
+  // Prescriber Details
   drawSectionTitle("Prescriber Details");
   drawLine(`Dr. ${doctor?.full_name ? String(doctor.full_name) : "Doctor"}`);
-  drawLine(`AHPRA: ${doctor?.ahpra_number ? String(doctor.ahpra_number) : "N/A"}`);
-  drawLine(`Provider: ${doctor?.provider_number ? String(doctor.provider_number) : "N/A"}`);
+  drawLine(`AHPRA Registration: ${doctor?.ahpra_number ? String(doctor.ahpra_number) : "N/A"}`);
+  drawLine(`Provider Number: ${doctor?.provider_number ? String(doctor.provider_number) : "N/A"}`);
 
-  y -= 6;
-
+  // Prescription Details
   drawSectionTitle("Prescription Details");
   drawKV("Date of Issue", formatDateAU(prescription.issued_at));
   drawKV("Valid Until", formatDateAU(prescription.expires_at));
+  drawKV("Prescription Status", capitalize(prescription.status));
 
-  y -= 6;
-
-  drawSectionTitle("Medication");
-  drawKV("Item", "Nicotine pouches (Schedule 4)");
+  // Medication
+  drawSectionTitle("Medication Information");
+  drawKV("Item", "Nicotine Pouches (Schedule 4)");
   drawKV("Nicotine Strength", String(prescription.nicotine_strength || ""));
   drawKV("Usage Tier", capitalize(String(prescription.usage_tier || "")));
-  drawKV("Daily Maximum", `${prescription.daily_max_pouches ?? ""} pouches/day`);
+  drawKV("Daily Maximum", `${prescription.daily_max_pouches ?? ""} pouches per day`);
   drawKV("Supply Period", `${prescription.supply_days ?? ""} days`);
-  drawKV("Total Pouches", String(prescription.total_pouches ?? ""));
+  drawKV("Total Pouches Prescribed", String(prescription.total_pouches ?? ""));
   drawKV("Containers Allowed", String(prescription.containers_allowed ?? ""));
 
-  y -= 10;
-  drawSectionTitle("Important");
-  page.drawText(
-    "This prescription is only valid for the named patient. Nicotine pouches are a prescription-only medicine in Australia and must be used as directed.",
-    { x: marginX, y, size: 10, font, color: muted, maxWidth: 495 }
-  );
+  // Usage Instructions
+  drawSectionTitle("Important Information");
+  const instructions = [
+    "• This prescription is only valid for the named patient.",
+    "• Nicotine pouches are Schedule 4 (Prescription Only Medicine) in Australia.",
+    "• Use as directed by your prescribing doctor.",
+    "• Do not exceed the prescribed daily maximum.",
+    "• Store in a cool, dry place away from children.",
+    "• Dispose of unused pouches safely.",
+  ];
 
-  // Signature line
-  y -= 70;
-  page.drawText("Prescriber Signature", { x: marginX, y, size: 12, font: fontBold, color: text });
-  y -= 10;
+  instructions.forEach(instruction => {
+    page.drawText(instruction, { x: marginX, y, size: 10, font, color: muted });
+    y -= 14;
+  });
+
+  // Signature Section
+  y -= 20;
+  page.drawLine({
+    start: { x: marginX, y },
+    end: { x: marginX + 200, y },
+    thickness: 1,
+    color: muted,
+  });
+  y -= 16;
+  page.drawText("Prescriber Signature", { x: marginX, y, size: 11, font: fontBold, color: text });
+  y -= 14;
   page.drawText(`Digitally signed on ${formatDateAU(prescription.issued_at)}`, {
     x: marginX,
     y,
     size: 10,
+    font,
+    color: muted,
+  });
+  y -= 12;
+  page.drawText(`Dr. ${doctor?.full_name || 'Doctor'}`, {
+    x: marginX,
+    y,
+    size: 10,
+    font,
+    color: muted,
+  });
+  y -= 12;
+  page.drawText(`AHPRA: ${doctor?.ahpra_number || 'N/A'}`, {
+    x: marginX,
+    y,
+    size: 10,
+    font,
+    color: muted,
+  });
+
+  // Footer
+  const footerY = 40;
+  page.drawText("NicoPatch Telehealth — Authorised Nicotine Prescription", {
+    x: marginX,
+    y: footerY,
+    size: 8,
+    font,
+    color: muted,
+  });
+  page.drawText(`Generated: ${formatDateAU(new Date().toISOString())}`, {
+    x: width - marginX - 100,
+    y: footerY,
+    size: 8,
     font,
     color: muted,
   });
@@ -191,9 +273,25 @@ serve(async (req) => {
       .single();
 
     if (prescriptionError || !prescription) {
+      logStep("Prescription not found", { error: prescriptionError?.message });
       return new Response(JSON.stringify({ error: "Prescription not found" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 404,
+      });
+    }
+
+    // Validate required prescription fields
+    if (!prescription.nicotine_strength || !prescription.usage_tier) {
+      logStep("Missing required prescription fields", { 
+        nicotine_strength: prescription.nicotine_strength, 
+        usage_tier: prescription.usage_tier 
+      });
+      return new Response(JSON.stringify({ 
+        error: "Missing required prescription fields", 
+        details: "nicotine_strength and usage_tier are required" 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
       });
     }
 

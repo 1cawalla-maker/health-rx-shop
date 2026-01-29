@@ -5,8 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Calendar, User, Upload, Loader2, AlertCircle } from 'lucide-react';
+import { FileText, Calendar, Upload, Loader2, AlertCircle, Eye } from 'lucide-react';
 import { format } from 'date-fns';
+import { PdfViewerDialog } from '@/components/prescription/PdfViewerDialog';
 
 interface Prescription {
   id: string;
@@ -24,10 +25,27 @@ interface Prescription {
   created_at: string;
 }
 
+interface IssuedPrescription {
+  id: string;
+  reference_id: string;
+  pdf_storage_path: string | null;
+  nicotine_strength: string;
+  usage_tier: string;
+  daily_max_pouches: number;
+  total_pouches: number;
+  containers_allowed: number;
+  supply_days: number;
+  issued_at: string;
+  expires_at: string;
+  status: string;
+}
+
 export default function PatientPrescriptions() {
   const { user } = useAuth();
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [issuedPrescriptions, setIssuedPrescriptions] = useState<IssuedPrescription[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewingPdf, setViewingPdf] = useState<{ path: string; refId: string } | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -38,17 +56,32 @@ export default function PatientPrescriptions() {
   const fetchPrescriptions = async () => {
     if (!user) return;
 
-    const { data, error } = await supabase
+    // Fetch uploaded prescriptions
+    const { data: uploadedData, error: uploadedError } = await supabase
       .from('prescriptions')
       .select('*')
       .eq('patient_id', user.id)
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching prescriptions:', error);
+    if (uploadedError) {
+      console.error('Error fetching prescriptions:', uploadedError);
     } else {
-      setPrescriptions(data || []);
+      setPrescriptions(uploadedData || []);
     }
+
+    // Fetch doctor-issued prescriptions
+    const { data: issuedData, error: issuedError } = await supabase
+      .from('doctor_issued_prescriptions')
+      .select('id, reference_id, pdf_storage_path, nicotine_strength, usage_tier, daily_max_pouches, total_pouches, containers_allowed, supply_days, issued_at, expires_at, status')
+      .eq('patient_id', user.id)
+      .order('issued_at', { ascending: false });
+
+    if (issuedError) {
+      console.error('Error fetching issued prescriptions:', issuedError);
+    } else {
+      setIssuedPrescriptions(issuedData || []);
+    }
+
     setLoading(false);
   };
 
@@ -75,6 +108,8 @@ export default function PatientPrescriptions() {
     );
   }
 
+  const hasNoPrescriptions = prescriptions.length === 0 && issuedPrescriptions.length === 0;
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -90,8 +125,72 @@ export default function PatientPrescriptions() {
         </Button>
       </div>
 
-      {prescriptions.length > 0 ? (
+      {/* Doctor-Issued Prescriptions */}
+      {issuedPrescriptions.length > 0 && (
         <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-foreground">Doctor-Issued Prescriptions</h2>
+          {issuedPrescriptions.map((prescription) => (
+            <Card key={prescription.id}>
+              <CardContent className="pt-6">
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium">
+                          Prescription {prescription.reference_id}
+                        </h3>
+                        {getStatusBadge(prescription.status)}
+                      </div>
+                      
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4" />
+                          Issued: {format(new Date(prescription.issued_at), 'MMM d, yyyy')}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          Expires: {format(new Date(prescription.expires_at), 'MMM d, yyyy')}
+                        </span>
+                      </div>
+
+                      <div className="mt-2 text-sm space-y-1">
+                        <p><strong>Nicotine Strength:</strong> {prescription.nicotine_strength}</p>
+                        <p><strong>Usage Tier:</strong> {prescription.usage_tier}</p>
+                        <p><strong>Daily Max:</strong> {prescription.daily_max_pouches} pouches/day</p>
+                        <p><strong>Supply Period:</strong> {prescription.supply_days} days</p>
+                        <p><strong>Total Pouches:</strong> {prescription.total_pouches}</p>
+                        <p><strong>Containers Allowed:</strong> {prescription.containers_allowed}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* View PDF Button */}
+                  {prescription.pdf_storage_path && prescription.status === 'active' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setViewingPdf({
+                        path: prescription.pdf_storage_path!,
+                        refId: prescription.reference_id
+                      })}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      View PDF
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Uploaded Prescriptions */}
+      {prescriptions.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-foreground">Uploaded Prescriptions</h2>
           {prescriptions.map((prescription) => (
             <Card key={prescription.id}>
               <CardContent className="pt-6">
@@ -151,7 +250,10 @@ export default function PatientPrescriptions() {
             </Card>
           ))}
         </div>
-      ) : (
+      )}
+
+      {/* Empty State */}
+      {hasNoPrescriptions && (
         <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-lg">No prescriptions yet</CardTitle>
@@ -168,6 +270,16 @@ export default function PatientPrescriptions() {
             </Button>
           </CardContent>
         </Card>
+      )}
+
+      {/* PDF Viewer Dialog */}
+      {viewingPdf && (
+        <PdfViewerDialog
+          open={!!viewingPdf}
+          onOpenChange={() => setViewingPdf(null)}
+          storagePath={viewingPdf.path}
+          title={`Prescription ${viewingPdf.refId}`}
+        />
       )}
     </div>
   );

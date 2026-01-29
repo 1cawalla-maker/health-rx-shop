@@ -47,7 +47,8 @@ Deno.serve(async (req) => {
 
     const userRole = roleData?.role
 
-    if (roleError || (userRole !== 'admin' && userRole !== 'doctor')) {
+    // Allow admin, doctor, and patient roles
+    if (roleError || !userRole || !['admin', 'doctor', 'patient'].includes(userRole)) {
       return new Response(JSON.stringify({ error: 'Access denied' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -69,6 +70,7 @@ Deno.serve(async (req) => {
         .maybeSingle()
 
       if (issuedPrescription?.pdf_storage_path) {
+        // Doctor access: must have issued this prescription
         if (userRole === 'doctor') {
           const { data: doctorId, error: doctorIdError } = await supabase.rpc('get_doctor_id', {
             _user_id: user.id,
@@ -81,6 +83,23 @@ Deno.serve(async (req) => {
             })
           }
         }
+        
+        // Patient access: must be the prescription recipient
+        if (userRole === 'patient') {
+          const { data: prescriptionPatient } = await supabase
+            .from('doctor_issued_prescriptions')
+            .select('patient_id')
+            .eq('id', prescriptionId)
+            .single()
+          
+          if (!prescriptionPatient || prescriptionPatient.patient_id !== user.id) {
+            return new Response(JSON.stringify({ error: 'Access denied - not your prescription' }), {
+              status: 403,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            })
+          }
+        }
+        // Admin has full access
 
         storagePath = issuedPrescription.pdf_storage_path
         bucketName = 'prescription-pdfs'
@@ -116,8 +135,7 @@ Deno.serve(async (req) => {
       // Accept either filePath or storagePath parameter
       const pathToUse = filePath || storagePathParam
 
-      // Doctors can access paths for prescriptions they've issued
-      // Check if the path belongs to a prescription this doctor issued
+      // Role-based access check for direct path access
       if (userRole === 'doctor') {
         const { data: doctorId } = await supabase.rpc('get_doctor_id', { _user_id: user.id })
         
@@ -134,7 +152,23 @@ Deno.serve(async (req) => {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           })
         }
+      } else if (userRole === 'patient') {
+        // Patient can only access prescriptions issued to them
+        const { data: prescriptionCheck } = await supabase
+          .from('doctor_issued_prescriptions')
+          .select('id')
+          .eq('pdf_storage_path', pathToUse)
+          .eq('patient_id', user.id)
+          .maybeSingle()
+        
+        if (!prescriptionCheck) {
+          return new Response(JSON.stringify({ error: 'Access denied - not your prescription' }), {
+            status: 403,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          })
+        }
       }
+      // Admin has full access - no additional checks needed
 
       storagePath = pathToUse
       if (type === 'uploaded') {
