@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,22 +12,34 @@ import {
   ShoppingBag
 } from 'lucide-react';
 import { format } from 'date-fns';
-
-interface Order {
-  id: string;
-  orderNumber: string;
-  status: 'processing' | 'shipped' | 'delivered';
-  createdAt: string;
-  items: { name: string; quantity: number }[];
-  total: number;
-  trackingNumber?: string;
-}
-
-// Placeholder data - would come from Supabase
-const placeholderOrders: Order[] = [];
+import { useAuth } from '@/hooks/useAuth';
+import { orderService } from '@/services/orderService';
+import type { Order } from '@/types/shop';
 
 export default function PatientOrders() {
-  const [orders] = useState<Order[]>(placeholderOrders);
+  const { user } = useAuth();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadOrders = async () => {
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const loadedOrders = await orderService.getOrders(user.id);
+        setOrders(loadedOrders);
+      } catch (error) {
+        console.error('Error loading orders:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadOrders();
+  }, [user]);
 
   const getStatusBadge = (status: Order['status']) => {
     switch (status) {
@@ -40,20 +52,40 @@ export default function PatientOrders() {
         );
       case 'shipped':
         return (
-          <Badge className="bg-info/10 text-info border-info/20">
+          <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">
             <Truck className="h-3 w-3 mr-1" />
             Shipped
           </Badge>
         );
       case 'delivered':
         return (
-          <Badge className="bg-success/10 text-success border-success/20">
+          <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
             <CheckCircle className="h-3 w-3 mr-1" />
             Delivered
           </Badge>
         );
+      case 'cancelled':
+        return (
+          <Badge variant="destructive">
+            Cancelled
+          </Badge>
+        );
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="font-display text-3xl font-bold text-foreground">Order History</h1>
+          <p className="text-muted-foreground mt-1">Track and manage your orders</p>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -103,7 +135,9 @@ export default function PatientOrders() {
                   <div className="space-y-2">
                     {order.items.map((item, index) => (
                       <div key={index} className="flex justify-between text-sm">
-                        <span>{item.name}</span>
+                        <span>
+                          {item.name} ({item.flavor} • {item.strength}mg)
+                        </span>
                         <span className="text-muted-foreground">x{item.quantity}</span>
                       </div>
                     ))}
@@ -111,18 +145,28 @@ export default function PatientOrders() {
                   
                   <div className="flex items-center justify-between pt-4 border-t">
                     <span className="font-medium">Total: ${order.total.toFixed(2)} AUD</span>
-                    {order.trackingNumber && (
-                      <Button variant="outline" size="sm" asChild>
-                        <a 
-                          href={`https://auspost.com.au/track/${order.trackingNumber}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Track Package
-                          <ExternalLink className="ml-2 h-3 w-3" />
-                        </a>
-                      </Button>
-                    )}
+                    <div className="flex gap-2">
+                      {order.status === 'shipped' && (
+                        <Button variant="outline" size="sm" asChild>
+                          <a 
+                            href="https://auspost.com.au/track"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Track Package
+                            <ExternalLink className="ml-2 h-3 w-3" />
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Shipping Address */}
+                  <div className="pt-4 border-t">
+                    <p className="text-sm text-muted-foreground">
+                      <strong>Shipping to:</strong> {order.shippingAddress.fullName}, 
+                      {order.shippingAddress.suburb}, {order.shippingAddress.state} {order.shippingAddress.postcode}
+                    </p>
                   </div>
                 </div>
               </CardContent>

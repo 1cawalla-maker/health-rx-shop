@@ -1,0 +1,164 @@
+import { useForm } from 'react-hook-form';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { ShippingAddress } from '@/types/shop';
+import { AUSTRALIAN_STATES } from '@/types/shop';
+
+interface ShippingFormProps {
+  initialData: ShippingAddress | null;
+  onSubmit: (data: ShippingAddress) => void;
+}
+
+export function ShippingForm({ initialData, onSubmit }: ShippingFormProps) {
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<ShippingAddress>({
+    defaultValues: initialData || {
+      fullName: '',
+      phone: '',
+      addressLine1: '',
+      addressLine2: '',
+      suburb: '',
+      state: '',
+      postcode: '',
+    },
+  });
+
+  const selectedState = watch('state');
+
+  const validatePhone = (value: string) => {
+    // Australian phone format: 04XX XXX XXX or +614XX XXX XXX
+    const phoneRegex = /^(\+?61|0)4\d{8}$/;
+    const cleaned = value.replace(/\s/g, '');
+    return phoneRegex.test(cleaned) || 'Please enter a valid Australian mobile number';
+  };
+
+  const validatePostcode = (value: string) => {
+    // Australian postcodes are 4 digits
+    const postcodeRegex = /^\d{4}$/;
+    return postcodeRegex.test(value) || 'Please enter a valid 4-digit postcode';
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <Label htmlFor="fullName">Full Name *</Label>
+          <Input
+            id="fullName"
+            {...register('fullName', { required: 'Full name is required' })}
+            placeholder="John Smith"
+            className={errors.fullName ? 'border-destructive' : ''}
+          />
+          {errors.fullName && (
+            <p className="text-sm text-destructive mt-1">{errors.fullName.message}</p>
+          )}
+        </div>
+
+        <div className="sm:col-span-2">
+          <Label htmlFor="phone">Phone Number *</Label>
+          <Input
+            id="phone"
+            {...register('phone', {
+              required: 'Phone number is required',
+              validate: validatePhone,
+            })}
+            placeholder="0412 345 678"
+            className={errors.phone ? 'border-destructive' : ''}
+          />
+          {errors.phone && (
+            <p className="text-sm text-destructive mt-1">{errors.phone.message}</p>
+          )}
+        </div>
+
+        <div className="sm:col-span-2">
+          <Label htmlFor="addressLine1">Address Line 1 *</Label>
+          <Input
+            id="addressLine1"
+            {...register('addressLine1', { required: 'Address is required' })}
+            placeholder="123 Main Street"
+            className={errors.addressLine1 ? 'border-destructive' : ''}
+          />
+          {errors.addressLine1 && (
+            <p className="text-sm text-destructive mt-1">{errors.addressLine1.message}</p>
+          )}
+        </div>
+
+        <div className="sm:col-span-2">
+          <Label htmlFor="addressLine2">Address Line 2</Label>
+          <Input
+            id="addressLine2"
+            {...register('addressLine2')}
+            placeholder="Apartment, suite, unit, etc. (optional)"
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="suburb">Suburb/City *</Label>
+          <Input
+            id="suburb"
+            {...register('suburb', { required: 'Suburb is required' })}
+            placeholder="Sydney"
+            className={errors.suburb ? 'border-destructive' : ''}
+          />
+          {errors.suburb && (
+            <p className="text-sm text-destructive mt-1">{errors.suburb.message}</p>
+          )}
+        </div>
+
+        <div>
+          <Label htmlFor="state">State *</Label>
+          <Select
+            value={selectedState}
+            onValueChange={(value) => setValue('state', value, { shouldValidate: true })}
+          >
+            <SelectTrigger className={errors.state ? 'border-destructive' : ''}>
+              <SelectValue placeholder="Select state" />
+            </SelectTrigger>
+            <SelectContent>
+              {AUSTRALIAN_STATES.map((state) => (
+                <SelectItem key={state.value} value={state.value}>
+                  {state.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <input
+            type="hidden"
+            {...register('state', { required: 'State is required' })}
+          />
+          {errors.state && (
+            <p className="text-sm text-destructive mt-1">{errors.state.message}</p>
+          )}
+        </div>
+
+        <div>
+          <Label htmlFor="postcode">Postcode *</Label>
+          <Input
+            id="postcode"
+            {...register('postcode', {
+              required: 'Postcode is required',
+              validate: validatePostcode,
+            })}
+            placeholder="2000"
+            maxLength={4}
+            className={errors.postcode ? 'border-destructive' : ''}
+          />
+          {errors.postcode && (
+            <p className="text-sm text-destructive mt-1">{errors.postcode.message}</p>
+          )}
+        </div>
+      </div>
+
+      <Button type="submit" className="w-full" size="lg">
+        Continue to Review
+      </Button>
+    </form>
+  );
+}
