@@ -1,263 +1,246 @@
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import { ChevronLeft, Truck, ClipboardList, CreditCard, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/hooks/useAuth';
+import { usePrescriptionStatus } from '@/hooks/usePrescriptionStatus';
+import { orderService } from '@/services/orderService';
+import { ShippingForm } from '@/components/checkout/ShippingForm';
+import { OrderReview } from '@/components/checkout/OrderReview';
+import { PaymentPlaceholder } from '@/components/checkout/PaymentPlaceholder';
+import type { ShippingAddress } from '@/types/shop';
 import { toast } from 'sonner';
-import { 
-  CreditCard, 
-  Truck, 
-  Shield, 
-  Loader2,
-  AlertTriangle,
-  CheckCircle
-} from 'lucide-react';
 
-interface CartItem {
-  id: string;
-  name: string;
-  brand: string;
-  strength: string;
-  quantity: number;
-  price: number;
-}
+type CheckoutStep = 'shipping' | 'review' | 'payment';
+
+const steps: { id: CheckoutStep; label: string; icon: React.ElementType }[] = [
+  { id: 'shipping', label: 'Shipping', icon: Truck },
+  { id: 'review', label: 'Review', icon: ClipboardList },
+  { id: 'payment', label: 'Payment', icon: CreditCard },
+];
 
 export default function PatientCheckout() {
-  const { user } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
+  const { user } = useAuth();
+  const { cart, clearCart } = useCart();
+  const { prescriptionId, referenceId, maxContainers } = usePrescriptionStatus();
   
-  // In a real app, this would come from a cart context/state
-  const cartItems: CartItem[] = location.state?.items || [];
-  
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [shippingDetails, setShippingDetails] = useState({
-    fullName: '',
-    addressLine1: '',
-    addressLine2: '',
-    suburb: '',
-    state: '',
-    postcode: '',
-    phone: ''
-  });
+  const [currentStep, setCurrentStep] = useState<CheckoutStep>('shipping');
+  const [shippingAddress, setShippingAddress] = useState<ShippingAddress | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [orderConfirmed, setOrderConfirmed] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shipping = subtotal > 100 ? 0 : 9.95;
-  const total = subtotal + shipping;
+  const SHIPPING_COST = cart.subtotal >= 100 ? 0 : 9.95;
+  const total = cart.subtotal + SHIPPING_COST;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    toast.success('Order placed successfully!');
-    navigate('/patient/orders');
-    setIsSubmitting(false);
-  };
-
-  if (cartItems.length === 0) {
+  // Redirect if cart is empty
+  if (cart.items.length === 0 && !orderConfirmed) {
     return (
-      <div className="max-w-4xl mx-auto space-y-8">
-        <h1 className="font-display text-3xl font-bold text-foreground">Checkout</h1>
-        <Card>
-          <CardContent className="py-12 text-center">
+      <div className="space-y-8">
+        <Card className="text-center py-12">
+          <CardContent>
             <p className="text-muted-foreground mb-4">Your cart is empty</p>
-            <Button onClick={() => navigate('/patient/shop')}>
-              Continue Shopping
-            </Button>
+            <Button onClick={() => navigate('/patient/shop')}>Continue Shopping</Button>
           </CardContent>
         </Card>
       </div>
     );
   }
 
+  const handleShippingSubmit = (address: ShippingAddress) => {
+    setShippingAddress(address);
+    setCurrentStep('review');
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!user || !shippingAddress) {
+      toast.error('Missing required information');
+      return;
+    }
+
+    if (!agreedToTerms) {
+      toast.error('Please agree to the terms before placing your order');
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const order = await orderService.createOrder({
+        userId: user.id,
+        items: cart.items,
+        shippingAddress,
+        subtotal: cart.subtotal,
+        shipping: SHIPPING_COST,
+        total,
+        prescriptionId,
+      });
+
+      await clearCart();
+      setOrderConfirmed(true);
+      navigate(`/patient/order-success?orderId=${order.id}`);
+    } catch (error) {
+      console.error('Error creating order:', error);
+      toast.error('Failed to place order. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const currentStepIndex = steps.findIndex(s => s.id === currentStep);
+
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div>
-        <h1 className="font-display text-3xl font-bold text-foreground">Checkout</h1>
-        <p className="text-muted-foreground mt-1">Complete your order</p>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => {
+            if (currentStep === 'shipping') {
+              navigate('/patient/shop');
+            } else if (currentStep === 'review') {
+              setCurrentStep('shipping');
+            } else {
+              setCurrentStep('review');
+            }
+          }}
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h1 className="font-display text-3xl font-bold text-foreground">Checkout</h1>
+          <p className="text-muted-foreground mt-1">Complete your order</p>
+        </div>
       </div>
 
-      <Alert className="border-warning bg-warning/10">
-        <AlertTriangle className="h-4 w-4 text-warning" />
-        <AlertDescription className="text-sm">
-          <strong>Important:</strong> All orders must strictly follow your doctor's prescription. 
-          Orders outside prescribed strength or quantity are not permitted and may be rejected.
-        </AlertDescription>
-      </Alert>
+      {/* Step Indicator */}
+      <div className="flex items-center justify-center">
+        {steps.map((step, index) => {
+          const isCompleted = index < currentStepIndex;
+          const isCurrent = step.id === currentStep;
+          const Icon = step.icon;
 
-      <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-2">
-        <div className="space-y-6">
-          {/* Shipping Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Truck className="h-5 w-5" />
-                Shipping Address
-              </CardTitle>
-              <CardDescription>Where should we deliver your order?</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
-                <Input
-                  id="fullName"
-                  value={shippingDetails.fullName}
-                  onChange={(e) => setShippingDetails(prev => ({ ...prev, fullName: e.target.value }))}
-                  required
+          return (
+            <div key={step.id} className="flex items-center">
+              <div className="flex flex-col items-center">
+                <div
+                  className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-colors ${
+                    isCompleted
+                      ? 'bg-primary border-primary text-primary-foreground'
+                      : isCurrent
+                      ? 'border-primary text-primary'
+                      : 'border-muted text-muted-foreground'
+                  }`}
+                >
+                  {isCompleted ? <Check className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
+                </div>
+                <span
+                  className={`text-xs mt-2 ${
+                    isCurrent ? 'text-foreground font-medium' : 'text-muted-foreground'
+                  }`}
+                >
+                  {step.label}
+                </span>
+              </div>
+              {index < steps.length - 1 && (
+                <div
+                  className={`w-16 sm:w-24 h-0.5 mx-2 ${
+                    index < currentStepIndex ? 'bg-primary' : 'bg-muted'
+                  }`}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="addressLine1">Address Line 1</Label>
-                <Input
-                  id="addressLine1"
-                  value={shippingDetails.addressLine1}
-                  onChange={(e) => setShippingDetails(prev => ({ ...prev, addressLine1: e.target.value }))}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="addressLine2">Address Line 2 (Optional)</Label>
-                <Input
-                  id="addressLine2"
-                  value={shippingDetails.addressLine2}
-                  onChange={(e) => setShippingDetails(prev => ({ ...prev, addressLine2: e.target.value }))}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="suburb">Suburb</Label>
-                  <Input
-                    id="suburb"
-                    value={shippingDetails.suburb}
-                    onChange={(e) => setShippingDetails(prev => ({ ...prev, suburb: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="state">State</Label>
-                  <Input
-                    id="state"
-                    placeholder="e.g. NSW"
-                    value={shippingDetails.state}
-                    onChange={(e) => setShippingDetails(prev => ({ ...prev, state: e.target.value }))}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="postcode">Postcode</Label>
-                  <Input
-                    id="postcode"
-                    value={shippingDetails.postcode}
-                    onChange={(e) => setShippingDetails(prev => ({ ...prev, postcode: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={shippingDetails.phone}
-                    onChange={(e) => setShippingDetails(prev => ({ ...prev, phone: e.target.value }))}
-                    required
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              )}
+            </div>
+          );
+        })}
+      </div>
 
-          {/* Payment - Placeholder */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                Payment
-              </CardTitle>
-              <CardDescription>Secure payment processing</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="bg-muted rounded-lg p-6 text-center text-muted-foreground">
-                <Shield className="h-8 w-8 mx-auto mb-2" />
-                <p className="text-sm">
-                  Payment integration will be configured with your preferred payment provider
-                  (Stripe, Square, etc.)
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+      {/* Step Content */}
+      <div className="grid gap-8 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          {currentStep === 'shipping' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Shipping Details</CardTitle>
+                <CardDescription>Enter your delivery address</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ShippingForm
+                  initialData={shippingAddress}
+                  onSubmit={handleShippingSubmit}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {currentStep === 'review' && shippingAddress && (
+            <OrderReview
+              cart={cart}
+              shippingAddress={shippingAddress}
+              shippingCost={SHIPPING_COST}
+              total={total}
+              prescriptionRef={referenceId}
+              maxContainers={maxContainers}
+              agreedToTerms={agreedToTerms}
+              onAgreeChange={setAgreedToTerms}
+              onEditShipping={() => setCurrentStep('shipping')}
+              onProceedToPayment={() => setCurrentStep('payment')}
+            />
+          )}
+
+          {currentStep === 'payment' && (
+            <PaymentPlaceholder
+              total={total}
+              isProcessing={isProcessing}
+              onPlaceOrder={handlePlaceOrder}
+              onBack={() => setCurrentStep('review')}
+            />
+          )}
         </div>
 
-        {/* Order Summary */}
-        <div>
-          <Card className="sticky top-4">
+        {/* Order Summary Sidebar */}
+        <div className="lg:col-span-1">
+          <Card className="sticky top-6">
             <CardHeader>
-              <CardTitle>Order Summary</CardTitle>
+              <CardTitle className="text-lg">Order Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {cartItems.map(item => (
+              {cart.items.map((item) => (
                 <div key={item.id} className="flex justify-between text-sm">
-                  <div>
-                    <p className="font-medium">{item.name}</p>
-                    <p className="text-muted-foreground">
-                      {item.brand} • {item.strength} • Qty: {item.quantity}
-                    </p>
-                  </div>
-                  <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
+                  <span>
+                    {item.name} x{item.quantity}
+                  </span>
+                  <span>${(item.price * item.quantity).toFixed(2)}</span>
                 </div>
               ))}
               
-              <Separator />
-              
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span>${subtotal.toFixed(2)}</span>
+              <div className="border-t pt-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Subtotal</span>
+                  <span>${cart.subtotal.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Shipping</span>
-                  <span>{shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}</span>
+                <div className="flex justify-between text-sm">
+                  <span>Shipping</span>
+                  <span>{SHIPPING_COST === 0 ? 'Free' : `$${SHIPPING_COST.toFixed(2)}`}</span>
+                </div>
+                <div className="flex justify-between font-semibold text-lg border-t pt-2">
+                  <span>Total</span>
+                  <span>${total.toFixed(2)} AUD</span>
                 </div>
               </div>
-              
-              <Separator />
-              
-              <div className="flex justify-between font-medium text-lg">
-                <span>Total</span>
-                <span>${total.toFixed(2)} AUD</span>
-              </div>
 
-              <Button 
-                type="submit" 
-                className="w-full" 
-                size="lg"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <>
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Place Order
-                  </>
-                )}
-              </Button>
-
-              <p className="text-xs text-muted-foreground text-center">
-                By placing this order, you confirm that all items comply with your prescription.
-              </p>
+              {cart.subtotal < 100 && (
+                <p className="text-xs text-muted-foreground">
+                  Add ${(100 - cart.subtotal).toFixed(2)} more for free shipping
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
-      </form>
+      </div>
     </div>
   );
 }

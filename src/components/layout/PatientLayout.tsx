@@ -10,6 +10,7 @@ import {
   FileText,
   Upload,
   ShoppingBag,
+  Package,
   Menu,
   X,
   LogOut,
@@ -25,6 +26,7 @@ const navItems = [
   { href: '/patient/upload-prescription', label: 'Upload Prescription', icon: Upload },
   { href: '/patient/prescriptions', label: 'Prescriptions', icon: FileText },
   { href: '/patient/shop', label: 'Shop', icon: ShoppingBag, requiresPrescription: true },
+  { href: '/patient/orders', label: 'Orders', icon: Package },
 ];
 
 export function PatientLayout() {
