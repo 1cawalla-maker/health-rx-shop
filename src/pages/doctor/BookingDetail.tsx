@@ -13,7 +13,8 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { 
   Loader2, User, Phone, Calendar, Clock, 
-  CheckCircle, AlertCircle, ChevronLeft, Pill, ChevronDown, XCircle, Lock, FileText
+  CheckCircle, AlertCircle, ChevronLeft, Pill, ChevronDown, XCircle, Lock, FileText,
+  PhoneCall, PhoneMissed, PhoneOff
 } from 'lucide-react';
 import { BookingStatusBadge } from '@/components/bookings/BookingStatusBadge';
 import type { ConsultationStatus } from '@/types/database';
@@ -59,6 +60,15 @@ export default function DoctorBookingDetail() {
   const [existingPrescription, setExistingPrescription] = useState<any>(null);
   const [doctorInfo, setDoctorInfo] = useState<DoctorInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Call attempts
+  const [callAttempts, setCallAttempts] = useState<Array<{
+    id: string;
+    attempt_number: number;
+    attempted_at: string;
+    notes: string | null;
+  }>>([]);
+  const [isLoggingCall, setIsLoggingCall] = useState(false);
   
   // Consultation notes
   const [consultationNote, setConsultationNote] = useState('');
@@ -161,6 +171,15 @@ export default function DoctorBookingDetail() {
         setConsultationNote(notesData[0].notes);
       }
 
+      // Load call attempts
+      const { data: attemptsData } = await supabase
+        .from('call_attempts')
+        .select('id, attempt_number, attempted_at, notes')
+        .eq('booking_id', bookingId)
+        .order('attempt_number', { ascending: true });
+
+      setCallAttempts(attemptsData || []);
+
     } catch (err) {
       console.error('Error fetching booking details:', err);
       toast.error('Failed to load booking details');
@@ -224,6 +243,68 @@ export default function DoctorBookingDetail() {
     }
 
     setSavingNote(false);
+  };
+
+  const logCallAttempt = async (answered: boolean) => {
+    if (!user || !bookingId) return;
+
+    setIsLoggingCall(true);
+    const nextAttemptNumber = callAttempts.length + 1;
+
+    try {
+      const { error } = await supabase
+        .from('call_attempts')
+        .insert({
+          booking_id: bookingId,
+          doctor_id: user.id,
+          attempt_number: nextAttemptNumber,
+          notes: answered ? 'Patient answered' : 'No answer',
+        });
+
+      if (error) throw error;
+
+      if (answered) {
+        // Update status to 'called' when patient answers
+        await supabase
+          .from('consultations')
+          .update({ status: 'called', updated_at: new Date().toISOString() })
+          .eq('id', bookingId);
+        toast.success('Call logged - patient answered');
+      } else {
+        toast.success(`No answer logged (attempt ${nextAttemptNumber}/3)`);
+      }
+
+      fetchBookingDetails();
+    } catch (err) {
+      console.error('Failed to log call attempt:', err);
+      toast.error('Failed to log call attempt');
+    } finally {
+      setIsLoggingCall(false);
+    }
+  };
+
+  const markAsNoShow = async () => {
+    if (!user || !bookingId) return;
+
+    try {
+      // Update consultation status to no_answer
+      const { error } = await supabase
+        .from('consultations')
+        .update({ 
+          status: 'cancelled', 
+          notes: 'No-show: Patient did not answer after 3 call attempts',
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', bookingId);
+
+      if (error) throw error;
+
+      toast.success('Marked as no-show');
+      navigate('/doctor/bookings');
+    } catch (err) {
+      console.error('Failed to mark as no-show:', err);
+      toast.error('Failed to mark as no-show');
+    }
   };
 
   const issuePrescription = async () => {
@@ -459,6 +540,121 @@ export default function DoctorBookingDetail() {
               </Button>
             </CardContent>
           </Card>
+
+          {/* Call Attempts Section */}
+          {booking.status !== 'completed' && booking.status !== 'cancelled' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PhoneCall className="h-5 w-5" />
+                  Call Attempts
+                </CardTitle>
+                <CardDescription>
+                  Log each call attempt. After 3 unsuccessful attempts, you can mark as no-show.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Call Attempt History */}
+                {callAttempts.length > 0 && (
+                  <div className="space-y-2">
+                    {callAttempts.map((attempt) => (
+                      <div 
+                        key={attempt.id} 
+                        className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                      >
+                        <div className="flex items-center gap-3">
+                          {attempt.notes === 'Patient answered' ? (
+                            <CheckCircle className="h-4 w-4 text-success" />
+                          ) : (
+                            <PhoneMissed className="h-4 w-4 text-destructive" />
+                          )}
+                          <div>
+                            <p className="text-sm font-medium">Attempt {attempt.attempt_number}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(attempt.attempted_at), 'MMM d, yyyy h:mm a')}
+                            </p>
+                          </div>
+                        </div>
+                        <span className={`text-xs font-medium ${
+                          attempt.notes === 'Patient answered' 
+                            ? 'text-success' 
+                            : 'text-destructive'
+                        }`}>
+                          {attempt.notes}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Log Call Buttons */}
+                {callAttempts.length < 3 && !callAttempts.some(a => a.notes === 'Patient answered') && (
+                  <div className="flex gap-3">
+                    <Button
+                      variant="default"
+                      className="flex-1"
+                      onClick={() => logCallAttempt(true)}
+                      disabled={isLoggingCall}
+                    >
+                      {isLoggingCall ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <PhoneCall className="h-4 w-4 mr-2" />
+                          Answered
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => logCallAttempt(false)}
+                      disabled={isLoggingCall}
+                    >
+                      {isLoggingCall ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <PhoneMissed className="h-4 w-4 mr-2" />
+                          No Answer
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Mark as No-Show Button (enabled after 3 failed attempts) */}
+                {callAttempts.filter(a => a.notes !== 'Patient answered').length >= 3 && (
+                  <div className="pt-2 border-t">
+                    <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 mb-3">
+                      <p className="text-sm text-destructive font-medium">3 unsuccessful call attempts logged</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        You may now mark this consultation as a no-show. The patient will remain charged.
+                      </p>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      className="w-full"
+                      onClick={markAsNoShow}
+                    >
+                      <PhoneOff className="h-4 w-4 mr-2" />
+                      Mark as No-Show
+                    </Button>
+                  </div>
+                )}
+
+                {/* Success state - patient answered */}
+                {callAttempts.some(a => a.notes === 'Patient answered') && (
+                  <div className="bg-success/10 border border-success/20 rounded-lg p-3">
+                    <p className="text-sm text-success font-medium flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4" />
+                      Patient answered - proceed with consultation
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Existing Prescription Display */}
           {existingPrescription && existingPrescription.status === 'active' && (
