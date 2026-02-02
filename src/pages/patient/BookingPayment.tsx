@@ -173,12 +173,10 @@ export default function BookingPayment() {
               </div>
             </div>
 
-            {booking.doctorName && (
-              <div className="bg-muted/50 rounded-lg p-3 mt-4">
-                <p className="text-sm text-muted-foreground">Assigned Doctor</p>
-                <p className="font-medium">{booking.doctorName}</p>
-              </div>
-            )}
+            <div className="bg-muted/50 rounded-lg p-3 mt-4">
+              <p className="text-sm text-muted-foreground">Doctor Assignment</p>
+              <p className="font-medium text-muted-foreground">Assigned after payment confirmation</p>
+            </div>
           </CardContent>
         </Card>
 

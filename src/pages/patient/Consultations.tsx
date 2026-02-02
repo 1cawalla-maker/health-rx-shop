@@ -59,6 +59,7 @@ export default function PatientConsultations() {
       scheduledAt: new Date(`${b.scheduledDate}T${b.timeWindowStart}:00`),
       status: b.status,
       doctorName: b.doctorName,
+      displayTimezone: b.displayTimezone,
       isMock: true,
     })),
     ...consultations.map(c => ({
@@ -66,9 +67,17 @@ export default function PatientConsultations() {
       scheduledAt: new Date(c.scheduled_at),
       status: c.status as BookingStatus,
       doctorName: null,
+      displayTimezone: undefined,
       isMock: false,
     })),
   ];
+
+  const getTimezoneAbbr = (date: Date, timezone: string): string => {
+    return new Intl.DateTimeFormat('en-AU', {
+      timeZone: timezone,
+      timeZoneName: 'short'
+    }).formatToParts(date).find(p => p.type === 'timeZoneName')?.value || '';
+  };
 
   const upcomingBookings = allBookings.filter(
     b => !isPast(b.scheduledAt) && ['booked', 'pending_payment', 'in_progress', 'requested', 'confirmed'].includes(b.status)
@@ -117,7 +126,7 @@ export default function PatientConsultations() {
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
-                  {format(booking.scheduledAt, 'h:mm a')}
+                  {format(booking.scheduledAt, 'h:mm a')} {getTimezoneAbbr(booking.scheduledAt, booking.displayTimezone || 'Australia/Brisbane')}
                 </span>
               </div>
               {booking.doctorName && (
