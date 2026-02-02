@@ -165,6 +165,66 @@ export interface DoctorProfile {
   isActive: boolean;
 }
 
+// 5-minute slot booking types
+export interface FiveMinuteSlot {
+  time: string;           // Local time "09:05"
+  date: string;           // "2025-02-05"
+  utcTimestamp: string;   // ISO string for absolute time
+  doctorIds: string[];    // Doctors available at this time
+  isAvailable: boolean;   // At least one doctor available
+  displayTimezone: string; // e.g., "Australia/Brisbane"
+  timezoneAbbr: string;   // "AEST" or "AEDT"
+}
+
+export interface BookingReservation {
+  id: string;
+  patientId: string;
+  doctorId: string;
+  date: string;
+  time: string;
+  utcTimestamp: string;
+  expiresAt: string;      // ISO string, 10 min from creation
+}
+
+export interface MockBooking {
+  id: string;
+  patientId: string;
+  doctorId: string | null;
+  doctorName: string | null;
+  scheduledDate: string;
+  timeWindowStart: string;
+  timeWindowEnd: string;
+  utcTimestamp: string;
+  displayTimezone: string;
+  status: BookingStatus;
+  amountPaid: number | null;
+  paidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  reservationId?: string;
+  callAttempts: MockCallAttempt[];
+}
+
+export interface MockCallAttempt {
+  attemptNumber: number;
+  attemptedAt: string;
+  notes: string | null;
+  answered: boolean;
+}
+
+export interface MockAvailabilityBlock {
+  id: string;
+  doctorId: string;
+  doctorName: string;
+  dayOfWeek: number | null;
+  specificDate: string | null;
+  startTime: string;
+  endTime: string;
+  timezone: string;
+  isRecurring: boolean;
+  isActive: boolean;
+}
+
 // Day of week helpers
 export const dayOfWeekLabels: Record<number, string> = {
   0: 'Sunday',
