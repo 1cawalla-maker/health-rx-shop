@@ -23,6 +23,7 @@ import { calculatePrescriptionQuantities, nicotineStrengthLabels } from '@/types
 import { getPatientEligibilityQuiz } from '@/services/eligibilityService';
 import type { EligibilityQuizResult } from '@/types/eligibility';
 import { PdfViewerDialog } from '@/components/prescription/PdfViewerDialog';
+import { callAttemptService, type CallAttemptRecord } from '@/services/callAttemptService';
 
 interface DoctorInfo {
   id: string;
@@ -61,13 +62,8 @@ export default function DoctorBookingDetail() {
   const [doctorInfo, setDoctorInfo] = useState<DoctorInfo | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // Call attempts
-  const [callAttempts, setCallAttempts] = useState<Array<{
-    id: string;
-    attempt_number: number;
-    attempted_at: string;
-    notes: string | null;
-  }>>([]);
+  // Call attempts (uses abstracted service for easy Supabase migration)
+  const [callAttempts, setCallAttempts] = useState<CallAttemptRecord[]>([]);
   const [isLoggingCall, setIsLoggingCall] = useState(false);
   
   // Consultation notes
@@ -171,14 +167,9 @@ export default function DoctorBookingDetail() {
         setConsultationNote(notesData[0].notes);
       }
 
-      // Load call attempts
-      const { data: attemptsData } = await supabase
-        .from('call_attempts')
-        .select('id, attempt_number, attempted_at, notes')
-        .eq('booking_id', bookingId)
-        .order('attempt_number', { ascending: true });
-
-      setCallAttempts(attemptsData || []);
+      // Load call attempts via service abstraction
+      const attempts = await callAttemptService.getAttempts(bookingId);
+      setCallAttempts(attempts);
 
     } catch (err) {
       console.error('Error fetching booking details:', err);
@@ -249,19 +240,14 @@ export default function DoctorBookingDetail() {
     if (!user || !bookingId) return;
 
     setIsLoggingCall(true);
-    const nextAttemptNumber = callAttempts.length + 1;
 
     try {
-      const { error } = await supabase
-        .from('call_attempts')
-        .insert({
-          booking_id: bookingId,
-          doctor_id: user.id,
-          attempt_number: nextAttemptNumber,
-          notes: answered ? 'Patient answered' : 'No answer',
-        });
-
-      if (error) throw error;
+      const attempt = await callAttemptService.logAttempt({
+        bookingId,
+        doctorId: user.id,
+        answered,
+        notes: answered ? 'Patient answered' : 'No answer',
+      });
 
       if (answered) {
         // Update status to 'called' when patient answers
@@ -271,13 +257,16 @@ export default function DoctorBookingDetail() {
           .eq('id', bookingId);
         toast.success('Call logged - patient answered');
       } else {
-        toast.success(`No answer logged (attempt ${nextAttemptNumber}/3)`);
+        toast.success(`No answer logged (attempt ${attempt.attemptNumber}/3)`);
       }
 
+      // Refresh call attempts
+      const updatedAttempts = await callAttemptService.getAttempts(bookingId);
+      setCallAttempts(updatedAttempts);
       fetchBookingDetails();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to log call attempt:', err);
-      toast.error('Failed to log call attempt');
+      toast.error(err.message || 'Failed to log call attempt');
     } finally {
       setIsLoggingCall(false);
     }
@@ -286,8 +275,14 @@ export default function DoctorBookingDetail() {
   const markAsNoShow = async () => {
     if (!user || !bookingId) return;
 
+    // Validate via service before proceeding
+    if (!callAttemptService.canMarkNoShow(callAttempts)) {
+      toast.error('Must have 3 failed call attempts to mark as no-show');
+      return;
+    }
+
     try {
-      // Update consultation status to no_answer
+      // Update consultation status to no_answer (existing BookingStatus value)
       const { error } = await supabase
         .from('consultations')
         .update({ 
@@ -563,32 +558,37 @@ export default function DoctorBookingDetail() {
                         className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                       >
                         <div className="flex items-center gap-3">
-                          {attempt.notes === 'Patient answered' ? (
+                          {attempt.answered ? (
                             <CheckCircle className="h-4 w-4 text-success" />
                           ) : (
                             <PhoneMissed className="h-4 w-4 text-destructive" />
                           )}
                           <div>
-                            <p className="text-sm font-medium">Attempt {attempt.attempt_number}</p>
+                            <p className="text-sm font-medium">Attempt {attempt.attemptNumber}</p>
                             <p className="text-xs text-muted-foreground">
-                              {format(new Date(attempt.attempted_at), 'MMM d, yyyy h:mm a')}
+                              {format(new Date(attempt.attemptedAt), 'MMM d, yyyy h:mm a')}
                             </p>
                           </div>
                         </div>
                         <span className={`text-xs font-medium ${
-                          attempt.notes === 'Patient answered' 
+                          attempt.answered 
                             ? 'text-success' 
                             : 'text-destructive'
                         }`}>
-                          {attempt.notes}
+                          {attempt.answered ? 'Answered' : 'No answer'}
                         </span>
                       </div>
                     ))}
                   </div>
                 )}
 
+                {/* Doctor instruction copy */}
+                <div className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-3">
+                  Make up to 3 call attempts. If no answer after 3 attempts, mark as No-show.
+                </div>
+
                 {/* Log Call Buttons */}
-                {callAttempts.length < 3 && !callAttempts.some(a => a.notes === 'Patient answered') && (
+                {callAttempts.length < 3 && !callAttempts.some(a => a.answered) && (
                   <div className="flex gap-3">
                     <Button
                       variant="default"
@@ -624,7 +624,7 @@ export default function DoctorBookingDetail() {
                 )}
 
                 {/* Mark as No-Show Button (enabled after 3 failed attempts) */}
-                {callAttempts.filter(a => a.notes !== 'Patient answered').length >= 3 && (
+                {callAttemptService.canMarkNoShow(callAttempts) && (
                   <div className="pt-2 border-t">
                     <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 mb-3">
                       <p className="text-sm text-destructive font-medium">3 unsuccessful call attempts logged</p>
@@ -644,7 +644,7 @@ export default function DoctorBookingDetail() {
                 )}
 
                 {/* Success state - patient answered */}
-                {callAttempts.some(a => a.notes === 'Patient answered') && (
+                {callAttempts.some(a => a.answered) && (
                   <div className="bg-success/10 border border-success/20 rounded-lg p-3">
                     <p className="text-sm text-success font-medium flex items-center gap-2">
                       <CheckCircle className="h-4 w-4" />
