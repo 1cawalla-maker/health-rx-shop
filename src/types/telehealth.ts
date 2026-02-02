@@ -87,11 +87,29 @@ export interface ConsultationBooking {
   patientEmail?: string;
   patientPhone?: string;
   patientDob?: string;
-  callAttempts?: CallAttempt[];
+  callAttempts?: LegacyCallAttempt[];
   intakeForm?: IntakeFormData | null;
 }
 
+// Call attempt types - Option A-ready (stable interface for Supabase migration)
+export type CallAttemptOutcome = 'no_answer' | 'answered';
+
 export interface CallAttempt {
+  id: string;
+  consultationId: string;
+  attemptNumber: number;
+  outcome: CallAttemptOutcome;
+  attemptedAtIso: string;
+}
+
+export interface CallAttemptRepository {
+  list(consultationId: string): Promise<CallAttempt[]>;
+  add(params: { consultationId: string; outcome: CallAttemptOutcome }): Promise<CallAttempt>;
+  canMarkNoShow(attempts: CallAttempt[]): boolean;
+}
+
+// Legacy type for mock bookings (to be removed when migrating to Supabase)
+export interface LegacyCallAttempt {
   id: string;
   bookingId: string;
   doctorId: string;
@@ -211,6 +229,9 @@ export interface MockCallAttempt {
   notes: string | null;
   answered: boolean;
 }
+
+// Re-export for backward compatibility
+export type { CallAttempt as CallAttemptRecord };
 
 export interface MockAvailabilityBlock {
   id: string;
