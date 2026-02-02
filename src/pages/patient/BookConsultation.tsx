@@ -1,119 +1,137 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { mockAvailabilityService } from '@/services/availabilityService';
+import { mockBookingService } from '@/services/consultationService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { format, addDays, setHours, setMinutes, isBefore } from 'date-fns';
-import { Phone, Video, Loader2, CalendarDays, Clock } from 'lucide-react';
-
-const timeSlots = [
-  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-  '14:00', '14:30', '15:00', '15:30', '16:00', '16:30'
-];
+import { format, addDays, isBefore, startOfDay } from 'date-fns';
+import { Phone, Loader2, CalendarDays, Clock, AlertTriangle } from 'lucide-react';
+import type { FiveMinuteSlot } from '@/types/telehealth';
 
 export default function BookConsultation() {
   const { user } = useAuth();
   const navigate = useNavigate();
   
-  const [consultationType, setConsultationType] = useState<'video' | 'phone'>('video');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
+  const [selectedSlot, setSelectedSlot] = useState<FiveMinuteSlot | undefined>(undefined);
+  const [availableSlots, setAvailableSlots] = useState<FiveMinuteSlot[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [datesWithAvailability, setDatesWithAvailability] = useState<Set<string>>(new Set());
+
+  const minDate = addDays(new Date(), 1);
+  const maxDate = addDays(new Date(), 30);
+
+  // Load dates with availability on mount
+  useEffect(() => {
+    const dates = mockAvailabilityService.getDatesWithAvailability(minDate, maxDate);
+    setDatesWithAvailability(new Set(dates));
+  }, []);
+
+  // Load slots when date changes
+  useEffect(() => {
+    if (selectedDate) {
+      setLoadingSlots(true);
+      setSelectedSlot(undefined);
+      
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      const slots = mockAvailabilityService.getAggregatedSlotsForDate(dateStr);
+      setAvailableSlots(slots);
+      setLoadingSlots(false);
+    } else {
+      setAvailableSlots([]);
+    }
+  }, [selectedDate]);
+
+  // Group slots by hour for better display
+  const slotsByHour = useMemo(() => {
+    const groups: Record<string, FiveMinuteSlot[]> = {};
+    for (const slot of availableSlots) {
+      const hour = slot.time.split(':')[0];
+      if (!groups[hour]) {
+        groups[hour] = [];
+      }
+      groups[hour].push(slot);
+    }
+    return groups;
+  }, [availableSlots]);
 
   const handleSubmit = async () => {
-    if (!user || !selectedDate || !selectedTime) {
+    if (!user || !selectedDate || !selectedSlot) {
       toast.error('Please select a date and time');
       return;
     }
 
     setIsSubmitting(true);
 
-    const [hours, minutes] = selectedTime.split(':').map(Number);
-    const scheduledAt = setMinutes(setHours(selectedDate, hours), minutes);
+    try {
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      
+      // Create booking with pending_payment status
+      const booking = mockBookingService.createBooking(
+        user.id,
+        dateStr,
+        selectedSlot.time,
+        selectedSlot.utcTimestamp,
+        selectedSlot.displayTimezone,
+        selectedSlot.doctorIds
+      );
 
-    if (isBefore(scheduledAt, new Date())) {
-      toast.error('Please select a future date and time');
+      toast.success('Proceeding to payment...');
+      navigate(`/patient/booking/payment/${booking.id}`);
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      toast.error('Failed to create booking. Please try again.');
+    } finally {
       setIsSubmitting(false);
-      return;
-    }
-
-    const { error } = await supabase
-      .from('consultations')
-      .insert({
-        patient_id: user.id,
-        scheduled_at: scheduledAt.toISOString(),
-        consultation_type: consultationType,
-        status: 'requested'
-      });
-
-    setIsSubmitting(false);
-
-    if (error) {
-      toast.error('Failed to book consultation. Please try again.');
-      console.error('Error booking consultation:', error);
-    } else {
-      toast.success('Consultation booked successfully!');
-      navigate('/patient/consultations');
     }
   };
 
-  const minDate = addDays(new Date(), 1);
-  const maxDate = addDays(new Date(), 30);
+  // Check if a date has availability
+  const dateHasAvailability = (date: Date): boolean => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return datesWithAvailability.has(dateStr);
+  };
+
+  // Disable dates without availability
+  const isDateDisabled = (date: Date): boolean => {
+    if (isBefore(date, startOfDay(minDate)) || date > maxDate) {
+      return true;
+    }
+    return !dateHasAvailability(date);
+  };
+
+  const getTimezoneLabel = (): string => {
+    if (selectedSlot) {
+      return selectedSlot.timezoneAbbr;
+    }
+    if (availableSlots.length > 0) {
+      return availableSlots[0].timezoneAbbr;
+    }
+    return 'AEST';
+  };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-8">
       <div>
         <h1 className="font-display text-3xl font-bold text-foreground">Book Consultation</h1>
-        <p className="text-muted-foreground mt-1">Schedule an online consultation with a doctor</p>
+        <p className="text-muted-foreground mt-1">Schedule a phone consultation with a doctor</p>
       </div>
 
-      <div className="grid gap-6">
-        {/* Consultation Type */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Phone className="h-5 w-5" />
-              Consultation Type
-            </CardTitle>
-            <CardDescription>Choose how you'd like to meet with the doctor</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <RadioGroup
-              value={consultationType}
-              onValueChange={(value) => setConsultationType(value as 'video' | 'phone')}
-              className="grid grid-cols-2 gap-4"
-            >
-              <div>
-                <RadioGroupItem value="video" id="video" className="peer sr-only" />
-                <Label
-                  htmlFor="video"
-                  className="flex flex-col items-center justify-center rounded-lg border-2 border-muted bg-card p-4 hover:bg-muted/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-colors"
-                >
-                  <Video className="h-8 w-8 mb-2 text-primary" />
-                  <span className="font-medium">Video Call</span>
-                  <span className="text-xs text-muted-foreground">Face-to-face consultation</span>
-                </Label>
-              </div>
-              <div>
-                <RadioGroupItem value="phone" id="phone" className="peer sr-only" />
-                <Label
-                  htmlFor="phone"
-                  className="flex flex-col items-center justify-center rounded-lg border-2 border-muted bg-card p-4 hover:bg-muted/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-colors"
-                >
-                  <Phone className="h-8 w-8 mb-2 text-primary" />
-                  <span className="font-medium">Phone Call</span>
-                  <span className="text-xs text-muted-foreground">Audio consultation</span>
-                </Label>
-              </div>
-            </RadioGroup>
-          </CardContent>
-        </Card>
+      {/* No-show Policy Warning */}
+      <Alert className="border-orange-500/50 bg-orange-500/10">
+        <AlertTriangle className="h-4 w-4 text-orange-500" />
+        <AlertDescription className="text-orange-700 dark:text-orange-400">
+          <strong>Important:</strong> If the doctor calls 3 times and you do not answer, your 
+          consultation will be marked as a no-show and you will still be charged.
+        </AlertDescription>
+      </Alert>
 
+      <div className="grid gap-6 lg:grid-cols-2">
         {/* Date Selection */}
         <Card>
           <CardHeader>
@@ -121,99 +139,149 @@ export default function BookConsultation() {
               <CalendarDays className="h-5 w-5" />
               Select Date
             </CardTitle>
-            <CardDescription>Choose a date for your consultation</CardDescription>
+            <CardDescription>
+              Choose a date for your consultation. Only dates with available slots are selectable.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Calendar
               mode="single"
               selected={selectedDate}
               onSelect={setSelectedDate}
-              disabled={(date) => 
-                isBefore(date, minDate) || 
-                date > maxDate ||
-                date.getDay() === 0 || 
-                date.getDay() === 6
-              }
-              className="rounded-md border mx-auto"
+              disabled={isDateDisabled}
+              className="rounded-md border mx-auto pointer-events-auto"
+              modifiers={{
+                available: (date) => dateHasAvailability(date) && !isBefore(date, startOfDay(minDate)) && date <= maxDate,
+              }}
+              modifiersStyles={{
+                available: { fontWeight: 'bold' },
+              }}
             />
+            {datesWithAvailability.size === 0 && (
+              <p className="text-center text-muted-foreground mt-4 text-sm">
+                No appointments available in the next 30 days.
+              </p>
+            )}
           </CardContent>
         </Card>
 
         {/* Time Selection */}
-        {selectedDate && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Select Time
-              </CardTitle>
-              <CardDescription>
-                Available slots for {format(selectedDate, 'EEEE, MMMM d, yyyy')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                {timeSlots.map((time) => (
-                  <Button
-                    key={time}
-                    variant={selectedTime === time ? 'default' : 'outline'}
-                    onClick={() => setSelectedTime(time)}
-                    className="text-sm"
-                  >
-                    {time}
-                  </Button>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Select Time
+            </CardTitle>
+            <CardDescription>
+              {selectedDate 
+                ? `Available 5-minute slots for ${format(selectedDate, 'EEEE, MMMM d')} (${getTimezoneLabel()})`
+                : 'Select a date to see available times'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!selectedDate ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Clock className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>Select a date to view available times</p>
+              </div>
+            ) : loadingSlots ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : availableSlots.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No available slots for this date.</p>
+                <p className="text-sm mt-1">Try selecting a different date.</p>
+              </div>
+            ) : (
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                {Object.entries(slotsByHour).map(([hour, slots]) => (
+                  <div key={hour}>
+                    <p className="text-xs text-muted-foreground font-medium mb-2 uppercase tracking-wide">
+                      {hour}:00 - {hour}:59
+                    </p>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {slots.map((slot) => (
+                        <Button
+                          key={slot.time}
+                          variant={selectedSlot?.time === slot.time ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setSelectedSlot(slot)}
+                          className="text-xs h-8"
+                        >
+                          {slot.time}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
-        {/* Summary & Submit */}
-        {selectedDate && selectedTime && (
-          <Card className="bg-primary/5 border-primary/20">
-            <CardHeader>
-              <CardTitle>Booking Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Type:</span>
-                  <span className="font-medium capitalize">{consultationType} consultation</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Date:</span>
-                  <span className="font-medium">{format(selectedDate, 'EEEE, MMMM d, yyyy')}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Time:</span>
-                  <span className="font-medium">{selectedTime} AEST</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Fee:</span>
-                  <span className="font-medium">$49 AUD</span>
+      {/* Summary & Submit */}
+      {selectedDate && selectedSlot && (
+        <Card className="bg-primary/5 border-primary/20">
+          <CardHeader>
+            <CardTitle>Booking Summary</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="flex items-center gap-3">
+                <Phone className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Type</p>
+                  <p className="font-medium">Phone Consultation</p>
                 </div>
               </div>
+              <div className="flex items-center gap-3">
+                <CalendarDays className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Date</p>
+                  <p className="font-medium">{format(selectedDate, 'EEEE, MMMM d, yyyy')}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Clock className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Time</p>
+                  <p className="font-medium">{selectedSlot.time} {selectedSlot.timezoneAbbr}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="h-5 w-5 flex items-center justify-center text-primary font-bold">$</div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Fee</p>
+                  <p className="font-medium">$49 AUD</p>
+                </div>
+              </div>
+            </div>
 
-              <Button 
-                onClick={handleSubmit} 
-                className="w-full" 
-                size="lg"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  'Confirm Booking'
-                )}
-              </Button>
+            <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
+              <p>A doctor will be assigned after booking confirmation. You will be called at the scheduled time.</p>
+            </div>
 
-              <p className="text-xs text-muted-foreground text-center">
-                By booking, you agree to our terms of service and cancellation policy.
-              </p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            <Button 
+              onClick={handleSubmit} 
+              className="w-full" 
+              size="lg"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                'Proceed to Payment ($49)'
+              )}
+            </Button>
+
+            <p className="text-xs text-muted-foreground text-center">
+              By booking, you agree to our terms of service and no-show policy.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

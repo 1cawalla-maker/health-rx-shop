@@ -29,6 +29,8 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
 // Patient pages
 import PatientDashboard from "./pages/patient/Dashboard";
 import BookConsultation from "./pages/patient/BookConsultation";
+import BookingPayment from "./pages/patient/BookingPayment";
+import BookingConfirmation from "./pages/patient/BookingConfirmation";
 import PatientConsultations from "./pages/patient/Consultations";
 import UploadPrescription from "./pages/patient/UploadPrescription";
 import PatientPrescriptions from "./pages/patient/Prescriptions";
@@ -91,6 +93,8 @@ const App = () => (
               <Route path="/patient" element={<ProtectedRoute allowedRoles={['patient']}><PatientLayout /></ProtectedRoute>}>
                 <Route path="dashboard" element={<PatientDashboard />} />
                 <Route path="book" element={<BookConsultation />} />
+                <Route path="booking/payment/:bookingId" element={<BookingPayment />} />
+                <Route path="booking/confirmation/:bookingId" element={<BookingConfirmation />} />
                 <Route path="consultations" element={<PatientConsultations />} />
                 <Route path="intake/:bookingId" element={<PatientIntake />} />
                 <Route path="upload-prescription" element={<UploadPrescription />} />

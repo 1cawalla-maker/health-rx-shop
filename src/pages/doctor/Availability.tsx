@@ -9,9 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar } from '@/components/ui/calendar';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { Loader2, Plus, Trash2, Clock, CalendarDays } from 'lucide-react';
+import { calculateSlotCount } from '@/services/availabilityService';
 
 const DAYS_OF_WEEK = [
   { value: 0, label: 'Sunday' },
@@ -313,27 +315,33 @@ export default function DoctorAvailability() {
             <CardContent>
               {recurringSlots.length > 0 ? (
                 <div className="space-y-2">
-                  {recurringSlots.map((slot) => (
-                    <div key={slot.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Switch
-                          checked={slot.is_active}
-                          onCheckedChange={(checked) => toggleSlotActive(slot.id, checked)}
-                        />
-                        <div>
-                          <p className="font-medium">
-                            {DAYS_OF_WEEK.find(d => d.value === slot.day_of_week)?.label}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {slot.start_time} - {slot.end_time} ({slot.max_bookings} slots)
-                          </p>
+                  {recurringSlots.map((slot) => {
+                    const slotCount = calculateSlotCount(slot.start_time, slot.end_time);
+                    return (
+                      <div key={slot.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <Switch
+                            checked={slot.is_active}
+                            onCheckedChange={(checked) => toggleSlotActive(slot.id, checked)}
+                          />
+                          <div>
+                            <p className="font-medium">
+                              {DAYS_OF_WEEK.find(d => d.value === slot.day_of_week)?.label}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {slot.start_time} - {slot.end_time}
+                            </p>
+                            <Badge variant="secondary" className="mt-1 text-xs">
+                              {slotCount} × 5-min slots
+                            </Badge>
+                          </div>
                         </div>
+                        <Button variant="ghost" size="icon" onClick={() => deleteSlot(slot.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       </div>
-                      <Button variant="ghost" size="icon" onClick={() => deleteSlot(slot.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">No recurring slots set up</p>

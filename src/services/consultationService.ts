@@ -1,6 +1,16 @@
 // Consultation Service - handles consultation booking and management
 import { supabase } from '@/integrations/supabase/client';
-import type { ConsultationBooking, BookingStatus, CallAttempt, IntakeFormData } from '@/types/telehealth';
+import type { ConsultationBooking, BookingStatus, CallAttempt, IntakeFormData, MockBooking, MockCallAttempt } from '@/types/telehealth';
+import { mockAvailabilityService } from './availabilityService';
+
+// Constants
+const MOCK_BOOKINGS_KEY = 'nicopatch_mock_bookings';
+
+const MOCK_DOCTORS = [
+  { id: 'mock-doc-1', name: 'Dr. Sarah Chen' },
+  { id: 'mock-doc-2', name: 'Dr. Michael Thompson' },
+  { id: 'mock-doc-3', name: 'Dr. Emily Patel' },
+];
 
 // Map database row to ConsultationBooking
 function mapToBooking(row: any): ConsultationBooking {
@@ -35,6 +45,201 @@ function mapToCallAttempt(row: any): CallAttempt {
     notes: row.notes,
   };
 }
+
+// Mock booking service for MVP (localStorage-based)
+export const mockBookingService = {
+  // Helper to add minutes to a time string
+  addMinutes(time: string, minutes: number): string {
+    const [h, m] = time.split(':').map(Number);
+    const totalMins = h * 60 + m + minutes;
+    return `${String(Math.floor(totalMins / 60)).padStart(2, '0')}:${String(totalMins % 60).padStart(2, '0')}`;
+  },
+
+  // Get all bookings
+  getBookings(): MockBooking[] {
+    const stored = localStorage.getItem(MOCK_BOOKINGS_KEY);
+    return stored ? JSON.parse(stored) : [];
+  },
+
+  // Get a single booking by ID
+  getBooking(bookingId: string): MockBooking | null {
+    return this.getBookings().find(b => b.id === bookingId) || null;
+  },
+
+  // Get patient's bookings
+  getPatientBookings(patientId: string): MockBooking[] {
+    return this.getBookings()
+      .filter(b => b.patientId === patientId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  // Create a booking with pending_payment status and reservation
+  createBooking(
+    patientId: string,
+    date: string,
+    time: string,
+    utcTimestamp: string,
+    displayTimezone: string,
+    availableDoctorIds: string[]
+  ): MockBooking {
+    // Pick first available doctor (deterministic)
+    const doctorId = availableDoctorIds[0];
+    const doctor = MOCK_DOCTORS.find(d => d.id === doctorId);
+    
+    // Create reservation to hold the slot
+    const reservation = mockAvailabilityService.createReservation(
+      patientId,
+      doctorId,
+      date,
+      time,
+      utcTimestamp
+    );
+    
+    const endTime = this.addMinutes(time, 5);
+    
+    const booking: MockBooking = {
+      id: crypto.randomUUID(),
+      patientId,
+      doctorId,
+      doctorName: doctor?.name || null,
+      scheduledDate: date,
+      timeWindowStart: time,
+      timeWindowEnd: endTime,
+      utcTimestamp,
+      displayTimezone,
+      status: 'pending_payment',
+      amountPaid: null,
+      paidAt: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      reservationId: reservation.id,
+      callAttempts: [],
+    };
+    
+    const bookings = this.getBookings();
+    bookings.push(booking);
+    localStorage.setItem(MOCK_BOOKINGS_KEY, JSON.stringify(bookings));
+    
+    return booking;
+  },
+
+  // Confirm payment - converts reservation to confirmed booking
+  confirmPayment(bookingId: string): MockBooking | null {
+    const bookings = this.getBookings();
+    const index = bookings.findIndex(b => b.id === bookingId);
+    if (index === -1) return null;
+    
+    const booking = bookings[index];
+    
+    // Release reservation (slot is now permanently taken)
+    if (booking.reservationId) {
+      mockAvailabilityService.releaseReservation(booking.reservationId);
+    }
+    
+    bookings[index] = {
+      ...booking,
+      status: 'booked',
+      amountPaid: 4900, // $49.00 in cents
+      paidAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      reservationId: undefined,
+    };
+    
+    localStorage.setItem(MOCK_BOOKINGS_KEY, JSON.stringify(bookings));
+    return bookings[index];
+  },
+
+  // Cancel booking (releases reservation if pending)
+  cancelBooking(bookingId: string): void {
+    const bookings = this.getBookings();
+    const index = bookings.findIndex(b => b.id === bookingId);
+    if (index === -1) return;
+    
+    const booking = bookings[index];
+    
+    // Release reservation if exists
+    if (booking.reservationId) {
+      mockAvailabilityService.releaseReservation(booking.reservationId);
+    }
+    
+    bookings[index] = {
+      ...booking,
+      status: 'cancelled',
+      updatedAt: new Date().toISOString(),
+    };
+    
+    localStorage.setItem(MOCK_BOOKINGS_KEY, JSON.stringify(bookings));
+  },
+
+  // Log a call attempt
+  logCallAttempt(bookingId: string, answered: boolean, notes?: string): MockCallAttempt | null {
+    const bookings = this.getBookings();
+    const index = bookings.findIndex(b => b.id === bookingId);
+    if (index === -1) return null;
+    
+    const booking = bookings[index];
+    const attemptNumber = booking.callAttempts.length + 1;
+    
+    if (attemptNumber > 3) return null;
+    
+    const attempt: MockCallAttempt = {
+      attemptNumber,
+      attemptedAt: new Date().toISOString(),
+      notes: notes || null,
+      answered,
+    };
+    
+    booking.callAttempts.push(attempt);
+    booking.updatedAt = new Date().toISOString();
+    
+    // If answered, mark as in_progress
+    if (answered) {
+      booking.status = 'in_progress';
+    }
+    
+    bookings[index] = booking;
+    localStorage.setItem(MOCK_BOOKINGS_KEY, JSON.stringify(bookings));
+    
+    return attempt;
+  },
+
+  // Mark as no-show (requires 3 failed attempts)
+  markNoShow(bookingId: string): boolean {
+    const bookings = this.getBookings();
+    const index = bookings.findIndex(b => b.id === bookingId);
+    if (index === -1) return false;
+    
+    const booking = bookings[index];
+    const failedAttempts = booking.callAttempts.filter(a => !a.answered);
+    
+    if (failedAttempts.length < 3) return false;
+    
+    booking.status = 'no_answer';
+    booking.updatedAt = new Date().toISOString();
+    bookings[index] = booking;
+    
+    localStorage.setItem(MOCK_BOOKINGS_KEY, JSON.stringify(bookings));
+    return true;
+  },
+
+  // Mark as completed
+  markCompleted(bookingId: string): void {
+    const bookings = this.getBookings();
+    const index = bookings.findIndex(b => b.id === bookingId);
+    if (index === -1) return;
+    
+    bookings[index].status = 'completed';
+    bookings[index].updatedAt = new Date().toISOString();
+    
+    localStorage.setItem(MOCK_BOOKINGS_KEY, JSON.stringify(bookings));
+  },
+
+  // Get doctor name by ID
+  getDoctorName(doctorId: string): string {
+    const doctor = MOCK_DOCTORS.find(d => d.id === doctorId);
+    return doctor?.name || 'Unknown Doctor';
+  },
+};
 
 export const consultationService = {
   // Get doctor's bookings for today

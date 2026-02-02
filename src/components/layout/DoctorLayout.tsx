@@ -98,13 +98,6 @@ export function DoctorLayout() {
           </nav>
 
           <div className="p-4 border-t border-border space-y-2">
-            <Link
-              to="/doctor/profile"
-              className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            >
-              <User className="h-5 w-5" />
-              <span>Profile</span>
-            </Link>
             <button
               onClick={handleSignOut}
               className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors w-full"
