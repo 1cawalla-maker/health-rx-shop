@@ -1,6 +1,6 @@
 // Consultation Service - handles consultation booking and management
 import { supabase } from '@/integrations/supabase/client';
-import type { ConsultationBooking, BookingStatus, CallAttempt, IntakeFormData, MockBooking, MockCallAttempt } from '@/types/telehealth';
+import type { ConsultationBooking, BookingStatus, LegacyCallAttempt, IntakeFormData, MockBooking, MockCallAttempt } from '@/types/telehealth';
 import { mockAvailabilityService } from './availabilityService';
 
 // Constants
@@ -35,7 +35,7 @@ function mapToBooking(row: any): ConsultationBooking {
   };
 }
 
-function mapToCallAttempt(row: any): CallAttempt {
+function mapToLegacyCallAttempt(row: any): LegacyCallAttempt {
   return {
     id: row.id,
     bookingId: row.booking_id,
@@ -363,7 +363,7 @@ export const consultationService = {
     result.patientName = profile?.full_name || 'Unknown';
     result.patientPhone = profile?.phone || '';
     result.patientDob = profile?.date_of_birth || '';
-    result.callAttempts = (attempts || []).map(mapToCallAttempt);
+    result.callAttempts = (attempts || []).map(mapToLegacyCallAttempt);
     result.intakeForm = intake ? {
       id: intake.id,
       bookingId: intake.booking_id,
@@ -408,8 +408,8 @@ export const consultationService = {
     }
   },
 
-  // Log call attempt
-  async logCallAttempt(bookingId: string, doctorId: string, notes?: string): Promise<CallAttempt> {
+  // Log call attempt (legacy Supabase integration - not used by mock)
+  async logCallAttempt(bookingId: string, doctorId: string, notes?: string): Promise<LegacyCallAttempt> {
     // Get current attempt count
     const { data: existing } = await supabase
       .from('call_attempts')
@@ -440,11 +440,11 @@ export const consultationService = {
       throw error;
     }
 
-    return mapToCallAttempt(data);
+    return mapToLegacyCallAttempt(data);
   },
 
-  // Get call attempts for booking
-  async getCallAttempts(bookingId: string): Promise<CallAttempt[]> {
+  // Get call attempts for booking (legacy Supabase integration)
+  async getCallAttempts(bookingId: string): Promise<LegacyCallAttempt[]> {
     const { data, error } = await supabase
       .from('call_attempts')
       .select('*')
@@ -456,7 +456,7 @@ export const consultationService = {
       throw error;
     }
 
-    return (data || []).map(mapToCallAttempt);
+    return (data || []).map(mapToLegacyCallAttempt);
   },
 
   // Mark as no answer after 3 attempts

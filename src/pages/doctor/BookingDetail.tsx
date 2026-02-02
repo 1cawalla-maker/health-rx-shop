@@ -23,7 +23,7 @@ import { calculatePrescriptionQuantities, nicotineStrengthLabels } from '@/types
 import { getPatientEligibilityQuiz } from '@/services/eligibilityService';
 import type { EligibilityQuizResult } from '@/types/eligibility';
 import { PdfViewerDialog } from '@/components/prescription/PdfViewerDialog';
-import { callAttemptService, type CallAttemptRecord } from '@/services/callAttemptService';
+import { callAttemptRepository, type CallAttempt } from '@/services/callAttemptService';
 
 interface DoctorInfo {
   id: string;
@@ -62,8 +62,8 @@ export default function DoctorBookingDetail() {
   const [doctorInfo, setDoctorInfo] = useState<DoctorInfo | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // Call attempts (uses abstracted service for easy Supabase migration)
-  const [callAttempts, setCallAttempts] = useState<CallAttemptRecord[]>([]);
+  // Call attempts (uses repository pattern for easy Supabase migration)
+  const [callAttempts, setCallAttempts] = useState<CallAttempt[]>([]);
   const [isLoggingCall, setIsLoggingCall] = useState(false);
   
   // Consultation notes
@@ -167,8 +167,8 @@ export default function DoctorBookingDetail() {
         setConsultationNote(notesData[0].notes);
       }
 
-      // Load call attempts via service abstraction
-      const attempts = await callAttemptService.getAttempts(bookingId);
+      // Load call attempts via repository abstraction
+      const attempts = await callAttemptRepository.list(bookingId);
       setCallAttempts(attempts);
 
     } catch (err) {
@@ -242,11 +242,10 @@ export default function DoctorBookingDetail() {
     setIsLoggingCall(true);
 
     try {
-      const attempt = await callAttemptService.logAttempt({
-        bookingId,
-        doctorId: user.id,
-        answered,
-        notes: answered ? 'Patient answered' : 'No answer',
+      const outcome = answered ? 'answered' : 'no_answer';
+      const attempt = await callAttemptRepository.add({
+        consultationId: bookingId,
+        outcome,
       });
 
       if (answered) {
@@ -261,7 +260,7 @@ export default function DoctorBookingDetail() {
       }
 
       // Refresh call attempts
-      const updatedAttempts = await callAttemptService.getAttempts(bookingId);
+      const updatedAttempts = await callAttemptRepository.list(bookingId);
       setCallAttempts(updatedAttempts);
       fetchBookingDetails();
     } catch (err: any) {
@@ -275,8 +274,8 @@ export default function DoctorBookingDetail() {
   const markAsNoShow = async () => {
     if (!user || !bookingId) return;
 
-    // Validate via service before proceeding
-    if (!callAttemptService.canMarkNoShow(callAttempts)) {
+    // Validate via repository before proceeding
+    if (!callAttemptRepository.canMarkNoShow(callAttempts)) {
       toast.error('Must have 3 failed call attempts to mark as no-show');
       return;
     }
@@ -550,7 +549,7 @@ export default function DoctorBookingDetail() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Call Attempt History */}
-                {callAttempts.length > 0 && (
+              {callAttempts.length > 0 && (
                   <div className="space-y-2">
                     {callAttempts.map((attempt) => (
                       <div 
@@ -558,7 +557,7 @@ export default function DoctorBookingDetail() {
                         className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                       >
                         <div className="flex items-center gap-3">
-                          {attempt.answered ? (
+                          {attempt.outcome === 'answered' ? (
                             <CheckCircle className="h-4 w-4 text-success" />
                           ) : (
                             <PhoneMissed className="h-4 w-4 text-destructive" />
@@ -566,16 +565,16 @@ export default function DoctorBookingDetail() {
                           <div>
                             <p className="text-sm font-medium">Attempt {attempt.attemptNumber}</p>
                             <p className="text-xs text-muted-foreground">
-                              {format(new Date(attempt.attemptedAt), 'MMM d, yyyy h:mm a')}
+                              {format(new Date(attempt.attemptedAtIso), 'MMM d, yyyy h:mm a')}
                             </p>
                           </div>
                         </div>
                         <span className={`text-xs font-medium ${
-                          attempt.answered 
+                          attempt.outcome === 'answered' 
                             ? 'text-success' 
                             : 'text-destructive'
                         }`}>
-                          {attempt.answered ? 'Answered' : 'No answer'}
+                          {attempt.outcome === 'answered' ? 'Answered' : 'No answer'}
                         </span>
                       </div>
                     ))}
@@ -588,7 +587,7 @@ export default function DoctorBookingDetail() {
                 </div>
 
                 {/* Log Call Buttons */}
-                {callAttempts.length < 3 && !callAttempts.some(a => a.answered) && (
+                {callAttempts.length < 3 && !callAttempts.some(a => a.outcome === 'answered') && (
                   <div className="flex gap-3">
                     <Button
                       variant="default"
@@ -624,7 +623,7 @@ export default function DoctorBookingDetail() {
                 )}
 
                 {/* Mark as No-Show Button (enabled after 3 failed attempts) */}
-                {callAttemptService.canMarkNoShow(callAttempts) && (
+                {callAttemptRepository.canMarkNoShow(callAttempts) && (
                   <div className="pt-2 border-t">
                     <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 mb-3">
                       <p className="text-sm text-destructive font-medium">3 unsuccessful call attempts logged</p>
@@ -644,7 +643,7 @@ export default function DoctorBookingDetail() {
                 )}
 
                 {/* Success state - patient answered */}
-                {callAttempts.some(a => a.answered) && (
+                {callAttempts.some(a => a.outcome === 'answered') && (
                   <div className="bg-success/10 border border-success/20 rounded-lg p-3">
                     <p className="text-sm text-success font-medium flex items-center gap-2">
                       <CheckCircle className="h-4 w-4" />
