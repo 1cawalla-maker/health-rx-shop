@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, Phone, Loader2, User } from 'lucide-react';
+import { Calendar, Clock, Phone, Loader2, User, Eye } from 'lucide-react';
 import { format, isPast } from 'date-fns';
+import { ConsultationDetailDialog } from '@/components/patient/ConsultationDetailDialog';
 import type { MockBooking, BookingStatus } from '@/types/telehealth';
 
 interface Consultation {
@@ -20,11 +21,23 @@ interface Consultation {
   created_at: string;
 }
 
+interface CombinedBooking {
+  id: string;
+  scheduledAt: Date;
+  status: BookingStatus;
+  doctorName: string | null;
+  displayTimezone?: string;
+  isMock: boolean;
+  amountPaid?: number;
+}
+
 export default function PatientConsultations() {
   const { user } = useAuth();
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [mockBookings, setMockBookings] = useState<MockBooking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedBooking, setSelectedBooking] = useState<CombinedBooking | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -53,7 +66,7 @@ export default function PatientConsultations() {
   };
 
   // Combine and filter consultations
-  const allBookings = [
+  const allBookings: CombinedBooking[] = [
     ...mockBookings.map(b => ({
       id: b.id,
       scheduledAt: new Date(`${b.scheduledDate}T${b.timeWindowStart}:00`),
@@ -61,6 +74,7 @@ export default function PatientConsultations() {
       doctorName: b.doctorName,
       displayTimezone: b.displayTimezone,
       isMock: true,
+      amountPaid: ['booked', 'confirmed', 'completed', 'in_progress', 'no_answer'].includes(b.status) ? 49 : undefined,
     })),
     ...consultations.map(c => ({
       id: c.id,
@@ -69,8 +83,14 @@ export default function PatientConsultations() {
       doctorName: null,
       displayTimezone: undefined,
       isMock: false,
+      amountPaid: ['booked', 'confirmed', 'completed', 'in_progress', 'no_answer'].includes(c.status) ? 49 : undefined,
     })),
   ];
+
+  const openDetails = (booking: CombinedBooking) => {
+    setSelectedBooking(booking);
+    setDialogOpen(true);
+  };
 
   const getTimezoneAbbr = (date: Date, timezone: string): string => {
     return new Intl.DateTimeFormat('en-AU', {
@@ -109,7 +129,7 @@ export default function PatientConsultations() {
     }
   };
 
-  const BookingCard = ({ booking }: { booking: typeof allBookings[0] }) => (
+  const BookingCard = ({ booking }: { booking: CombinedBooking }) => (
     <Card>
       <CardContent className="pt-6">
         <div className="flex items-start justify-between">
@@ -137,7 +157,12 @@ export default function PatientConsultations() {
               )}
             </div>
           </div>
-          {getStatusBadge(booking.status)}
+          <div className="flex items-center gap-2">
+            {getStatusBadge(booking.status)}
+            <Button variant="ghost" size="icon" onClick={() => openDetails(booking)}>
+              <Eye className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -216,6 +241,12 @@ export default function PatientConsultations() {
           )}
         </TabsContent>
       </Tabs>
+
+      <ConsultationDetailDialog
+        booking={selectedBooking}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+      />
     </div>
   );
 }
