@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { mockAvailabilityService } from '@/services/availabilityService';
 import { mockBookingService } from '@/services/consultationService';
@@ -9,12 +9,13 @@ import { Calendar } from '@/components/ui/calendar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { format, addDays, isBefore, startOfDay } from 'date-fns';
-import { Phone, Loader2, CalendarDays, Clock, AlertTriangle } from 'lucide-react';
+import { Phone, Loader2, CalendarDays, Clock, AlertTriangle, Info } from 'lucide-react';
 import type { FiveMinuteSlot } from '@/types/telehealth';
 
 export default function BookConsultation() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedSlot, setSelectedSlot] = useState<FiveMinuteSlot | undefined>(undefined);
@@ -25,6 +26,25 @@ export default function BookConsultation() {
 
   const minDate = addDays(new Date(), 1);
   const maxDate = addDays(new Date(), 30);
+
+  // Reschedule mode detection and validation
+  const isReschedule = searchParams.get('reschedule') === 'true';
+  const rescheduleBookingId = searchParams.get('bookingId') || '';
+  const amountPaidParam = searchParams.get('amountPaid');
+
+  // Validate amountPaid: must be numeric, positive, and reasonable (max $1000 = 100000 cents)
+  const rescheduleAmountPaid = useMemo(() => {
+    if (!isReschedule) return 0;
+    const parsed = parseInt(amountPaidParam || '', 10);
+    // Validate: must be a positive number between 1 cent and $1000 (100000 cents)
+    if (isNaN(parsed) || parsed <= 0 || parsed > 100000) {
+      return null; // Invalid
+    }
+    return parsed;
+  }, [isReschedule, amountPaidParam]);
+
+  // If reschedule mode but invalid params, show error
+  const rescheduleParamsValid = !isReschedule || (rescheduleBookingId && rescheduleAmountPaid !== null);
 
   // Load dates with availability on mount
   useEffect(() => {
@@ -66,26 +86,51 @@ export default function BookConsultation() {
       return;
     }
 
+    // Validate reschedule params
+    if (isReschedule && !rescheduleParamsValid) {
+      toast.error('Invalid reschedule request. Please try again from your dashboard.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
       
-      // Create booking with pending_payment status
-      const booking = mockBookingService.createBooking(
-        user.id,
-        dateStr,
-        selectedSlot.time,
-        selectedSlot.utcTimestamp,
-        selectedSlot.displayTimezone,
-        selectedSlot.doctorIds
-      );
+      if (isReschedule && rescheduleAmountPaid) {
+        // Atomic reschedule: validates slot + doctor availability + 24h rule,
+        // creates new paid booking, cancels old
+        const newBooking = mockBookingService.rescheduleBooking(
+          rescheduleBookingId,
+          user.id,
+          dateStr,
+          selectedSlot.time,
+          selectedSlot.utcTimestamp,
+          selectedSlot.displayTimezone,
+          selectedSlot.doctorIds,
+          rescheduleAmountPaid
+        );
+        
+        toast.success('Consultation rescheduled successfully!');
+        navigate(`/patient/booking/confirmation/${newBooking.id}`);
+      } else {
+        // Normal flow: create pending booking and go to payment
+        const booking = mockBookingService.createBooking(
+          user.id,
+          dateStr,
+          selectedSlot.time,
+          selectedSlot.utcTimestamp,
+          selectedSlot.displayTimezone,
+          selectedSlot.doctorIds
+        );
 
-      toast.success('Proceeding to payment...');
-      navigate(`/patient/booking/payment/${booking.id}`);
+        toast.success('Proceeding to payment...');
+        navigate(`/patient/booking/payment/${booking.id}`);
+      }
     } catch (error) {
       console.error('Error creating booking:', error);
-      toast.error('Failed to create booking. Please try again.');
+      const message = error instanceof Error ? error.message : 'Failed to create booking. Please try again.';
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -121,6 +166,28 @@ export default function BookConsultation() {
         <h1 className="font-display text-3xl font-bold text-foreground">Book Consultation</h1>
         <p className="text-muted-foreground mt-1">Schedule a phone consultation with a doctor</p>
       </div>
+
+      {/* Reschedule Mode Banner */}
+      {isReschedule && rescheduleParamsValid && (
+        <Alert className="border-blue-500/50 bg-blue-500/10">
+          <Info className="h-4 w-4 text-blue-500" />
+          <AlertDescription className="text-blue-700 dark:text-blue-400">
+            <strong>Rescheduling:</strong> Select a new time for your consultation. 
+            No additional payment required.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Invalid reschedule params error */}
+      {isReschedule && !rescheduleParamsValid && (
+        <Alert className="border-red-500/50 bg-red-500/10">
+          <AlertTriangle className="h-4 w-4 text-red-500" />
+          <AlertDescription className="text-red-700 dark:text-red-400">
+            <strong>Error:</strong> Invalid reschedule request. Please return to your 
+            dashboard and try again.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* No-show Policy Warning */}
       <Alert className="border-orange-500/50 bg-orange-500/10">
@@ -254,7 +321,9 @@ export default function BookConsultation() {
                 <div className="h-5 w-5 flex items-center justify-center text-primary font-bold">$</div>
                 <div>
                   <p className="text-sm text-muted-foreground">Fee</p>
-                  <p className="font-medium">$49 AUD</p>
+                  <p className="font-medium">
+                    {isReschedule && rescheduleParamsValid ? 'Already paid' : '$49 AUD'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -267,10 +336,12 @@ export default function BookConsultation() {
               onClick={handleSubmit} 
               className="w-full" 
               size="lg"
-              disabled={isSubmitting}
+              disabled={isSubmitting || (isReschedule && !rescheduleParamsValid)}
             >
               {isSubmitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
+              ) : isReschedule && rescheduleParamsValid ? (
+                'Confirm New Time'
               ) : (
                 'Proceed to Payment ($49)'
               )}
