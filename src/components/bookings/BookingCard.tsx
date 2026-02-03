@@ -2,7 +2,7 @@ import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BookingStatusBadge } from './BookingStatusBadge';
-import { Phone, Video, Calendar, Clock, User } from 'lucide-react';
+import { Phone, Calendar, Clock, User } from 'lucide-react';
 import type { BookingWithPatient } from '@/types/database';
 
 interface BookingCardProps {
@@ -13,7 +13,8 @@ interface BookingCardProps {
 }
 
 export function BookingCard({ booking, showPatient, onViewDetails, actions }: BookingCardProps) {
-  const Icon = booking.consultation_type === 'phone' ? Phone : Video;
+  // Always use Phone icon (phone-only service model)
+  const Icon = Phone;
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -25,7 +26,7 @@ export function BookingCard({ booking, showPatient, onViewDetails, actions }: Bo
             </div>
             <div>
               <CardTitle className="text-base font-semibold">
-                {booking.consultation_type === 'phone' ? 'Phone' : 'Video'} Consultation
+                Phone Consultation
               </CardTitle>
               {showPatient && booking.patient_profile && (
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">

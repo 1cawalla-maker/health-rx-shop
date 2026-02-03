@@ -15,7 +15,6 @@ import type { MockBooking, BookingStatus } from '@/types/telehealth';
 interface Consultation {
   id: string;
   scheduled_at: string;
-  consultation_type: 'video' | 'phone';
   status: string;
   notes: string | null;
   created_at: string;

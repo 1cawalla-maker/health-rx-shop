@@ -37,7 +37,7 @@ export default function Disclaimer() {
                   Telehealth Services
                 </h2>
                 <p>
-                  NicoPatch provides telehealth consultations via video and phone with registered Australian 
+                  NicoPatch provides telehealth consultations via phone with registered Australian 
                   medical practitioners. While telehealth is a convenient and effective way to access healthcare, 
                   it has certain limitations:
                 </p>

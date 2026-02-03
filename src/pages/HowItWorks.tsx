@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { 
   UserPlus, 
   ClipboardList, 
-  Video, 
+  Phone, 
   FileCheck, 
   ShoppingBag, 
   Truck,
@@ -38,15 +38,15 @@ const detailedSteps = [
     ],
   },
   {
-    icon: Video,
+    icon: Phone,
     step: 3,
     title: "Book Your Consultation",
-    description: "Choose a convenient time for your online consultation with one of our registered Australian doctors.",
+    description: "Choose a convenient time for your phone consultation with one of our registered Australian doctors.",
     details: [
-      "Select from available video or phone appointments",
+      "Select from available phone appointment times",
       "Choose a time that suits your schedule",
       "Receive confirmation and appointment reminders",
-      "Join securely from any device with internet",
+      "We'll call you at your scheduled time",
     ],
   },
   {

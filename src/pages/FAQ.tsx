@@ -32,7 +32,7 @@ const faqCategories = [
     faqs: [
       {
         question: "How do consultations work?",
-        answer: "After creating an account and completing your medical profile, you can book a video or phone consultation at a time that suits you. During the consultation, the doctor will review your health history, discuss your needs, and determine if a prescription is appropriate for you.",
+        answer: "After creating an account and completing your medical profile, you can book a phone consultation at a time that suits you. During the consultation, the doctor will review your health history, discuss your needs, and determine if a prescription is appropriate for you.",
       },
       {
         question: "How long does a consultation take?",

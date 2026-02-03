@@ -35,7 +35,7 @@ export default function Terms() {
                   medical practitioners for consultations regarding nicotine pouch products. Our service includes:
                 </p>
                 <ul className="list-disc pl-6 mt-4 space-y-2">
-                  <li>Online video and phone consultations with AHPRA-registered doctors</li>
+                  <li>Phone consultations with AHPRA-registered doctors</li>
                   <li>Medical assessments for nicotine pouch suitability</li>
                   <li>Electronic prescription issuance where clinically appropriate</li>
                   <li>Access to a product ordering platform for eligible patients</li>
