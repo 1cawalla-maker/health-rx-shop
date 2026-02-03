@@ -1,5 +1,4 @@
 import { format } from 'date-fns';
-import { Link } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -171,10 +170,6 @@ export function ConsultationDetailDialog({ booking, open, onOpenChange }: Consul
             </div>
           )}
 
-          {/* Book Another CTA */}
-          <Button asChild className="w-full">
-            <Link to="/patient/book">Book another consultation</Link>
-          </Button>
         </div>
       </DialogContent>
     </Dialog>
