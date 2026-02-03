@@ -1,47 +1,87 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { mockBookingService } from '@/services/consultationService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, FileText, ShoppingBag, Upload, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { BookingStatusBadge } from '@/components/bookings/BookingStatusBadge';
+import { Calendar, FileText, ShoppingBag, Upload, Clock, CheckCircle, AlertCircle, User } from 'lucide-react';
 import { format } from 'date-fns';
+import type { MockBooking, BookingStatus } from '@/types/telehealth';
 
 interface OutletContext {
   hasActivePrescription: boolean;
   checkActivePrescription: () => void;
 }
 
+interface CombinedBooking {
+  id: string;
+  scheduledAt: Date;
+  status: BookingStatus;
+  doctorName: string | null;
+  displayTimezone?: string;
+  amountPaid?: number;
+}
+
+// Helper to get timezone abbreviation (AEST/AEDT)
+const getTimezoneLabel = (date: Date, timezone: string = 'Australia/Sydney'): string => {
+  const formatter = new Intl.DateTimeFormat('en-AU', {
+    timeZone: timezone,
+    timeZoneName: 'short'
+  });
+  const parts = formatter.formatToParts(date);
+  const tzPart = parts.find(p => p.type === 'timeZoneName');
+  return tzPart?.value || 'AEST';
+};
+
+// Helper to format doctor name with Dr. prefix (avoiding duplication)
+const formatDoctorName = (name: string): string => {
+  return /^dr\.?\s*/i.test(name) ? name : `Dr. ${name}`;
+};
+
 export default function PatientDashboard() {
   const { user } = useAuth();
   const { hasActivePrescription } = useOutletContext<OutletContext>();
-  const [nextConsultation, setNextConsultation] = useState<any>(null);
+  const [mockBookings, setMockBookings] = useState<MockBooking[]>([]);
   const [prescriptionStatus, setPrescriptionStatus] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
-      fetchData();
+      // Load mock bookings from localStorage
+      const bookings = mockBookingService.getPatientBookings(user.id);
+      setMockBookings(bookings);
+      fetchPrescriptionData();
     }
   }, [user]);
 
-  const fetchData = async () => {
+  // Combine mock bookings into unified format
+  const allBookings: CombinedBooking[] = useMemo(() => {
+    return mockBookings.map(b => ({
+      id: b.id,
+      scheduledAt: new Date(`${b.scheduledDate}T${b.timeWindowStart}:00`),
+      status: b.status,
+      doctorName: b.doctorName,
+      displayTimezone: b.displayTimezone,
+      amountPaid: ['booked', 'confirmed', 'completed', 'in_progress', 'no_answer'].includes(b.status) ? 49 : undefined,
+    }));
+  }, [mockBookings]);
+
+  // Derive next upcoming booking
+  const nextBooking: CombinedBooking | null = useMemo(() => {
+    // 'booked' represents confirmed bookings in our mock data
+    const upcomingStatuses: BookingStatus[] = ['booked'];
+    const now = new Date();
+    
+    return allBookings
+      .filter(b => upcomingStatuses.includes(b.status) && new Date(b.scheduledAt) >= now)
+      .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())[0] || null;
+  }, [allBookings]);
+
+  const fetchPrescriptionData = async () => {
     if (!user) return;
-
-    // Fetch next upcoming consultation
-    const { data: consultations } = await supabase
-      .from('consultations')
-      .select('*')
-      .eq('patient_id', user.id)
-      .in('status', ['requested', 'confirmed'])
-      .gte('scheduled_at', new Date().toISOString())
-      .order('scheduled_at', { ascending: true })
-      .limit(1);
-
-    if (consultations && consultations.length > 0) {
-      setNextConsultation(consultations[0]);
-    }
 
     // Fetch latest prescription
     const { data: prescriptions } = await supabase
@@ -119,23 +159,41 @@ export default function PatientDashboard() {
           <CardContent>
             {loading ? (
               <div className="h-16 bg-muted animate-pulse rounded" />
-            ) : nextConsultation ? (
-              <div className="space-y-2">
-                <p className="text-2xl font-bold">
-                  {format(new Date(nextConsultation.scheduled_at), 'MMM d, yyyy')}
-                </p>
+            ) : nextBooking ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="font-medium">
+                    {new Date(nextBooking.scheduledAt).toLocaleDateString('en-AU', {
+                      weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
+                    })}
+                  </p>
+                  <BookingStatusBadge status={nextBooking.status} />
+                </div>
                 <p className="text-sm text-muted-foreground">
-                  {format(new Date(nextConsultation.scheduled_at), 'h:mm a')} • {nextConsultation.consultation_type}
+                  {new Date(nextBooking.scheduledAt).toLocaleTimeString('en-AU', {
+                    hour: '2-digit', minute: '2-digit'
+                  })} ({getTimezoneLabel(new Date(nextBooking.scheduledAt), nextBooking.displayTimezone)})
                 </p>
-                <Badge variant="outline" className="capitalize">
-                  {nextConsultation.status}
-                </Badge>
+                {nextBooking.doctorName && (
+                  <p className="text-sm flex items-center gap-1">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span>{formatDoctorName(nextBooking.doctorName)}</span>
+                  </p>
+                )}
+                <div className="flex gap-2 pt-2">
+                  <Button asChild size="sm" variant="outline">
+                    <Link to="/patient/consultations">View consultation</Link>
+                  </Button>
+                  <Button asChild size="sm">
+                    <Link to="/patient/book">Book another</Link>
+                  </Button>
+                </div>
               </div>
             ) : (
-              <div className="space-y-2">
-                <p className="text-muted-foreground">No upcoming consultations</p>
-                <Button asChild size="sm">
-                  <Link to="/patient/book">Book Now</Link>
+              <div className="text-center py-4">
+                <p className="text-muted-foreground mb-4">No upcoming consultations</p>
+                <Button asChild>
+                  <Link to="/patient/book">Book a Consultation</Link>
                 </Button>
               </div>
             )}
