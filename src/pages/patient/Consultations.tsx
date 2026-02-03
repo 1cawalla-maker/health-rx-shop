@@ -12,6 +12,7 @@ import { format, isPast } from 'date-fns';
 import { formatDoctorName } from '@/lib/utils';
 import { ConsultationDetailDialog } from '@/components/patient/ConsultationDetailDialog';
 import { ManageBookingDialog } from '@/components/patient/ManageBookingDialog';
+import { CountdownChip } from '@/components/bookings/CountdownChip';
 import type { MockBooking, BookingStatus } from '@/types/telehealth';
 
 interface Consultation {
