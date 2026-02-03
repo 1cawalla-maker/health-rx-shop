@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle, ArrowRight, HelpCircle } from "lucide-react";
 
 const consultationFeatures = [
-  "15-30 minute video or phone consultation",
+  "15-30 minute phone consultation",
   "Assessment by AHPRA-registered doctor",
   "Review of your medical history",
   "Personalized medical advice",

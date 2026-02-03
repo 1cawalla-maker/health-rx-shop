@@ -16,7 +16,7 @@ const steps = [
   {
     icon: Calendar,
     title: "Book a Consultation",
-    description: "Schedule an online video or phone consultation with a registered Australian doctor.",
+    description: "Schedule a phone consultation with a registered Australian doctor.",
   },
   {
     icon: ClipboardCheck,
