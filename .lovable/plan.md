@@ -1,63 +1,145 @@
 
 
-# Remove "Book another consultation" CTA from Consultation Details Modal
+# Phase 1: Add Countdown Timer for Upcoming Consultations (Updated)
 
 ## Overview
-Simple UI cleanup: remove the bottom CTA button from the `ConsultationDetailDialog` component while preserving all other elements.
+Create a shared countdown chip component that displays remaining time for consultations within 24 hours. The component will update live every 60 seconds and automatically hide when time has passed.
 
-## File to Modify
+---
 
-**`src/components/patient/ConsultationDetailDialog.tsx`**
+## New File to Create
 
-## Changes
+### `src/components/bookings/CountdownChip.tsx`
 
-### 1. Remove unused imports (line 2, 4)
-Remove `Link` from react-router-dom and `Button` from UI components since they're no longer needed.
-
-**Before:**
 ```typescript
-import { Link } from 'react-router-dom';
-...
-import { Button } from '@/components/ui/button';
-```
+import { useState, useEffect } from 'react';
+import { Clock } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-**After:**
-```typescript
-// Remove line 2 entirely (Link import)
-// Keep Button import only if used elsewhere - but it IS used for the copy button on line 145
-// So we keep Button, remove only the Link import
-```
+interface CountdownChipProps {
+  utcTimestamp?: string;
+  targetMs?: number;
+  className?: string;
+}
 
-Actually, `Button` is still used for the copy booking ID button (line 145), so we only remove the `Link` import.
+export function CountdownChip({ utcTimestamp, targetMs, className }: CountdownChipProps) {
+  const [minutesRemaining, setMinutesRemaining] = useState<number | null>(null);
 
-### 2. Remove the CTA block (lines 174-177)
-Delete the entire "Book Another CTA" section.
+  useEffect(() => {
+    // Compute target time from props
+    const targetDate = utcTimestamp 
+      ? new Date(utcTimestamp) 
+      : targetMs 
+        ? new Date(targetMs) 
+        : null;
 
-**Remove:**
-```tsx
-{/* Book Another CTA */}
-<Button asChild className="w-full">
-  <Link to="/patient/book">Book another consultation</Link>
-</Button>
+    if (!targetDate || isNaN(targetDate.getTime())) {
+      setMinutesRemaining(null);
+      return;
+    }
+
+    const update = () => {
+      const msRemaining = targetDate.getTime() - Date.now();
+      setMinutesRemaining(Math.floor(msRemaining / 60000));
+    };
+
+    // Call immediately on mount
+    update();
+
+    // Then update every 60 seconds
+    const interval = setInterval(update, 60000);
+
+    // Cleanup on unmount
+    return () => clearInterval(interval);
+  }, [utcTimestamp, targetMs]);
+
+  // Hide if no data, passed, or > 24 hours away
+  if (minutesRemaining === null || minutesRemaining <= 0 || minutesRemaining > 1440) {
+    return null;
+  }
+
+  // Format: hours if >= 60min, otherwise minutes
+  const displayText = minutesRemaining >= 60
+    ? `${Math.floor(minutesRemaining / 60)}h left`
+    : `${minutesRemaining}m left`;
+
+  return (
+    <div className={cn(
+      "inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600 border border-amber-500/20",
+      className
+    )}>
+      <Clock className="h-3 w-3" />
+      <span>{displayText}</span>
+    </div>
+  );
+}
 ```
 
 ---
 
-## Summary
+## Files to Update (4 files)
 
-| Line(s) | Change |
-|---------|--------|
-| 2 | Remove `import { Link } from 'react-router-dom';` |
-| 174-177 | Delete the "Book Another CTA" `<Button>` block |
+### 1. `src/pages/patient/Dashboard.tsx`
+- Add import: `import { CountdownChip } from '@/components/bookings/CountdownChip';`
+- Add after time display in "Next Consultation" card:
+```tsx
+<CountdownChip utcTimestamp={nextBooking.utcTimestamp} />
+```
 
-## What Remains Unchanged
-- Date/time display with timezone
-- Status badge
-- Doctor name (when available)
-- Amount paid (when exists)
-- Booking ID with copy functionality
-- No-show policy (for upcoming bookings)
-- Rescheduling note (for upcoming bookings)
+---
+
+### 2. `src/pages/patient/Consultations.tsx`
+- Add import: `import { CountdownChip } from '@/components/bookings/CountdownChip';`
+- Add after time span in BookingCard:
+```tsx
+<CountdownChip utcTimestamp={booking.utcTimestamp} />
+```
+
+---
+
+### 3. `src/components/patient/ManageBookingDialog.tsx`
+- Add import: `import { CountdownChip } from '@/components/bookings/CountdownChip';`
+- Note: ManageBookingDialog receives `scheduledAt: Date` - need to pass as targetMs:
+```tsx
+<CountdownChip targetMs={booking.scheduledAt.getTime()} />
+```
+
+---
+
+### 4. `src/components/patient/ConsultationDetailDialog.tsx`
+- Add import: `import { CountdownChip } from '@/components/bookings/CountdownChip';`
+- Add after status badge:
+```tsx
+<CountdownChip utcTimestamp={booking.utcTimestamp} />
+```
+
+---
+
+## Summary Table
+
+| File | Change Type | Prop Used |
+|------|-------------|-----------|
+| `src/components/bookings/CountdownChip.tsx` | **Create** | N/A |
+| `src/pages/patient/Dashboard.tsx` | Update | `utcTimestamp` |
+| `src/pages/patient/Consultations.tsx` | Update | `utcTimestamp` |
+| `src/components/patient/ManageBookingDialog.tsx` | Update | `targetMs` |
+| `src/components/patient/ConsultationDetailDialog.tsx` | Update | `utcTimestamp` |
+
+---
+
+## Key Implementation Details
+
+| Requirement | Implementation |
+|-------------|----------------|
+| Immediate update on mount | `update()` called before `setInterval` |
+| 60s interval | `setInterval(update, 60000)` |
+| Cleanup on unmount | `return () => clearInterval(interval)` |
+| Timestamp input | `utcTimestamp: string` OR `targetMs: number` |
+| Compute remaining | `targetDate.getTime() - Date.now()` |
+| Hide when passed | `minutesRemaining <= 0` returns null |
+| Hide when > 24h | `minutesRemaining > 1440` returns null |
+| Display >= 60m | `${Math.floor(minutes / 60)}h left` |
+| Display < 60m | `${minutes}m left` |
 
 ---
 
