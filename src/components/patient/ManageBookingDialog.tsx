@@ -22,6 +22,7 @@ interface ManagedBooking {
   status: BookingStatus;
   doctorName: string | null;
   displayTimezone?: string;
+  amountPaid?: number | null;  // in cents
 }
 
 interface ManageBookingDialogProps {
@@ -101,20 +102,22 @@ export function ManageBookingDialog({
   const handleReschedule = () => {
     setIsRescheduling(true);
 
-    // Cancel the current booking and release the slot
-    mockBookingService.cancelBooking(booking.id);
+    // Get the amount paid (in cents) before navigating
+    // Default to $49 (4900 cents) if not set
+    const amountPaidCents = booking.amountPaid ?? 4900;
 
     toast({
-      title: 'Booking cancelled',
-      description: 'Please select a new time for your consultation.',
+      title: 'Select new time',
+      description: 'Please choose a new time for your consultation.',
     });
 
-    onBookingCancelled?.();
     onOpenChange(false);
     setIsRescheduling(false);
 
-    // Navigate to booking page
-    navigate('/patient/book');
+    // Navigate to booking page with reschedule context
+    // amountPaid is in cents (e.g., 4900 = $49.00)
+    // Do NOT cancel here - the atomic rescheduleBooking() will handle it
+    navigate(`/patient/book?reschedule=true&bookingId=${booking.id}&amountPaid=${amountPaidCents}`);
   };
 
   return (

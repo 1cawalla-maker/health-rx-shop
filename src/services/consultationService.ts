@@ -171,6 +171,121 @@ export const mockBookingService = {
     localStorage.setItem(MOCK_BOOKINGS_KEY, JSON.stringify(bookings));
   },
 
+  // Reschedule a booking atomically (validates slot, creates new paid booking, cancels old)
+  // amountPaid is in cents (e.g., 4900 = $49.00)
+  rescheduleBooking(
+    oldBookingId: string,
+    patientId: string,
+    date: string,
+    time: string,
+    utcTimestamp: string,
+    displayTimezone: string,
+    availableDoctorIds: string[],
+    amountPaid: number
+  ): MockBooking {
+    // 1. Validate amountPaid (must be positive and reasonable, max $1000)
+    if (!amountPaid || amountPaid <= 0 || amountPaid > 100000) {
+      throw new Error('Invalid payment amount for reschedule');
+    }
+
+    // 2. Validate old booking exists
+    const oldBooking = this.getBooking(oldBookingId);
+    if (!oldBooking) {
+      throw new Error('Original booking not found');
+    }
+
+    // 3. Validate old booking status is exactly 'booked'
+    if (oldBooking.status !== 'booked') {
+      throw new Error('Only booked appointments can be rescheduled');
+    }
+
+    // 4. Validate old booking is >24 hours in the future
+    const oldBookingTime = new Date(oldBooking.utcTimestamp);
+    const now = new Date();
+    const hoursUntilOldBooking = (oldBookingTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+    
+    if (hoursUntilOldBooking <= 0) {
+      throw new Error('Cannot reschedule a past appointment');
+    }
+    
+    if (hoursUntilOldBooking <= 24) {
+      throw new Error('Appointments within 24 hours cannot be rescheduled');
+    }
+
+    // 5. Validate new slot exists in aggregated availability
+    const aggregatedSlots = mockAvailabilityService.getAggregatedSlotsForDate(date);
+    const targetSlot = aggregatedSlots.find(s => s.time === time);
+    if (!targetSlot || !targetSlot.isAvailable) {
+      throw new Error('Selected time slot is no longer available');
+    }
+
+    // 6. Pick doctor and validate doctor-specific availability
+    const doctorId = availableDoctorIds[0];
+    if (!doctorId) {
+      throw new Error('No doctor available for this time slot');
+    }
+
+    // Check that this specific doctor has no existing 'booked' booking at same date/time
+    const allBookings = this.getBookings();
+    const conflictingBooking = allBookings.find(b => 
+      b.doctorId === doctorId &&
+      b.scheduledDate === date &&
+      b.timeWindowStart === time &&
+      b.status === 'booked' &&
+      b.id !== oldBookingId
+    );
+    
+    if (conflictingBooking) {
+      throw new Error('This doctor is not available at the selected time');
+    }
+
+    const doctor = MOCK_DOCTORS.find(d => d.id === doctorId);
+
+    // 7. Create reservation for new slot
+    const reservation = mockAvailabilityService.createReservation(
+      patientId,
+      doctorId,
+      date,
+      time,
+      utcTimestamp
+    );
+
+    const endTime = this.addMinutes(time, 5);
+
+    // 8. Create new booking with paid status (carry over payment)
+    const newBooking: MockBooking = {
+      id: crypto.randomUUID(),
+      patientId,
+      doctorId,
+      doctorName: doctor?.name || null,
+      scheduledDate: date,
+      timeWindowStart: time,
+      timeWindowEnd: endTime,
+      utcTimestamp,
+      displayTimezone,
+      status: 'booked',
+      amountPaid,
+      paidAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      reservationId: undefined,
+      callAttempts: [],
+    };
+
+    // 9. Release reservation immediately since it's already paid
+    mockAvailabilityService.releaseReservation(reservation.id);
+
+    // 10. Cancel old booking (releases its slot)
+    this.cancelBooking(oldBookingId);
+
+    // 11. Save new booking
+    const bookings = this.getBookings();
+    bookings.push(newBooking);
+    localStorage.setItem(MOCK_BOOKINGS_KEY, JSON.stringify(bookings));
+
+    return newBooking;
+  },
+
   // Log a call attempt
   logCallAttempt(bookingId: string, answered: boolean, notes?: string): MockCallAttempt | null {
     const bookings = this.getBookings();
