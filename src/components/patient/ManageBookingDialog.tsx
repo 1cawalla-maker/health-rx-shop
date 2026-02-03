@@ -14,6 +14,7 @@ import { Calendar, Clock, User, AlertTriangle, Info } from 'lucide-react';
 import { formatDoctorName } from '@/lib/utils';
 import { mockBookingService } from '@/services/consultationService';
 import { toast } from '@/hooks/use-toast';
+import { CountdownChip } from '@/components/bookings/CountdownChip';
 import type { BookingStatus } from '@/types/telehealth';
 
 interface ManagedBooking {
@@ -155,6 +156,7 @@ export function ManageBookingDialog({
               <Badge variant="outline" className={statusInfo.className}>
                 {statusInfo.label}
               </Badge>
+              <CountdownChip targetMs={booking.scheduledAt.getTime()} />
             </div>
           </div>
 

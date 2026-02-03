@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { BookingStatusBadge } from '@/components/bookings/BookingStatusBadge';
+import { CountdownChip } from '@/components/bookings/CountdownChip';
 import { ManageBookingDialog } from '@/components/patient/ManageBookingDialog';
 import { Calendar, FileText, ShoppingBag, Upload, Clock, CheckCircle, AlertCircle, User } from 'lucide-react';
 import { format } from 'date-fns';
@@ -179,6 +180,7 @@ export default function PatientDashboard() {
                     hour: '2-digit', minute: '2-digit'
                   })} ({getTimezoneLabel(new Date(nextBooking.scheduledAt), nextBooking.displayTimezone)})
                 </p>
+                <CountdownChip targetMs={nextBooking.scheduledAt.getTime()} />
                 {nextBooking.doctorName && (
                   <p className="text-sm flex items-center gap-1">
                     <User className="h-4 w-4 text-muted-foreground" />

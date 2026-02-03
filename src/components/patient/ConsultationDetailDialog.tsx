@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, User, Copy, AlertTriangle, Info } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { formatDoctorName } from '@/lib/utils';
+import { CountdownChip } from '@/components/bookings/CountdownChip';
 
 // Status can come from different tables with different allowed values
 type ConsultationStatus = 'pending_payment' | 'booked' | 'confirmed' | 'requested' | 'in_progress' | 'completed' | 'cancelled' | 'no_answer';
@@ -117,6 +118,7 @@ export function ConsultationDetailDialog({ booking, open, onOpenChange }: Consul
             <Badge variant="outline" className={statusInfo.className}>
               {statusInfo.label}
             </Badge>
+            <CountdownChip targetMs={booking.scheduledAt.getTime()} />
           </div>
 
           {/* Doctor Name - only if available */}
