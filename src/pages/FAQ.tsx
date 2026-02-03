@@ -39,6 +39,10 @@ const faqCategories = [
         answer: "Initial consultations typically take 15-30 minutes. Follow-up consultations are usually shorter, around 10-15 minutes. The doctor will take as much time as needed to properly assess your situation.",
       },
       {
+        question: "Can I reschedule my consultation?",
+        answer: "You can change your consultation time up to 24 hours before your scheduled appointment, subject to availability. Changes within 24 hours are not permitted. Rescheduling does not include refunds. If you reschedule, your original time slot is released and may be booked by another patient. No-shows remain non-refundable.",
+      },
+      {
         question: "What if I'm not approved for a prescription?",
         answer: "Not all consultations result in a prescription—this is at the doctor's clinical discretion based on your health profile. If you're not approved, the doctor will explain why and may suggest alternative options. You will still be charged for the consultation as it is a medical service.",
       },

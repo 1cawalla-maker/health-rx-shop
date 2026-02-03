@@ -7,8 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { BookingStatusBadge } from '@/components/bookings/BookingStatusBadge';
+import { ManageBookingDialog } from '@/components/patient/ManageBookingDialog';
 import { Calendar, FileText, ShoppingBag, Upload, Clock, CheckCircle, AlertCircle, User } from 'lucide-react';
 import { format } from 'date-fns';
+import { formatDoctorName } from '@/lib/utils';
 import type { MockBooking, BookingStatus } from '@/types/telehealth';
 
 interface OutletContext {
@@ -36,23 +38,26 @@ const getTimezoneLabel = (date: Date, timezone: string = 'Australia/Sydney'): st
   return tzPart?.value || 'AEST';
 };
 
-// Helper to format doctor name with Dr. prefix (avoiding duplication)
-const formatDoctorName = (name: string): string => {
-  return /^dr\.?\s*/i.test(name) ? name : `Dr. ${name}`;
-};
-
 export default function PatientDashboard() {
   const { user } = useAuth();
   const { hasActivePrescription } = useOutletContext<OutletContext>();
   const [mockBookings, setMockBookings] = useState<MockBooking[]>([]);
   const [prescriptionStatus, setPrescriptionStatus] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [manageDialogOpen, setManageDialogOpen] = useState(false);
+  const [selectedBookingForManage, setSelectedBookingForManage] = useState<CombinedBooking | null>(null);
+
+  const refreshBookings = () => {
+    if (user) {
+      const bookings = mockBookingService.getPatientBookings(user.id);
+      setMockBookings(bookings);
+    }
+  };
 
   useEffect(() => {
     if (user) {
       // Load mock bookings from localStorage
-      const bookings = mockBookingService.getPatientBookings(user.id);
-      setMockBookings(bookings);
+      refreshBookings();
       fetchPrescriptionData();
     }
   }, [user]);
@@ -180,12 +185,15 @@ export default function PatientDashboard() {
                     <span>{formatDoctorName(nextBooking.doctorName)}</span>
                   </p>
                 )}
-                <div className="flex gap-2 pt-2">
-                  <Button asChild size="sm" variant="outline">
-                    <Link to="/patient/consultations">View consultation</Link>
-                  </Button>
-                  <Button asChild size="sm">
-                    <Link to="/patient/book">Book another</Link>
+                <div className="pt-2">
+                  <Button 
+                    size="sm" 
+                    onClick={() => {
+                      setSelectedBookingForManage(nextBooking);
+                      setManageDialogOpen(true);
+                    }}
+                  >
+                    Manage
                   </Button>
                 </div>
               </div>
@@ -305,6 +313,14 @@ export default function PatientDashboard() {
           </ol>
         </CardContent>
       </Card>
+
+      {/* Manage Booking Dialog */}
+      <ManageBookingDialog
+        booking={selectedBookingForManage}
+        open={manageDialogOpen}
+        onOpenChange={setManageDialogOpen}
+        onBookingCancelled={refreshBookings}
+      />
     </div>
   );
 }

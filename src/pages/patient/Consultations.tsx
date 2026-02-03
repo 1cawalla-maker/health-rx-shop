@@ -7,9 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, Phone, Loader2, User, Eye } from 'lucide-react';
+import { Calendar, Clock, Phone, Loader2, User, Eye, Settings } from 'lucide-react';
 import { format, isPast } from 'date-fns';
+import { formatDoctorName } from '@/lib/utils';
 import { ConsultationDetailDialog } from '@/components/patient/ConsultationDetailDialog';
+import { ManageBookingDialog } from '@/components/patient/ManageBookingDialog';
 import type { MockBooking, BookingStatus } from '@/types/telehealth';
 
 interface Consultation {
@@ -37,6 +39,16 @@ export default function PatientConsultations() {
   const [loading, setLoading] = useState(true);
   const [selectedBooking, setSelectedBooking] = useState<CombinedBooking | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [manageDialogOpen, setManageDialogOpen] = useState(false);
+  const [selectedBookingForManage, setSelectedBookingForManage] = useState<CombinedBooking | null>(null);
+
+  const refreshBookings = () => {
+    if (user) {
+      const bookings = mockBookingService.getPatientBookings(user.id);
+      setMockBookings(bookings);
+      fetchConsultations();
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -151,13 +163,26 @@ export default function PatientConsultations() {
               {booking.doctorName && (
                 <div className="flex items-center gap-1 mt-2 text-sm">
                   <User className="h-4 w-4 text-muted-foreground" />
-                  <span>{booking.doctorName}</span>
+                  <span>{formatDoctorName(booking.doctorName)}</span>
                 </div>
               )}
             </div>
           </div>
           <div className="flex items-center gap-2">
             {getStatusBadge(booking.status)}
+            {['booked', 'confirmed'].includes(booking.status) && (
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={() => {
+                  setSelectedBookingForManage(booking);
+                  setManageDialogOpen(true);
+                }}
+                title="Manage booking"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            )}
             <Button variant="ghost" size="icon" onClick={() => openDetails(booking)}>
               <Eye className="h-4 w-4" />
             </Button>
@@ -245,6 +270,13 @@ export default function PatientConsultations() {
         booking={selectedBooking}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
+      />
+
+      <ManageBookingDialog
+        booking={selectedBookingForManage}
+        open={manageDialogOpen}
+        onOpenChange={setManageDialogOpen}
+        onBookingCancelled={refreshBookings}
       />
     </div>
   );

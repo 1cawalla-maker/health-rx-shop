@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, User, Copy, AlertTriangle } from 'lucide-react';
+import { Calendar, Clock, User, Copy, AlertTriangle, Info } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { formatDoctorName } from '@/lib/utils';
 
 // Status can come from different tables with different allowed values
 type ConsultationStatus = 'pending_payment' | 'booked' | 'confirmed' | 'requested' | 'in_progress' | 'completed' | 'cancelled' | 'no_answer';
@@ -123,7 +124,7 @@ export function ConsultationDetailDialog({ booking, open, onOpenChange }: Consul
           {booking.doctorName && (
             <div className="flex items-center gap-2 text-sm">
               <User className="h-4 w-4 text-muted-foreground" />
-              <span>Dr. {booking.doctorName}</span>
+              <span>{formatDoctorName(booking.doctorName)}</span>
             </div>
           )}
 
@@ -153,6 +154,18 @@ export function ConsultationDetailDialog({ booking, open, onOpenChange }: Consul
                 <AlertTriangle className="h-4 w-4 text-yellow-600 shrink-0 mt-0.5" />
                 <p className="text-sm text-yellow-700">
                   If you do not answer after 3 call attempts within the scheduled time, your consultation will be marked as a no-show. The $49 consultation fee is non-refundable for no-shows.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Rescheduling Note - only for upcoming bookings */}
+          {isUpcoming && (
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <div className="flex gap-2">
+                <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground">
+                  Need to change your appointment? Changes must be made at least 24 hours in advance. Use the "Manage" option from your consultations list.
                 </p>
               </div>
             </div>
