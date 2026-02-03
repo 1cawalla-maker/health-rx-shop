@@ -156,6 +156,7 @@ export function ManageBookingDialog({
               <Badge variant="outline" className={statusInfo.className}>
                 {statusInfo.label}
               </Badge>
+              <CountdownChip targetMs={booking.scheduledAt.getTime()} />
             </div>
           </div>
 

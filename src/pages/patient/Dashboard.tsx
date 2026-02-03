@@ -180,6 +180,7 @@ export default function PatientDashboard() {
                     hour: '2-digit', minute: '2-digit'
                   })} ({getTimezoneLabel(new Date(nextBooking.scheduledAt), nextBooking.displayTimezone)})
                 </p>
+                <CountdownChip targetMs={nextBooking.scheduledAt.getTime()} />
                 {nextBooking.doctorName && (
                   <p className="text-sm flex items-center gap-1">
                     <User className="h-4 w-4 text-muted-foreground" />

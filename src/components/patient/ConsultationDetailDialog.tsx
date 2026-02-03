@@ -118,6 +118,7 @@ export function ConsultationDetailDialog({ booking, open, onOpenChange }: Consul
             <Badge variant="outline" className={statusInfo.className}>
               {statusInfo.label}
             </Badge>
+            <CountdownChip targetMs={booking.scheduledAt.getTime()} />
           </div>
 
           {/* Doctor Name - only if available */}

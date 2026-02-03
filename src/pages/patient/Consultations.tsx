@@ -160,6 +160,7 @@ export default function PatientConsultations() {
                   <Clock className="h-4 w-4" />
                   {format(booking.scheduledAt, 'h:mm a')} {getTimezoneAbbr(booking.scheduledAt, booking.displayTimezone || 'Australia/Brisbane')}
                 </span>
+                <CountdownChip targetMs={booking.scheduledAt.getTime()} />
               </div>
               {booking.doctorName && (
                 <div className="flex items-center gap-1 mt-2 text-sm">
