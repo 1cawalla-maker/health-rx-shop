@@ -1,56 +1,71 @@
 // Shop Prescription Service - Mock implementation for prescription gating
-// MVP: Uses localStorage
-// Future: Query from Supabase
+// Phase 1: Uses localStorage only - NO Supabase
+// Storage key: healthrx_mock_prescriptions
 
-import type { MockPrescription, Order, PRESCRIPTION_TOTAL_CANS } from '@/types/shop';
+import type { MockPrescription } from '@/types/shop';
 import { orderService } from './orderService';
 
-const PRESCRIPTION_STORAGE_KEY = 'nicopatch_shop_prescription';
+const PRESCRIPTION_STORAGE_KEY = 'healthrx_mock_prescriptions';
 
 class ShopPrescriptionService {
-  private getStoredPrescription(): MockPrescription | null {
+  // Private: Read all prescriptions from localStorage
+  private getAllPrescriptions(): MockPrescription[] {
     try {
       const stored = localStorage.getItem(PRESCRIPTION_STORAGE_KEY);
       if (stored) {
-        const prescription = JSON.parse(stored) as MockPrescription;
-        // Check if expired
-        if (prescription.expiresAt && new Date(prescription.expiresAt) < new Date()) {
-          return { ...prescription, status: 'expired' };
-        }
-        return prescription;
+        return JSON.parse(stored) as MockPrescription[];
       }
     } catch (error) {
-      console.error('Error reading prescription from localStorage:', error);
+      console.error('Error reading prescriptions from localStorage:', error);
     }
-    return null;
+    return [];
   }
 
-  private savePrescription(prescription: MockPrescription): void {
+  // Private: Save all prescriptions to localStorage
+  private savePrescriptions(prescriptions: MockPrescription[]): void {
     try {
-      localStorage.setItem(PRESCRIPTION_STORAGE_KEY, JSON.stringify(prescription));
+      localStorage.setItem(PRESCRIPTION_STORAGE_KEY, JSON.stringify(prescriptions));
     } catch (error) {
-      console.error('Error saving prescription to localStorage:', error);
+      console.error('Error saving prescriptions to localStorage:', error);
     }
   }
 
-  // Get active prescription for current user
-  async getActivePrescription(userId: string): Promise<MockPrescription | null> {
-    const prescription = this.getStoredPrescription();
-    if (prescription && prescription.userId === userId && prescription.status === 'active') {
-      return prescription;
+  // Get active prescription for specific user
+  // Returns newest active, non-expired prescription or null
+  getActivePrescription(userId: string): MockPrescription | null {
+    const all = this.getAllPrescriptions();
+    const now = new Date().toISOString();
+    
+    // Filter by userId, status='active', and non-expired
+    const activePrescriptions = all.filter(p => 
+      p.userId === userId && 
+      p.status === 'active' && 
+      (!p.expiresAt || p.expiresAt > now)
+    );
+    
+    // Return newest (by createdAt)
+    if (activePrescriptions.length === 0) {
+      return null;
     }
-    return null;
+    
+    return activePrescriptions.sort((a, b) => 
+      b.createdAt.localeCompare(a.createdAt)
+    )[0];
   }
 
-  // Calculate remaining allowance based on placed orders
-  async getRemainingAllowance(userId: string): Promise<{ totalCansAllowed: number; cansUsed: number; remainingCans: number }> {
-    const prescription = await this.getActivePrescription(userId);
+  // Calculate remaining allowance from persisted orders (user-scoped)
+  // Formula: 60 - sum(orders.filter(o => o.userId).totalCans)
+  async getRemainingAllowance(userId: string): Promise<{
+    totalCansAllowed: number;
+    cansUsed: number;
+    remainingCans: number;
+  }> {
+    const prescription = this.getActivePrescription(userId);
     if (!prescription) {
       return { totalCansAllowed: 0, cansUsed: 0, remainingCans: 0 };
     }
 
-    const orders = await orderService.getOrders(userId);
-    const cansUsed = orders.reduce((sum, order) => sum + order.totalCans, 0);
+    const cansUsed = await orderService.getTotalCansOrdered(userId);
     const remainingCans = Math.max(0, prescription.totalCansAllowed - cansUsed);
 
     return {
@@ -60,10 +75,15 @@ class ShopPrescriptionService {
     };
   }
 
-  // Create/activate a mock prescription (for dev toggle)
-  async createMockPrescription(userId: string, maxStrengthMg: 3 | 6 | 9 = 9): Promise<MockPrescription> {
+  // Create mock prescription for testing (dev helper)
+  // Removes existing prescriptions for this user first
+  createMockPrescription(userId: string, maxStrengthMg: 3 | 6 | 9): MockPrescription {
+    // Remove existing prescriptions for this user
+    this.clearMockPrescriptionsForUser(userId);
+
+    const now = new Date();
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 90); // 3 months
+    expiresAt.setDate(expiresAt.getDate() + 30); // 30 days for testing
 
     const prescription: MockPrescription = {
       id: `mock-rx-${Date.now()}`,
@@ -72,21 +92,33 @@ class ShopPrescriptionService {
       maxStrengthMg,
       totalCansAllowed: 60,
       expiresAt: expiresAt.toISOString(),
-      createdAt: new Date().toISOString(),
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
     };
 
-    this.savePrescription(prescription);
+    const all = this.getAllPrescriptions();
+    all.push(prescription);
+    this.savePrescriptions(all);
+    
     return prescription;
   }
 
-  // Clear mock prescription (for dev toggle)
-  clearMockPrescription(): void {
-    localStorage.removeItem(PRESCRIPTION_STORAGE_KEY);
+  // Clear prescriptions for specific user only
+  clearMockPrescriptionsForUser(userId: string): void {
+    const all = this.getAllPrescriptions();
+    const filtered = all.filter(p => p.userId !== userId);
+    this.savePrescriptions(filtered);
   }
 
-  // Check if strength is allowed by prescription
-  isStrengthAllowed(prescriptionMaxStrength: number, variantStrength: number): boolean {
-    return variantStrength <= prescriptionMaxStrength;
+  // Legacy: Clear all prescriptions (for backwards compatibility)
+  clearAllPrescriptions(): void {
+    this.savePrescriptions([]);
+  }
+
+  // STRENGTH GATING HELPER
+  // Rule: variant.strengthMg <= prescription.maxStrengthMg
+  isVariantAllowed(variantStrengthMg: number, prescriptionMaxStrengthMg: number): boolean {
+    return variantStrengthMg <= prescriptionMaxStrengthMg;
   }
 }
 

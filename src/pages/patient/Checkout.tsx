@@ -41,7 +41,7 @@ export default function PatientCheckout() {
   const SHIPPING_COST_CENTS = subtotalCents >= 10000 ? 0 : 995; // Free shipping over $100
   const totalCents = subtotalCents + SHIPPING_COST_CENTS;
 
-  // Calculate remaining allowance
+  // Calculate remaining allowance (display purposes - will be recalculated at submit)
   const remainingCans = Math.max(0, PRESCRIPTION_TOTAL_CANS - cansOrdered);
   const cartExceedsAllowance = cart.totalCans > remainingCans;
 
@@ -89,14 +89,20 @@ export default function PatientCheckout() {
       return;
     }
 
-    if (cartExceedsAllowance) {
-      toast.error('Cart exceeds your remaining prescription allowance');
+    // RECALC FROM SCRATCH at submit time - fresh read from localStorage
+    // Defends against localStorage manipulation between add and checkout
+    const freshCansOrdered = await orderService.getTotalCansOrdered(user.id);
+    const freshRemainingCans = PRESCRIPTION_TOTAL_CANS - freshCansOrdered;
+
+    if (cart.totalCans > freshRemainingCans) {
+      toast.error(`Cart (${cart.totalCans} cans) exceeds remaining allowance (${freshRemainingCans} cans)`);
       return;
     }
 
     setIsProcessing(true);
 
     try {
+      // ATOMIC: Order persists first
       const order = await orderService.placeOrder({
         userId: user.id,
         cart,
@@ -105,12 +111,14 @@ export default function PatientCheckout() {
         prescriptionId,
       });
 
+      // ONLY clear cart after successful order persistence
       await clearCart();
       setOrderConfirmed(true);
       navigate(`/patient/order-success?orderId=${order.id}`);
     } catch (error) {
       console.error('Error creating order:', error);
-      toast.error('Failed to place order. Please try again.');
+      // Cart remains unchanged on failure
+      toast.error('Failed to place order. Your cart has not been modified.');
     } finally {
       setIsProcessing(false);
     }

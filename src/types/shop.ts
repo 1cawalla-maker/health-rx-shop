@@ -101,6 +101,7 @@ export interface MockPrescription {
   totalCansAllowed: 60;
   expiresAt?: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface PrescriptionStatus {
