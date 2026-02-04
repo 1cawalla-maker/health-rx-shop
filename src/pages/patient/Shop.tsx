@@ -9,6 +9,7 @@ import { useCart } from '@/contexts/CartContext';
 import { usePrescriptionStatus } from '@/hooks/usePrescriptionStatus';
 import { catalogService } from '@/services/catalogService';
 import { orderService } from '@/services/orderService';
+import { shopPrescriptionService } from '@/services/shopPrescriptionService';
 import { CartButton } from '@/components/shop/CartButton';
 import { CartDrawer } from '@/components/shop/CartDrawer';
 import { ShopLockedOverlay } from '@/components/shop/ShopLockedOverlay';
@@ -18,6 +19,7 @@ import type { Product, ProductVariant } from '@/types/shop';
 import { PRESCRIPTION_TOTAL_CANS } from '@/types/shop';
 import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 interface OutletContext {
   hasActivePrescription: boolean;
@@ -39,12 +41,13 @@ export default function PatientShop() {
     referenceId,
     mockEnabled,
     setMockPrescription,
+    refreshStatus,
     isLoading: isLoadingRx,
   } = usePrescriptionStatus();
 
-  // Combine context and hook - prefer context for real-time updates, but allow mock override
-  const hasActivePrescription = mockEnabled || outletContext.hasActivePrescription || rxHasActive;
-  const hasPendingPrescription = !mockEnabled && outletContext.hasPendingPrescription;
+  // Combine context and hook - prefer mock/hook for Phase 1 testing
+  const hasActivePrescription = mockEnabled || rxHasActive || outletContext.hasActivePrescription;
+  const hasPendingPrescription = !mockEnabled && !rxHasActive && outletContext.hasPendingPrescription;
 
   // Use prescription strength or default to 9 for mock
   const maxStrengthMg = allowedStrengthMg || (mockEnabled ? 9 : 0);
@@ -81,16 +84,40 @@ export default function PatientShop() {
     loadCansOrdered();
   }, [user]);
 
+  // ALLOWANCE CHECK: Recalc from scratch BEFORE add-to-cart mutation
   const handleAddToCart = async (product: Product, variant: ProductVariant) => {
-    if (remainingCans <= 0) return;
+    if (!user) {
+      toast.error('Please log in to add items to cart');
+      return;
+    }
+
+    // RECALC FROM SCRATCH: persisted orders + current cart
+    const freshCansOrdered = await orderService.getTotalCansOrdered(user.id);
+    const freshRemainingCans = PRESCRIPTION_TOTAL_CANS - freshCansOrdered - cart.totalCans;
+
+    if (freshRemainingCans <= 0) {
+      toast.error('No remaining allowance - you have used your full prescription');
+      return;
+    }
+
     await addToCart(product, variant, 1);
   };
 
+  // STRENGTH GATING: Use service helper
   const isVariantAllowed = (variant: ProductVariant): boolean => {
-    return variant.strengthMg <= maxStrengthMg;
+    return shopPrescriptionService.isVariantAllowed(variant.strengthMg, maxStrengthMg);
   };
 
   const canAddMore = remainingCans > 0;
+
+  // Dev toggle handlers with strength support
+  const handleCreatePrescription = (strength: 3 | 6 | 9) => {
+    setMockPrescription(true, strength);
+  };
+
+  const handleClearPrescription = () => {
+    setMockPrescription(false);
+  };
 
   return (
     <div className="space-y-8">
@@ -239,10 +266,11 @@ export default function PatientShop() {
       {/* Cart Drawer */}
       <CartDrawer remainingCans={remainingCans} />
 
-      {/* Dev Toggle */}
+      {/* Dev Toggle - with new props */}
       <DevPrescriptionToggle
-        mockEnabled={mockEnabled}
-        onToggle={setMockPrescription}
+        onCreatePrescription={handleCreatePrescription}
+        onClearPrescription={handleClearPrescription}
+        activePrescription={hasActivePrescription ? { maxStrengthMg } : null}
       />
     </div>
   );
