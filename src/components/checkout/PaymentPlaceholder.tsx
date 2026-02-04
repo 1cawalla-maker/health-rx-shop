@@ -10,6 +10,7 @@ interface PaymentPlaceholderProps {
   isProcessing: boolean;
   onPlaceOrder: () => void;
   onBack: () => void;
+  disabled?: boolean;
 }
 
 export function PaymentPlaceholder({
@@ -17,6 +18,7 @@ export function PaymentPlaceholder({
   isProcessing,
   onPlaceOrder,
   onBack,
+  disabled = false,
 }: PaymentPlaceholderProps) {
   return (
     <div className="space-y-6">
@@ -105,7 +107,7 @@ export function PaymentPlaceholder({
           className="w-full"
           size="lg"
           onClick={onPlaceOrder}
-          disabled={isProcessing}
+          disabled={isProcessing || disabled}
         >
           {isProcessing ? (
             <>

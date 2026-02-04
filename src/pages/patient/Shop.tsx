@@ -1,19 +1,23 @@
 import { useState, useEffect } from 'react';
-import { ShoppingCart, AlertTriangle } from 'lucide-react';
+import { ShoppingCart, AlertTriangle, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
 import { useCart } from '@/contexts/CartContext';
 import { usePrescriptionStatus } from '@/hooks/usePrescriptionStatus';
-import { productService } from '@/services/productService';
+import { catalogService } from '@/services/catalogService';
+import { orderService } from '@/services/orderService';
 import { CartButton } from '@/components/shop/CartButton';
 import { CartDrawer } from '@/components/shop/CartDrawer';
 import { ShopLockedOverlay } from '@/components/shop/ShopLockedOverlay';
 import { ShopPendingOverlay } from '@/components/shop/ShopPendingOverlay';
 import { DevPrescriptionToggle } from '@/components/shop/DevPrescriptionToggle';
-import type { Product } from '@/types/shop';
+import type { Product, ProductVariant } from '@/types/shop';
+import { PRESCRIPTION_TOTAL_CANS } from '@/types/shop';
 import { useOutletContext } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 
 interface OutletContext {
   hasActivePrescription: boolean;
@@ -23,14 +27,15 @@ interface OutletContext {
 
 export default function PatientShop() {
   const outletContext = useOutletContext<OutletContext>();
+  const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [cansOrdered, setCansOrdered] = useState(0);
   const { addToCart, cart } = useCart();
   
   const {
     hasActivePrescription: rxHasActive,
     allowedStrengthMg,
-    maxContainers,
     referenceId,
     mockEnabled,
     setMockPrescription,
@@ -41,10 +46,17 @@ export default function PatientShop() {
   const hasActivePrescription = mockEnabled || outletContext.hasActivePrescription || rxHasActive;
   const hasPendingPrescription = !mockEnabled && outletContext.hasPendingPrescription;
 
+  // Use prescription strength or default to 9 for mock
+  const maxStrengthMg = allowedStrengthMg || (mockEnabled ? 9 : 0);
+
+  // Calculate remaining allowance
+  const remainingCans = Math.max(0, PRESCRIPTION_TOTAL_CANS - cansOrdered - cart.totalCans);
+  const allowancePercentUsed = ((cansOrdered + cart.totalCans) / PRESCRIPTION_TOTAL_CANS) * 100;
+
   useEffect(() => {
     const loadProducts = async () => {
       try {
-        const loadedProducts = await productService.getProducts();
+        const loadedProducts = await catalogService.listProducts();
         setProducts(loadedProducts);
       } catch (error) {
         console.error('Error loading products:', error);
@@ -55,16 +67,30 @@ export default function PatientShop() {
     loadProducts();
   }, []);
 
-  // Filter products by allowed strength if prescription exists
-  const filteredProducts = hasActivePrescription && allowedStrengthMg
-    ? products.filter(p => p.strength <= allowedStrengthMg)
-    : products;
+  // Load orders to calculate cans already ordered
+  useEffect(() => {
+    const loadCansOrdered = async () => {
+      if (!user) return;
+      try {
+        const totalCans = await orderService.getTotalCansOrdered(user.id);
+        setCansOrdered(totalCans);
+      } catch (error) {
+        console.error('Error loading cans ordered:', error);
+      }
+    };
+    loadCansOrdered();
+  }, [user]);
 
-  const handleAddToCart = async (product: Product) => {
-    await addToCart(product);
+  const handleAddToCart = async (product: Product, variant: ProductVariant) => {
+    if (remainingCans <= 0) return;
+    await addToCart(product, variant, 1);
   };
 
-  const isOverLimit = maxContainers !== undefined && cart.itemCount >= maxContainers;
+  const isVariantAllowed = (variant: ProductVariant): boolean => {
+    return variant.strengthMg <= maxStrengthMg;
+  };
+
+  const canAddMore = remainingCans > 0;
 
   return (
     <div className="space-y-8">
@@ -77,25 +103,57 @@ export default function PatientShop() {
         {hasActivePrescription && <CartButton />}
       </div>
 
-      {/* Prescription Warning Banner */}
+      {/* Allowance Card */}
       {hasActivePrescription && (
+        <Card className="border-primary/20">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-primary" />
+                <span className="font-medium">Prescription Allowance</span>
+              </div>
+              <span className="text-sm text-muted-foreground">
+                {remainingCans} of {PRESCRIPTION_TOTAL_CANS} cans remaining
+              </span>
+            </div>
+            <Progress value={allowancePercentUsed} className="h-2" />
+            <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+              <span>{cansOrdered} ordered</span>
+              <span>{cart.totalCans} in cart</span>
+              <span>Max strength: {maxStrengthMg}mg</span>
+            </div>
+            {referenceId && (
+              <p className="text-xs text-muted-foreground mt-2">Prescription: {referenceId}</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Prescription Warning Banner */}
+      {hasActivePrescription && remainingCans < 10 && remainingCans > 0 && (
         <Alert variant="default" className="border-amber-500/50 bg-amber-500/10">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-amber-700">
-            <strong>Important:</strong> All orders must strictly follow your doctor's prescription (strength and allowed quantity).
-            {referenceId && <span className="ml-1">Prescription: {referenceId}</span>}
-            {maxContainers && <span className="ml-1">• Max containers: {maxContainers}</span>}
-            {allowedStrengthMg && <span className="ml-1">• Max strength: {allowedStrengthMg}mg</span>}
+            <strong>Low Allowance:</strong> You have {remainingCans} cans remaining on your prescription.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {hasActivePrescription && remainingCans === 0 && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Allowance Exhausted:</strong> You've used your full prescription allowance of {PRESCRIPTION_TOTAL_CANS} cans.
           </AlertDescription>
         </Alert>
       )}
 
       <div className="relative">
-        {/* Product Grid */}
+        {/* Product Grid by Flavour */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {isLoadingProducts ? (
             // Loading skeletons
-            Array.from({ length: 6 }).map((_, i) => (
+            Array.from({ length: 3 }).map((_, i) => (
               <Card key={i} className="overflow-hidden animate-pulse">
                 <div className="aspect-square bg-muted" />
                 <CardHeader className="pb-2">
@@ -111,39 +169,52 @@ export default function PatientShop() {
               </Card>
             ))
           ) : (
-            filteredProducts.map((product) => (
+            products.map((product) => (
               <Card key={product.id} className="overflow-hidden">
-                <div className="aspect-square bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+                <div className="aspect-[4/3] bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
                   <div className="text-center p-4">
-                    <p className="font-display text-lg font-bold text-foreground">{product.name}</p>
+                    <p className="font-display text-2xl font-bold text-foreground">{product.name}</p>
                     <p className="text-sm text-muted-foreground">{product.brand}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{product.canSizePouches} pouches per can</p>
                   </div>
                 </div>
                 <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{product.name}</CardTitle>
-                      <CardDescription>{product.flavor}</CardDescription>
-                    </div>
-                    <Badge variant="outline">{product.strength}mg</Badge>
-                  </div>
+                  <CardTitle className="text-lg">{product.name}</CardTitle>
+                  <CardDescription>{product.description}</CardDescription>
                 </CardHeader>
-                <CardContent className="pb-2">
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>Pack of {product.packSize}</span>
-                    <span className="font-semibold text-foreground">${product.price.toFixed(2)}</span>
+                <CardContent className="pb-4">
+                  {/* Variant buttons */}
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">Select Strength:</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {product.variants.map((variant) => {
+                        const allowed = isVariantAllowed(variant);
+                        const available = variant.available && allowed && canAddMore;
+                        
+                        return (
+                          <Button
+                            key={variant.id}
+                            variant={allowed ? "outline" : "ghost"}
+                            size="sm"
+                            className={`flex flex-col h-auto py-2 ${
+                              !allowed ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                            onClick={() => available && handleAddToCart(product, variant)}
+                            disabled={!available}
+                          >
+                            <span className="font-semibold">{variant.strengthMg}mg</span>
+                            <span className="text-xs text-muted-foreground">
+                              ${(variant.priceCents / 100).toFixed(2)}
+                            </span>
+                            {!allowed && (
+                              <span className="text-[10px] text-destructive">Not allowed</span>
+                            )}
+                          </Button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </CardContent>
-                <CardFooter>
-                  <Button
-                    className="w-full"
-                    onClick={() => handleAddToCart(product)}
-                    disabled={!hasActivePrescription || isOverLimit}
-                  >
-                    <ShoppingCart className="h-4 w-4 mr-2" />
-                    {isOverLimit ? 'Cart Limit Reached' : 'Add to Cart'}
-                  </Button>
-                </CardFooter>
               </Card>
             ))
           )}
@@ -159,14 +230,14 @@ export default function PatientShop() {
         <Card className="bg-green-500/5 border-green-500/20">
           <CardContent className="pt-6">
             <p className="text-sm text-green-600">
-              ✓ Your prescription is active. You can order products within your prescription limits.
+              ✓ Your prescription is active. You can order products up to {maxStrengthMg}mg strength within your allowance.
             </p>
           </CardContent>
         </Card>
       )}
 
       {/* Cart Drawer */}
-      <CartDrawer maxContainers={maxContainers} />
+      <CartDrawer remainingCans={remainingCans} />
 
       {/* Dev Toggle */}
       <DevPrescriptionToggle

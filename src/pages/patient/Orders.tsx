@@ -124,7 +124,7 @@ export default function PatientOrders() {
                   <div>
                     <CardTitle className="text-lg">Order #{order.orderNumber}</CardTitle>
                     <CardDescription>
-                      Placed on {format(new Date(order.createdAt), 'MMMM d, yyyy')}
+                      Placed on {format(new Date(order.createdAt), 'MMMM d, yyyy')} • {order.totalCans} cans
                     </CardDescription>
                   </div>
                   {getStatusBadge(order.status)}
@@ -136,15 +136,15 @@ export default function PatientOrders() {
                     {order.items.map((item, index) => (
                       <div key={index} className="flex justify-between text-sm">
                         <span>
-                          {item.name} ({item.flavor} • {item.strength}mg)
+                          {item.flavor} ({item.strengthMg}mg)
                         </span>
-                        <span className="text-muted-foreground">x{item.quantity}</span>
+                        <span className="text-muted-foreground">x{item.qtyCans} cans</span>
                       </div>
                     ))}
                   </div>
                   
                   <div className="flex items-center justify-between pt-4 border-t">
-                    <span className="font-medium">Total: ${order.total.toFixed(2)} AUD</span>
+                    <span className="font-medium">Total: ${(order.totalCents / 100).toFixed(2)} AUD</span>
                     <div className="flex gap-2">
                       {order.status === 'shipped' && (
                         <Button variant="outline" size="sm" asChild>

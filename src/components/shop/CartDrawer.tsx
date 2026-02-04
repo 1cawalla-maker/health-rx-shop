@@ -4,16 +4,22 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
 import { useCart } from '@/contexts/CartContext';
+import { PRESCRIPTION_TOTAL_CANS } from '@/types/shop';
 
 interface CartDrawerProps {
-  maxContainers?: number;
+  remainingCans?: number;
+  maxContainers?: number; // Legacy prop
 }
 
-export function CartDrawer({ maxContainers }: CartDrawerProps) {
+export function CartDrawer({ remainingCans, maxContainers }: CartDrawerProps) {
   const { cart, isCartOpen, setIsCartOpen, updateQuantity, removeFromCart } = useCart();
 
-  const isOverLimit = maxContainers !== undefined && cart.itemCount > maxContainers;
+  // Use remainingCans if provided, otherwise fall back to maxContainers for backwards compatibility
+  const allowanceRemaining = remainingCans ?? (maxContainers ? maxContainers - cart.totalCans : undefined);
+  const isOverLimit = allowanceRemaining !== undefined && allowanceRemaining < 0;
+  const canCheckout = !isOverLimit && cart.items.length > 0;
 
   return (
     <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
@@ -21,7 +27,7 @@ export function CartDrawer({ maxContainers }: CartDrawerProps) {
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <ShoppingBag className="h-5 w-5" />
-            Your Cart ({cart.itemCount} {cart.itemCount === 1 ? 'item' : 'items'})
+            Your Cart ({cart.totalCans} {cart.totalCans === 1 ? 'can' : 'cans'})
           </SheetTitle>
         </SheetHeader>
 
@@ -33,10 +39,26 @@ export function CartDrawer({ maxContainers }: CartDrawerProps) {
           </div>
         ) : (
           <>
+            {/* Allowance indicator */}
+            {allowanceRemaining !== undefined && (
+              <div className="mt-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Allowance used</span>
+                  <span className={isOverLimit ? 'text-destructive' : ''}>
+                    {cart.totalCans} / {cart.totalCans + (allowanceRemaining > 0 ? allowanceRemaining : 0)} cans
+                  </span>
+                </div>
+                <Progress 
+                  value={Math.min(100, (cart.totalCans / (cart.totalCans + Math.max(0, allowanceRemaining))) * 100)} 
+                  className="h-2"
+                />
+              </div>
+            )}
+
             {isOverLimit && (
               <Alert variant="destructive" className="mt-4">
                 <AlertDescription>
-                  Your prescription allows up to {maxContainers} containers. Please reduce your cart.
+                  Your cart exceeds your remaining prescription allowance. Please reduce items.
                 </AlertDescription>
               </Alert>
             )}
@@ -47,14 +69,14 @@ export function CartDrawer({ maxContainers }: CartDrawerProps) {
                   {/* Product Image Placeholder */}
                   <div className="h-20 w-20 rounded-md bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center shrink-0">
                     <span className="text-xs text-muted-foreground text-center px-1">
-                      {item.strength}mg
+                      {item.strengthMg}mg
                     </span>
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <h4 className="font-medium text-sm truncate">{item.name}</h4>
-                    <p className="text-xs text-muted-foreground">{item.flavor} • {item.strength}mg</p>
-                    <p className="text-sm font-semibold mt-1">${item.price.toFixed(2)}</p>
+                    <p className="text-xs text-muted-foreground">{item.flavor} • {item.strengthMg}mg</p>
+                    <p className="text-sm font-semibold mt-1">${(item.priceCents / 100).toFixed(2)} / can</p>
 
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center gap-2">
@@ -62,16 +84,17 @@ export function CartDrawer({ maxContainers }: CartDrawerProps) {
                           variant="outline"
                           size="icon"
                           className="h-7 w-7"
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.id, item.qtyCans - 1)}
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
-                        <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+                        <span className="w-8 text-center text-sm font-medium">{item.qtyCans}</span>
                         <Button
                           variant="outline"
                           size="icon"
                           className="h-7 w-7"
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          onClick={() => updateQuantity(item.id, item.qtyCans + 1)}
+                          disabled={allowanceRemaining !== undefined && allowanceRemaining <= 0}
                         >
                           <Plus className="h-3 w-3" />
                         </Button>
@@ -96,18 +119,22 @@ export function CartDrawer({ maxContainers }: CartDrawerProps) {
             <SheetFooter className="pt-4 flex-col gap-4 sm:flex-col">
               <div className="flex items-center justify-between w-full">
                 <span className="text-lg font-medium">Subtotal</span>
-                <span className="text-lg font-bold">${cart.subtotal.toFixed(2)} AUD</span>
+                <span className="text-lg font-bold">${(cart.subtotalCents / 100).toFixed(2)} AUD</span>
               </div>
 
               <Button
-                asChild
+                asChild={canCheckout}
                 className="w-full"
                 size="lg"
-                disabled={isOverLimit || cart.items.length === 0}
+                disabled={!canCheckout}
               >
-                <Link to="/patient/checkout" onClick={() => setIsCartOpen(false)}>
-                  Proceed to Checkout
-                </Link>
+                {canCheckout ? (
+                  <Link to="/patient/checkout" onClick={() => setIsCartOpen(false)}>
+                    Proceed to Checkout
+                  </Link>
+                ) : (
+                  <span>Proceed to Checkout</span>
+                )}
               </Button>
 
               <p className="text-xs text-muted-foreground text-center">
