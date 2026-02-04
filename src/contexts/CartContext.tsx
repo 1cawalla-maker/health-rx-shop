@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { cartService } from '@/services/cartService';
-import type { Cart, CartItem, Product } from '@/types/shop';
+import type { Cart, CartItem, Product, ProductVariant } from '@/types/shop';
 import { toast } from 'sonner';
 
 interface CartContextType {
@@ -8,8 +8,8 @@ interface CartContextType {
   isLoading: boolean;
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
-  addToCart: (product: Product, quantity?: number) => Promise<void>;
-  updateQuantity: (itemId: string, quantity: number) => Promise<void>;
+  addToCart: (product: Product, variant: ProductVariant, qtyCans?: number) => Promise<void>;
+  updateQuantity: (itemId: string, qtyCans: number) => Promise<void>;
   removeFromCart: (itemId: string) => Promise<void>;
   clearCart: () => Promise<void>;
   refreshCart: () => Promise<void>;
@@ -17,8 +17,10 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | null>(null);
 
+const emptyCart: Cart = { items: [], subtotalCents: 0, totalCans: 0, subtotal: 0, itemCount: 0 };
+
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [cart, setCart] = useState<Cart>({ items: [], subtotal: 0, itemCount: 0 });
+  const [cart, setCart] = useState<Cart>(emptyCart);
   const [isLoading, setIsLoading] = useState(true);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
@@ -45,20 +47,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
     loadCart();
   }, []);
 
-  const addToCart = async (product: Product, quantity: number = 1) => {
+  const addToCart = async (product: Product, variant: ProductVariant, qtyCans: number = 1) => {
     try {
-      const updatedCart = await cartService.addItem(product, quantity);
+      const updatedCart = await cartService.addItem(product, variant, qtyCans);
       setCart(updatedCart);
-      toast.success(`Added ${product.name} to cart`);
+      toast.success(`Added ${product.name} (${variant.strengthMg}mg) to cart`);
     } catch (error) {
       console.error('Error adding to cart:', error);
       toast.error('Failed to add item to cart');
     }
   };
 
-  const updateQuantity = async (itemId: string, quantity: number) => {
+  const updateQuantity = async (itemId: string, qtyCans: number) => {
     try {
-      const updatedCart = await cartService.updateQuantity(itemId, quantity);
+      const updatedCart = await cartService.updateQuantity(itemId, qtyCans);
       setCart(updatedCart);
     } catch (error) {
       console.error('Error updating quantity:', error);
@@ -79,8 +81,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = async () => {
     try {
-      const emptyCart = await cartService.clearCart();
-      setCart(emptyCart);
+      const empty = await cartService.clearCart();
+      setCart(empty);
     } catch (error) {
       console.error('Error clearing cart:', error);
       toast.error('Failed to clear cart');

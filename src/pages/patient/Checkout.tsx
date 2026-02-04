@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Truck, ClipboardList, CreditCard, Check } from 'lucide-react';
+import { ChevronLeft, Truck, ClipboardList, CreditCard, Check, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/hooks/useAuth';
 import { usePrescriptionStatus } from '@/hooks/usePrescriptionStatus';
@@ -11,6 +12,7 @@ import { ShippingForm } from '@/components/checkout/ShippingForm';
 import { OrderReview } from '@/components/checkout/OrderReview';
 import { PaymentPlaceholder } from '@/components/checkout/PaymentPlaceholder';
 import type { ShippingAddress } from '@/types/shop';
+import { PRESCRIPTION_TOTAL_CANS } from '@/types/shop';
 import { toast } from 'sonner';
 
 type CheckoutStep = 'shipping' | 'review' | 'payment';
@@ -25,16 +27,37 @@ export default function PatientCheckout() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { cart, clearCart } = useCart();
-  const { prescriptionId, referenceId, maxContainers } = usePrescriptionStatus();
+  const { prescriptionId, referenceId } = usePrescriptionStatus();
   
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('shipping');
   const [shippingAddress, setShippingAddress] = useState<ShippingAddress | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderConfirmed, setOrderConfirmed] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [cansOrdered, setCansOrdered] = useState(0);
 
-  const SHIPPING_COST = cart.subtotal >= 100 ? 0 : 9.95;
-  const total = cart.subtotal + SHIPPING_COST;
+  // Calculate amounts in cents
+  const subtotalCents = cart.subtotalCents;
+  const SHIPPING_COST_CENTS = subtotalCents >= 10000 ? 0 : 995; // Free shipping over $100
+  const totalCents = subtotalCents + SHIPPING_COST_CENTS;
+
+  // Calculate remaining allowance
+  const remainingCans = Math.max(0, PRESCRIPTION_TOTAL_CANS - cansOrdered);
+  const cartExceedsAllowance = cart.totalCans > remainingCans;
+
+  // Load cans already ordered
+  useEffect(() => {
+    const loadCansOrdered = async () => {
+      if (!user) return;
+      try {
+        const totalCans = await orderService.getTotalCansOrdered(user.id);
+        setCansOrdered(totalCans);
+      } catch (error) {
+        console.error('Error loading cans ordered:', error);
+      }
+    };
+    loadCansOrdered();
+  }, [user]);
 
   // Redirect if cart is empty
   if (cart.items.length === 0 && !orderConfirmed) {
@@ -66,16 +89,19 @@ export default function PatientCheckout() {
       return;
     }
 
+    if (cartExceedsAllowance) {
+      toast.error('Cart exceeds your remaining prescription allowance');
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
-      const order = await orderService.createOrder({
+      const order = await orderService.placeOrder({
         userId: user.id,
-        items: cart.items,
+        cart,
         shippingAddress,
-        subtotal: cart.subtotal,
-        shipping: SHIPPING_COST,
-        total,
+        shippingCents: SHIPPING_COST_CENTS,
         prescriptionId,
       });
 
@@ -116,6 +142,17 @@ export default function PatientCheckout() {
           <p className="text-muted-foreground mt-1">Complete your order</p>
         </div>
       </div>
+
+      {/* Allowance Warning */}
+      {cartExceedsAllowance && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Your cart ({cart.totalCans} cans) exceeds your remaining allowance ({remainingCans} cans). 
+            Please remove items before proceeding.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Step Indicator */}
       <div className="flex items-center justify-center">
@@ -180,10 +217,10 @@ export default function PatientCheckout() {
             <OrderReview
               cart={cart}
               shippingAddress={shippingAddress}
-              shippingCost={SHIPPING_COST}
-              total={total}
+              shippingCost={SHIPPING_COST_CENTS / 100}
+              total={totalCents / 100}
               prescriptionRef={referenceId}
-              maxContainers={maxContainers}
+              maxContainers={remainingCans}
               agreedToTerms={agreedToTerms}
               onAgreeChange={setAgreedToTerms}
               onEditShipping={() => setCurrentStep('shipping')}
@@ -193,10 +230,11 @@ export default function PatientCheckout() {
 
           {currentStep === 'payment' && (
             <PaymentPlaceholder
-              total={total}
+              total={totalCents / 100}
               isProcessing={isProcessing}
               onPlaceOrder={handlePlaceOrder}
               onBack={() => setCurrentStep('review')}
+              disabled={cartExceedsAllowance}
             />
           )}
         </div>
@@ -206,35 +244,36 @@ export default function PatientCheckout() {
           <Card className="sticky top-6">
             <CardHeader>
               <CardTitle className="text-lg">Order Summary</CardTitle>
+              <CardDescription>{cart.totalCans} cans</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {cart.items.map((item) => (
                 <div key={item.id} className="flex justify-between text-sm">
                   <span>
-                    {item.name} x{item.quantity}
+                    {item.name} ({item.strengthMg}mg) x{item.qtyCans}
                   </span>
-                  <span>${(item.price * item.quantity).toFixed(2)}</span>
+                  <span>${((item.priceCents * item.qtyCans) / 100).toFixed(2)}</span>
                 </div>
               ))}
               
               <div className="border-t pt-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal</span>
-                  <span>${cart.subtotal.toFixed(2)}</span>
+                  <span>${(subtotalCents / 100).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Shipping</span>
-                  <span>{SHIPPING_COST === 0 ? 'Free' : `$${SHIPPING_COST.toFixed(2)}`}</span>
+                  <span>{SHIPPING_COST_CENTS === 0 ? 'Free' : `$${(SHIPPING_COST_CENTS / 100).toFixed(2)}`}</span>
                 </div>
                 <div className="flex justify-between font-semibold text-lg border-t pt-2">
                   <span>Total</span>
-                  <span>${total.toFixed(2)} AUD</span>
+                  <span>${(totalCents / 100).toFixed(2)} AUD</span>
                 </div>
               </div>
 
-              {cart.subtotal < 100 && (
+              {subtotalCents < 10000 && (
                 <p className="text-xs text-muted-foreground">
-                  Add ${(100 - cart.subtotal).toFixed(2)} more for free shipping
+                  Add ${((10000 - subtotalCents) / 100).toFixed(2)} more for free shipping
                 </p>
               )}
             </CardContent>

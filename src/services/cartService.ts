@@ -2,7 +2,7 @@
 // MVP: Uses localStorage
 // Future: Replace with Shopify Cart API
 
-import type { Cart, CartItem, Product } from '@/types/shop';
+import type { Cart, CartItem, Product, ProductVariant } from '@/types/shop';
 
 const CART_STORAGE_KEY = 'nicopatch_cart';
 
@@ -11,12 +11,20 @@ class CartService {
     try {
       const stored = localStorage.getItem(CART_STORAGE_KEY);
       if (stored) {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        // Ensure new fields exist
+        return {
+          items: parsed.items || [],
+          subtotalCents: parsed.subtotalCents ?? (parsed.subtotal ? Math.round(parsed.subtotal * 100) : 0),
+          totalCans: parsed.totalCans ?? parsed.itemCount ?? 0,
+          subtotal: parsed.subtotal ?? (parsed.subtotalCents ? parsed.subtotalCents / 100 : 0),
+          itemCount: parsed.itemCount ?? parsed.totalCans ?? 0,
+        };
       }
     } catch (error) {
       console.error('Error reading cart from localStorage:', error);
     }
-    return { items: [], subtotal: 0, itemCount: 0 };
+    return { items: [], subtotalCents: 0, totalCans: 0, subtotal: 0, itemCount: 0 };
   }
 
   private saveCart(cart: Cart): void {
@@ -27,87 +35,101 @@ class CartService {
     }
   }
 
-  private calculateTotals(items: CartItem[]): { subtotal: number; itemCount: number } {
-    const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
-    return { subtotal, itemCount };
+  private calculateTotals(items: CartItem[]): { subtotalCents: number; totalCans: number } {
+    const subtotalCents = items.reduce((sum, item) => sum + item.priceCents * item.qtyCans, 0);
+    const totalCans = items.reduce((sum, item) => sum + item.qtyCans, 0);
+    return { subtotalCents, totalCans };
   }
 
   async getCart(): Promise<Cart> {
-    // MVP: Read from localStorage
-    // Future: Call Shopify Cart API
     return this.getStoredCart();
   }
 
-  async addItem(product: Product, quantity: number = 1): Promise<Cart> {
-    // MVP: Update localStorage
-    // Future: Call Shopify Cart API
+  async addItem(product: Product, variant: ProductVariant, qtyCans: number = 1): Promise<Cart> {
     const cart = this.getStoredCart();
     
     const existingItemIndex = cart.items.findIndex(
-      item => item.productId === product.id
+      item => item.productId === product.id && item.variantId === variant.id
     );
 
     if (existingItemIndex >= 0) {
-      cart.items[existingItemIndex].quantity += quantity;
+      cart.items[existingItemIndex].qtyCans += qtyCans;
+      // Also update legacy quantity
+      cart.items[existingItemIndex].quantity = cart.items[existingItemIndex].qtyCans;
     } else {
       const newItem: CartItem = {
         id: `cart-item-${Date.now()}`,
         productId: product.id,
+        variantId: variant.id,
         name: product.name,
         brand: product.brand,
         flavor: product.flavor,
-        strength: product.strength,
-        packSize: product.packSize,
-        price: product.price,
-        quantity,
+        strengthMg: variant.strengthMg,
+        priceCents: variant.priceCents,
+        qtyCans,
         imageUrl: product.imageUrl,
+        // Legacy fields
+        strength: variant.strengthMg,
+        packSize: 20,
+        price: variant.priceCents / 100,
+        quantity: qtyCans,
       };
       cart.items.push(newItem);
     }
 
     const totals = this.calculateTotals(cart.items);
-    cart.subtotal = totals.subtotal;
-    cart.itemCount = totals.itemCount;
+    cart.subtotalCents = totals.subtotalCents;
+    cart.totalCans = totals.totalCans;
+    // Legacy fields
+    cart.subtotal = totals.subtotalCents / 100;
+    cart.itemCount = totals.totalCans;
     
     this.saveCart(cart);
     return cart;
   }
 
-  async updateQuantity(itemId: string, quantity: number): Promise<Cart> {
-    // MVP: Update localStorage
-    // Future: Call Shopify Cart API
+  async updateQuantity(itemId: string, qtyCans: number): Promise<Cart> {
     const cart = this.getStoredCart();
     
     const itemIndex = cart.items.findIndex(item => item.id === itemId);
     if (itemIndex >= 0) {
-      if (quantity <= 0) {
+      if (qtyCans <= 0) {
         cart.items.splice(itemIndex, 1);
       } else {
-        cart.items[itemIndex].quantity = quantity;
+        cart.items[itemIndex].qtyCans = qtyCans;
+        cart.items[itemIndex].quantity = qtyCans;
       }
     }
 
     const totals = this.calculateTotals(cart.items);
-    cart.subtotal = totals.subtotal;
-    cart.itemCount = totals.itemCount;
+    cart.subtotalCents = totals.subtotalCents;
+    cart.totalCans = totals.totalCans;
+    cart.subtotal = totals.subtotalCents / 100;
+    cart.itemCount = totals.totalCans;
     
     this.saveCart(cart);
     return cart;
   }
 
   async removeItem(itemId: string): Promise<Cart> {
-    // MVP: Update localStorage
-    // Future: Call Shopify Cart API
     return this.updateQuantity(itemId, 0);
   }
 
   async clearCart(): Promise<Cart> {
-    // MVP: Clear localStorage
-    // Future: Call Shopify Cart API
-    const emptyCart: Cart = { items: [], subtotal: 0, itemCount: 0 };
+    const emptyCart: Cart = { 
+      items: [], 
+      subtotalCents: 0, 
+      totalCans: 0,
+      subtotal: 0,
+      itemCount: 0,
+    };
     this.saveCart(emptyCart);
     return emptyCart;
+  }
+
+  // Check if adding items would exceed allowance
+  canAddToCart(cart: Cart, qtyCans: number, remainingAllowance: number): boolean {
+    return (cart.totalCans + qtyCans) <= remainingAllowance;
   }
 }
 

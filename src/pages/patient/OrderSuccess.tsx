@@ -83,20 +83,20 @@ export default function PatientOrderSuccess() {
       <Card>
         <CardHeader>
           <CardTitle>Order Details</CardTitle>
-          <CardDescription>Summary of your purchase</CardDescription>
+          <CardDescription>Summary of your purchase ({order.totalCans} cans)</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Items */}
           <div className="space-y-3">
-            {order.items.map((item) => (
-              <div key={item.id} className="flex justify-between">
+            {order.items.map((item, index) => (
+              <div key={index} className="flex justify-between">
                 <div>
-                  <p className="font-medium">{item.name}</p>
+                  <p className="font-medium">{item.flavor}</p>
                   <p className="text-sm text-muted-foreground">
-                    {item.flavor} • {item.strength}mg • Qty: {item.quantity}
+                    {item.strengthMg}mg • Qty: {item.qtyCans} cans
                   </p>
                 </div>
-                <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
+                <p className="font-medium">${((item.unitPriceCents * item.qtyCans) / 100).toFixed(2)}</p>
               </div>
             ))}
           </div>
@@ -107,15 +107,15 @@ export default function PatientOrderSuccess() {
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>Subtotal</span>
-              <span>${order.subtotal.toFixed(2)}</span>
+              <span>${(order.subtotalCents / 100).toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span>Shipping</span>
-              <span>{order.shipping === 0 ? 'Free' : `$${order.shipping.toFixed(2)}`}</span>
+              <span>{order.shippingCents === 0 ? 'Free' : `$${(order.shippingCents / 100).toFixed(2)}`}</span>
             </div>
             <div className="flex justify-between font-semibold text-lg">
               <span>Total</span>
-              <span>${order.total.toFixed(2)} AUD</span>
+              <span>${(order.totalCents / 100).toFixed(2)} AUD</span>
             </div>
           </div>
 
