@@ -8,11 +8,11 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/hooks/useAuth';
 import { usePrescriptionStatus } from '@/hooks/usePrescriptionStatus';
 import { orderService } from '@/services/orderService';
+import { allowanceUtils } from '@/lib/allowanceUtils';
 import { ShippingForm } from '@/components/checkout/ShippingForm';
 import { OrderReview } from '@/components/checkout/OrderReview';
 import { PaymentPlaceholder } from '@/components/checkout/PaymentPlaceholder';
 import type { ShippingAddress } from '@/types/shop';
-import { PRESCRIPTION_TOTAL_CANS } from '@/types/shop';
 import { toast } from 'sonner';
 
 type CheckoutStep = 'shipping' | 'review' | 'payment';
@@ -41,9 +41,9 @@ export default function PatientCheckout() {
   const SHIPPING_COST_CENTS = subtotalCents >= 10000 ? 0 : 995; // Free shipping over $100
   const totalCents = subtotalCents + SHIPPING_COST_CENTS;
 
-  // Calculate remaining allowance (display purposes - will be recalculated at submit)
-  const remainingCans = Math.max(0, PRESCRIPTION_TOTAL_CANS - cansOrdered);
-  const cartExceedsAllowance = cart.totalCans > remainingCans;
+  // Calculate remaining allowance using centralized utils (for display - recalculated at submit)
+  const remainingCans = allowanceUtils.remainingAtCheckout(cansOrdered);
+  const cartExceedsAllowance = allowanceUtils.cartExceedsAllowance(cansOrdered, cart.totalCans);
 
   // Load cans already ordered
   useEffect(() => {
@@ -89,12 +89,11 @@ export default function PatientCheckout() {
       return;
     }
 
-    // RECALC FROM SCRATCH at submit time - fresh read from localStorage
-    // Defends against localStorage manipulation between add and checkout
+    // RECALC FROM SCRATCH at submit using allowanceUtils
     const freshCansOrdered = await orderService.getTotalCansOrdered(user.id);
-    const freshRemainingCans = PRESCRIPTION_TOTAL_CANS - freshCansOrdered;
 
-    if (cart.totalCans > freshRemainingCans) {
+    if (allowanceUtils.cartExceedsAllowance(freshCansOrdered, cart.totalCans)) {
+      const freshRemainingCans = allowanceUtils.remainingAtCheckout(freshCansOrdered);
       toast.error(`Cart (${cart.totalCans} cans) exceeds remaining allowance (${freshRemainingCans} cans)`);
       return;
     }
@@ -214,6 +213,7 @@ export default function PatientCheckout() {
               </CardHeader>
               <CardContent>
                 <ShippingForm
+                  userId={user?.id}
                   initialData={shippingAddress}
                   onSubmit={handleShippingSubmit}
                 />

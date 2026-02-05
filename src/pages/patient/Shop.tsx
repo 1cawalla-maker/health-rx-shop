@@ -9,11 +9,12 @@ import { useCart } from '@/contexts/CartContext';
 import { usePrescriptionStatus } from '@/hooks/usePrescriptionStatus';
 import { catalogService } from '@/services/catalogService';
 import { orderService } from '@/services/orderService';
-import { shopPrescriptionService } from '@/services/shopPrescriptionService';
+import { allowanceUtils } from '@/lib/allowanceUtils';
 import { CartButton } from '@/components/shop/CartButton';
 import { CartDrawer } from '@/components/shop/CartDrawer';
 import { ShopLockedOverlay } from '@/components/shop/ShopLockedOverlay';
 import { ShopPendingOverlay } from '@/components/shop/ShopPendingOverlay';
+import { ShopExpiredOverlay } from '@/components/shop/ShopExpiredOverlay';
 import { DevPrescriptionToggle } from '@/components/shop/DevPrescriptionToggle';
 import type { Product, ProductVariant } from '@/types/shop';
 import { PRESCRIPTION_TOTAL_CANS } from '@/types/shop';
@@ -43,6 +44,8 @@ export default function PatientShop() {
     setMockPrescription,
     refreshStatus,
     isLoading: isLoadingRx,
+    isExpired,
+    expiredAt,
   } = usePrescriptionStatus();
 
   // Combine context and hook - prefer mock/hook for Phase 1 testing
@@ -52,9 +55,9 @@ export default function PatientShop() {
   // Use prescription strength or default to 9 for mock
   const maxStrengthMg = allowedStrengthMg || (mockEnabled ? 9 : 0);
 
-  // Calculate remaining allowance
-  const remainingCans = Math.max(0, PRESCRIPTION_TOTAL_CANS - cansOrdered - cart.totalCans);
-  const allowancePercentUsed = ((cansOrdered + cart.totalCans) / PRESCRIPTION_TOTAL_CANS) * 100;
+  // Calculate remaining allowance using centralized utils
+  const remainingCans = allowanceUtils.remainingForAddToCart(cansOrdered, cart.totalCans);
+  const allowancePercentUsed = allowanceUtils.percentageUsed(cansOrdered, cart.totalCans);
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -91,9 +94,9 @@ export default function PatientShop() {
       return;
     }
 
-    // RECALC FROM SCRATCH: persisted orders + current cart
+    // RECALC FROM SCRATCH using allowanceUtils
     const freshCansOrdered = await orderService.getTotalCansOrdered(user.id);
-    const freshRemainingCans = PRESCRIPTION_TOTAL_CANS - freshCansOrdered - cart.totalCans;
+    const freshRemainingCans = allowanceUtils.remainingForAddToCart(freshCansOrdered, cart.totalCans);
 
     if (freshRemainingCans <= 0) {
       toast.error('No remaining allowance - you have used your full prescription');
@@ -103,9 +106,9 @@ export default function PatientShop() {
     await addToCart(product, variant, 1);
   };
 
-  // STRENGTH GATING: Use service helper
+  // STRENGTH GATING: Use allowanceUtils helper
   const isVariantAllowed = (variant: ProductVariant): boolean => {
-    return shopPrescriptionService.isVariantAllowed(variant.strengthMg, maxStrengthMg);
+    return allowanceUtils.isVariantAllowed(variant.strengthMg, maxStrengthMg);
   };
 
   const canAddMore = remainingCans > 0;
@@ -144,10 +147,15 @@ export default function PatientShop() {
               </span>
             </div>
             <Progress value={allowancePercentUsed} className="h-2" />
-            <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-              <span>{cansOrdered} ordered</span>
-              <span>{cart.totalCans} in cart</span>
-              <span>Max strength: {maxStrengthMg}mg</span>
+            <div className="flex justify-between mt-2 text-sm">
+              <span className="font-medium">{cansOrdered} ordered</span>
+              <span className="text-muted-foreground">|</span>
+              <span className="font-medium">{cart.totalCans} in cart</span>
+              <span className="text-muted-foreground">|</span>
+              <span className="font-medium text-primary">{remainingCans} remaining</span>
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              Max strength: {maxStrengthMg}mg
             </div>
             {referenceId && (
               <p className="text-xs text-muted-foreground mt-2">Prescription: {referenceId}</p>
@@ -248,8 +256,9 @@ export default function PatientShop() {
         </div>
 
         {/* Overlays */}
+        {!hasActivePrescription && isExpired && <ShopExpiredOverlay expiredAt={expiredAt} />}
         {!hasActivePrescription && hasPendingPrescription && <ShopPendingOverlay />}
-        {!hasActivePrescription && !hasPendingPrescription && <ShopLockedOverlay />}
+        {!hasActivePrescription && !hasPendingPrescription && !isExpired && <ShopLockedOverlay />}
       </div>
 
       {/* Active prescription info */}

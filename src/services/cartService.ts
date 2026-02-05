@@ -3,13 +3,12 @@
 // Future: Replace with Shopify Cart API
 
 import type { Cart, CartItem, Product, ProductVariant } from '@/types/shop';
-
-const CART_STORAGE_KEY = 'nicopatch_cart';
+import { STORAGE_KEYS } from '@/lib/storageKeys';
 
 class CartService {
   private getStoredCart(): Cart {
     try {
-      const stored = localStorage.getItem(CART_STORAGE_KEY);
+      const stored = localStorage.getItem(STORAGE_KEYS.cart);
       if (stored) {
         const parsed = JSON.parse(stored);
         // Ensure new fields exist
@@ -29,7 +28,7 @@ class CartService {
 
   private saveCart(cart: Cart): void {
     try {
-      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+      localStorage.setItem(STORAGE_KEYS.cart, JSON.stringify(cart));
     } catch (error) {
       console.error('Error saving cart to localStorage:', error);
     }

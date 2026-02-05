@@ -1,17 +1,16 @@
 // Shop Prescription Service - Mock implementation for prescription gating
 // Phase 1: Uses localStorage only - NO Supabase
-// Storage key: healthrx_mock_prescriptions
+// Storage key: STORAGE_KEYS.prescriptions
 
 import type { MockPrescription } from '@/types/shop';
+import { STORAGE_KEYS } from '@/lib/storageKeys';
 import { orderService } from './orderService';
-
-const PRESCRIPTION_STORAGE_KEY = 'healthrx_mock_prescriptions';
 
 class ShopPrescriptionService {
   // Private: Read all prescriptions from localStorage
   private getAllPrescriptions(): MockPrescription[] {
     try {
-      const stored = localStorage.getItem(PRESCRIPTION_STORAGE_KEY);
+      const stored = localStorage.getItem(STORAGE_KEYS.prescriptions);
       if (stored) {
         return JSON.parse(stored) as MockPrescription[];
       }
@@ -24,7 +23,7 @@ class ShopPrescriptionService {
   // Private: Save all prescriptions to localStorage
   private savePrescriptions(prescriptions: MockPrescription[]): void {
     try {
-      localStorage.setItem(PRESCRIPTION_STORAGE_KEY, JSON.stringify(prescriptions));
+      localStorage.setItem(STORAGE_KEYS.prescriptions, JSON.stringify(prescriptions));
     } catch (error) {
       console.error('Error saving prescriptions to localStorage:', error);
     }
@@ -33,6 +32,9 @@ class ShopPrescriptionService {
   // Get active prescription for specific user
   // Returns newest active, non-expired prescription or null
   getActivePrescription(userId: string): MockPrescription | null {
+    // NULL GUARD: If userId is falsy, return null (do not read localStorage)
+    if (!userId) return null;
+    
     const all = this.getAllPrescriptions();
     const now = new Date().toISOString();
     
@@ -53,6 +55,36 @@ class ShopPrescriptionService {
     )[0];
   }
 
+  // Get latest prescription for user (even if expired) for UX messaging
+  getLatestPrescription(userId: string): { 
+    prescription: MockPrescription | null; 
+    isExpired: boolean 
+  } {
+    // NULL GUARD: If userId is falsy, return safe default
+    if (!userId) {
+      return { prescription: null, isExpired: false };
+    }
+    
+    const all = this.getAllPrescriptions();
+    const userPrescriptions = all.filter(p => p.userId === userId);
+    
+    if (userPrescriptions.length === 0) {
+      return { prescription: null, isExpired: false };
+    }
+    
+    // Return newest by createdAt
+    const latest = userPrescriptions.sort((a, b) => 
+      b.createdAt.localeCompare(a.createdAt)
+    )[0];
+    
+    // Check if expired (expiresAt <= now)
+    const isExpired = latest.expiresAt 
+      ? new Date(latest.expiresAt) <= new Date() 
+      : false;
+    
+    return { prescription: latest, isExpired };
+  }
+
   // Calculate remaining allowance from persisted orders (user-scoped)
   // Formula: 60 - sum(orders.filter(o => o.userId).totalCans)
   async getRemainingAllowance(userId: string): Promise<{
@@ -60,6 +92,11 @@ class ShopPrescriptionService {
     cansUsed: number;
     remainingCans: number;
   }> {
+    // NULL GUARD: If userId is falsy, return zeros
+    if (!userId) {
+      return { totalCansAllowed: 0, cansUsed: 0, remainingCans: 0 };
+    }
+
     const prescription = this.getActivePrescription(userId);
     if (!prescription) {
       return { totalCansAllowed: 0, cansUsed: 0, remainingCans: 0 };
