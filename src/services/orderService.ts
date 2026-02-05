@@ -3,8 +3,7 @@
 // Future: Insert into Supabase orders table + sync with Shopify
 
 import type { Order, OrderItem, Cart, ShippingAddress } from '@/types/shop';
-
-const ORDERS_STORAGE_KEY = 'nicopatch_orders';
+import { STORAGE_KEYS } from '@/lib/storageKeys';
 
 interface CreateOrderData {
   userId: string;
@@ -17,7 +16,7 @@ interface CreateOrderData {
 class OrderService {
   private getStoredOrders(): Order[] {
     try {
-      const stored = localStorage.getItem(ORDERS_STORAGE_KEY);
+      const stored = localStorage.getItem(STORAGE_KEYS.orders);
       if (stored) {
         const orders = JSON.parse(stored) as Order[];
         // Ensure totalCans exists for legacy orders
@@ -34,7 +33,7 @@ class OrderService {
 
   private saveOrders(orders: Order[]): void {
     try {
-      localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
+      localStorage.setItem(STORAGE_KEYS.orders, JSON.stringify(orders));
     } catch (error) {
       console.error('Error saving orders to localStorage:', error);
     }
@@ -92,6 +91,9 @@ class OrderService {
   }
 
   async getOrders(userId: string): Promise<Order[]> {
+    // NULL GUARD: If userId is falsy, return empty array
+    if (!userId) return [];
+    
     const orders = this.getStoredOrders();
     return orders.filter(o => o.userId === userId);
   }
@@ -108,6 +110,9 @@ class OrderService {
 
   // Calculate total cans ordered by user (for allowance tracking)
   async getTotalCansOrdered(userId: string): Promise<number> {
+    // NULL GUARD: If userId is falsy, return 0
+    if (!userId) return 0;
+    
     const orders = await this.getOrders(userId);
     return orders.reduce((sum, order) => sum + order.totalCans, 0);
   }

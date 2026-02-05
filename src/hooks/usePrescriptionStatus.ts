@@ -6,35 +6,57 @@ import { useAuth } from '@/hooks/useAuth';
 import { shopPrescriptionService } from '@/services/shopPrescriptionService';
 import type { PrescriptionStatus } from '@/types/shop';
 
+interface ExtendedPrescriptionStatus extends PrescriptionStatus {
+  isExpired: boolean;
+  expiredAt?: Date;
+  latestPrescriptionId?: string;
+}
+
 export function usePrescriptionStatus() {
   const { user } = useAuth();
-  const [status, setStatus] = useState<PrescriptionStatus>({ hasActivePrescription: false });
+  const [status, setStatus] = useState<ExtendedPrescriptionStatus>({ 
+    hasActivePrescription: false,
+    isExpired: false,
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   // Refresh function to reload from service
   const refreshStatus = useCallback(async () => {
+    // Null guard: if no user, return safe defaults
     if (!user) {
-      setStatus({ hasActivePrescription: false });
+      setStatus({ hasActivePrescription: false, isExpired: false });
       setIsLoading(false);
       return;
     }
 
-    // ONLY use mock service - NO Supabase
     const prescription = shopPrescriptionService.getActivePrescription(user.id);
 
     if (prescription) {
+      // Active prescription found
       const allowance = await shopPrescriptionService.getRemainingAllowance(user.id);
       setStatus({
         hasActivePrescription: true,
+        isExpired: false,  // Active means not expired
         allowedStrengthMg: prescription.maxStrengthMg,
         prescriptionId: prescription.id,
         expiresAt: prescription.expiresAt ? new Date(prescription.expiresAt) : undefined,
         totalCansAllowed: prescription.totalCansAllowed,
         remainingCans: allowance.remainingCans,
-        referenceId: prescription.id, // Use ID as reference for mock
+        referenceId: prescription.id,
       });
     } else {
-      setStatus({ hasActivePrescription: false });
+      // No active prescription - check if expired for messaging
+      const { prescription: latest, isExpired } = 
+        shopPrescriptionService.getLatestPrescription(user.id);
+      
+      setStatus({
+        hasActivePrescription: false,
+        isExpired,  // True only if user had a prescription that expired
+        expiredAt: isExpired && latest?.expiresAt 
+          ? new Date(latest.expiresAt) 
+          : undefined,
+        latestPrescriptionId: latest?.id,
+      });
     }
 
     setIsLoading(false);

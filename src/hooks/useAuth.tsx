@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
+import { cartService } from '@/services/cartService';
 
 export type AppRole = Database['public']['Enums']['app_role'];
 export type UserStatus = Database['public']['Enums']['user_status'];
@@ -249,6 +250,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    // Clear cart before signing out to prevent data leakage
+    await cartService.clearCart();
+    
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
