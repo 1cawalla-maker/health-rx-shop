@@ -76,7 +76,14 @@ export function CartDrawer({ remainingCans, maxContainers }: CartDrawerProps) {
                   <div className="flex-1 min-w-0">
                     <h4 className="font-medium text-sm truncate">{item.name}</h4>
                     <p className="text-xs text-muted-foreground">{item.flavor} • {item.strengthMg}mg</p>
-                    <p className="text-sm font-semibold mt-1">${(item.priceCents / 100).toFixed(2)} / can</p>
+<p className="text-sm font-semibold mt-1">
+                      {typeof item.priceCents === 'number' && !isNaN(item.priceCents) && item.priceCents >= 0
+                        ? `$${(item.priceCents / 100).toFixed(2)} / can`
+                        : (() => {
+                            console.warn('CartDrawer: item has invalid priceCents:', { id: item.id, name: item.name, priceCents: item.priceCents });
+                            return '—';
+                          })()}
+                    </p>
 
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center gap-2">

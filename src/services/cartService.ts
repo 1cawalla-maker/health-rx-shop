@@ -5,19 +5,96 @@
 import type { Cart, CartItem, Product, ProductVariant } from '@/types/shop';
 import { STORAGE_KEYS } from '@/lib/storageKeys';
 
+/**
+ * Type for cart items as stored in localStorage
+ * Includes legacy fields that may exist in older stored data
+ * TODO Phase 2: Remove after migration to backend storage
+ */
+type StoredCartItem = Partial<CartItem> & {
+  price?: number;       // Legacy: dollars (e.g., 9.95)
+  quantity?: number;    // Legacy: same as qtyCans
+  strength?: number;    // Legacy: same as strengthMg
+};
+
 class CartService {
+  /**
+   * Normalize a cart item from localStorage to ensure all required fields are valid numbers
+   * Handles legacy fields (price, quantity, strength) for backward compatibility
+   */
+  private normalizeCartItem(item: StoredCartItem): CartItem {
+    // Derive priceCents: prefer priceCents, fall back to legacy price * 100
+    let priceCents: number;
+    if (typeof item.priceCents === 'number' && !isNaN(item.priceCents) && item.priceCents >= 0) {
+      priceCents = item.priceCents;
+    } else if (typeof item.price === 'number' && !isNaN(item.price) && item.price >= 0) {
+      // Legacy field: convert dollars to cents, round to avoid floating point issues
+      priceCents = Math.round(item.price * 100);
+    } else {
+      // Corrupted data: log error and fall back to 0
+      console.error('CartItem missing valid priceCents, falling back to 0:', {
+        itemId: item.id,
+        itemName: item.name,
+        priceCents: item.priceCents,
+        price: item.price,
+      });
+      priceCents = 0;
+    }
+
+    // Derive qtyCans: prefer qtyCans, fall back to legacy quantity, minimum 1
+    let qtyCans: number;
+    if (typeof item.qtyCans === 'number' && !isNaN(item.qtyCans) && item.qtyCans > 0) {
+      qtyCans = item.qtyCans;
+    } else if (typeof item.quantity === 'number' && !isNaN(item.quantity) && item.quantity > 0) {
+      qtyCans = item.quantity;
+    } else {
+      // Invalid quantity: default to 1 (minimum safe value)
+      qtyCans = 1;
+    }
+
+    // Derive strengthMg: prefer strengthMg, fall back to legacy strength
+    const strengthMg = (item.strengthMg ?? item.strength ?? 3) as 3 | 6 | 9;
+
+    return {
+      id: item.id || `cart-item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      productId: item.productId || '',
+      variantId: item.variantId || '',
+      name: item.name || 'Unknown Product',
+      brand: item.brand || '',
+      flavor: item.flavor || '',
+      strengthMg,
+      priceCents,
+      qtyCans,
+      imageUrl: item.imageUrl,
+      // Legacy fields maintained for backward compatibility only
+      // TODO Phase 2: Remove after migration to backend storage
+      strength: strengthMg,
+      packSize: item.packSize ?? 20,
+      price: priceCents / 100,
+      quantity: qtyCans,
+    };
+  }
+
   private getStoredCart(): Cart {
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.cart);
       if (stored) {
         const parsed = JSON.parse(stored);
-        // Ensure new fields exist
+        
+        // Normalize each item to ensure priceCents and qtyCans are valid numbers
+        const normalizedItems = (parsed.items || []).map(
+          (item: StoredCartItem) => this.normalizeCartItem(item)
+        );
+        
+        // Always recalculate totals from normalized items (don't trust stored totals)
+        const freshTotals = this.calculateTotals(normalizedItems);
+        
         return {
-          items: parsed.items || [],
-          subtotalCents: parsed.subtotalCents ?? (parsed.subtotal ? Math.round(parsed.subtotal * 100) : 0),
-          totalCans: parsed.totalCans ?? parsed.itemCount ?? 0,
-          subtotal: parsed.subtotal ?? (parsed.subtotalCents ? parsed.subtotalCents / 100 : 0),
-          itemCount: parsed.itemCount ?? parsed.totalCans ?? 0,
+          items: normalizedItems,
+          subtotalCents: freshTotals.subtotalCents,
+          totalCans: freshTotals.totalCans,
+          // Legacy fields derived from fresh totals
+          subtotal: freshTotals.subtotalCents / 100,
+          itemCount: freshTotals.totalCans,
         };
       }
     } catch (error) {
