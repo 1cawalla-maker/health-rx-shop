@@ -1,6 +1,29 @@
 
 
-# Phase 1: UX Polish + Migration-Ready Seams (Shop/Checkout) — Rev 3
+# Phase 1: UX Polish + Migration-Ready Seams (Shop/Checkout) — ✅ IMPLEMENTED
+
+---
+
+## Implementation Status
+
+✅ **COMPLETED** - All planned changes have been implemented:
+
+| File | Status |
+|------|--------|
+| `src/lib/storageKeys.ts` | ✅ Created |
+| `src/types/shopContracts.ts` | ✅ Created |
+| `src/services/shippingFormService.ts` | ✅ Created |
+| `src/lib/allowanceUtils.ts` | ✅ Created |
+| `src/components/shop/ShopExpiredOverlay.tsx` | ✅ Created |
+| `docs/migration/supabase-phase2.md` | ✅ Created |
+| `src/services/shopPrescriptionService.ts` | ✅ Updated |
+| `src/services/orderService.ts` | ✅ Updated |
+| `src/services/cartService.ts` | ✅ Updated |
+| `src/hooks/usePrescriptionStatus.ts` | ✅ Updated |
+| `src/hooks/useAuth.tsx` | ✅ Updated |
+| `src/pages/patient/Shop.tsx` | ✅ Updated |
+| `src/components/checkout/ShippingForm.tsx` | ✅ Updated |
+| `src/pages/patient/Checkout.tsx` | ✅ Updated |
 
 ---
 
