@@ -13,8 +13,8 @@
      <div className="absolute inset-0 z-10 bg-background/80 backdrop-blur-sm flex items-center justify-center">
        <Card className="max-w-md mx-4">
          <CardHeader className="text-center">
-           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
-             <Clock className="h-6 w-6 text-amber-600" />
+           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+             <Clock className="h-6 w-6 text-muted-foreground" />
            </div>
            <CardTitle>Prescription Expired</CardTitle>
            <CardDescription>

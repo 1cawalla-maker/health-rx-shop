@@ -1,22 +1,26 @@
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { ShippingAddress } from '@/types/shop';
 import { AUSTRALIAN_STATES } from '@/types/shop';
+import { shippingFormService } from '@/services/shippingFormService';
 
 interface ShippingFormProps {
+  userId?: string;
   initialData: ShippingAddress | null;
   onSubmit: (data: ShippingAddress) => void;
 }
 
-export function ShippingForm({ initialData, onSubmit }: ShippingFormProps) {
+export function ShippingForm({ userId, initialData, onSubmit }: ShippingFormProps) {
   const {
     register,
     handleSubmit,
     setValue,
-    watch,
+    getValues,
+    control,
     formState: { errors },
   } = useForm<ShippingAddress>({
     defaultValues: initialData || {
@@ -30,7 +34,35 @@ export function ShippingForm({ initialData, onSubmit }: ShippingFormProps) {
     },
   });
 
-  const selectedState = watch('state');
+  const selectedState = useWatch({ control, name: 'state' });
+
+  // Load saved draft on mount (if no initialData provided)
+  useEffect(() => {
+    if (userId && !initialData) {
+      const savedDraft = shippingFormService.getDraft(userId);
+      if (savedDraft) {
+        Object.entries(savedDraft).forEach(([key, value]) => {
+          if (value) setValue(key as keyof ShippingAddress, value);
+        });
+      }
+    }
+  }, [userId, initialData, setValue]);
+
+  // Save draft on blur (per-field) to reduce localStorage writes
+  const handleFieldBlur = () => {
+    if (userId) {
+      const currentValues = getValues();
+      shippingFormService.saveDraft(userId, currentValues);
+    }
+  };
+
+  // Clear draft on successful submit
+  const handleFormSubmit = (data: ShippingAddress) => {
+    if (userId) {
+      shippingFormService.clearDraft(userId);
+    }
+    onSubmit(data);
+  };
 
   const validatePhone = (value: string) => {
     // Australian phone format: 04XX XXX XXX or +614XX XXX XXX
@@ -45,8 +77,8 @@ export function ShippingForm({ initialData, onSubmit }: ShippingFormProps) {
     return postcodeRegex.test(value) || 'Please enter a valid 4-digit postcode';
   };
 
-  return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+  return ( 
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <Label htmlFor="fullName">Full Name *</Label>
@@ -55,6 +87,7 @@ export function ShippingForm({ initialData, onSubmit }: ShippingFormProps) {
             {...register('fullName', { required: 'Full name is required' })}
             placeholder="John Smith"
             className={errors.fullName ? 'border-destructive' : ''}
+            onBlur={handleFieldBlur}
           />
           {errors.fullName && (
             <p className="text-sm text-destructive mt-1">{errors.fullName.message}</p>
@@ -71,6 +104,7 @@ export function ShippingForm({ initialData, onSubmit }: ShippingFormProps) {
             })}
             placeholder="0412 345 678"
             className={errors.phone ? 'border-destructive' : ''}
+            onBlur={handleFieldBlur}
           />
           {errors.phone && (
             <p className="text-sm text-destructive mt-1">{errors.phone.message}</p>
@@ -84,6 +118,7 @@ export function ShippingForm({ initialData, onSubmit }: ShippingFormProps) {
             {...register('addressLine1', { required: 'Address is required' })}
             placeholder="123 Main Street"
             className={errors.addressLine1 ? 'border-destructive' : ''}
+            onBlur={handleFieldBlur}
           />
           {errors.addressLine1 && (
             <p className="text-sm text-destructive mt-1">{errors.addressLine1.message}</p>
@@ -96,6 +131,7 @@ export function ShippingForm({ initialData, onSubmit }: ShippingFormProps) {
             id="addressLine2"
             {...register('addressLine2')}
             placeholder="Apartment, suite, unit, etc. (optional)"
+            onBlur={handleFieldBlur}
           />
         </div>
 
@@ -106,6 +142,7 @@ export function ShippingForm({ initialData, onSubmit }: ShippingFormProps) {
             {...register('suburb', { required: 'Suburb is required' })}
             placeholder="Sydney"
             className={errors.suburb ? 'border-destructive' : ''}
+            onBlur={handleFieldBlur}
           />
           {errors.suburb && (
             <p className="text-sm text-destructive mt-1">{errors.suburb.message}</p>
@@ -116,7 +153,10 @@ export function ShippingForm({ initialData, onSubmit }: ShippingFormProps) {
           <Label htmlFor="state">State *</Label>
           <Select
             value={selectedState}
-            onValueChange={(value) => setValue('state', value, { shouldValidate: true })}
+            onValueChange={(value) => {
+              setValue('state', value, { shouldValidate: true });
+              handleFieldBlur();
+            }}
           >
             <SelectTrigger className={errors.state ? 'border-destructive' : ''}>
               <SelectValue placeholder="Select state" />
@@ -149,6 +189,7 @@ export function ShippingForm({ initialData, onSubmit }: ShippingFormProps) {
             placeholder="2000"
             maxLength={4}
             className={errors.postcode ? 'border-destructive' : ''}
+            onBlur={handleFieldBlur}
           />
           {errors.postcode && (
             <p className="text-sm text-destructive mt-1">{errors.postcode.message}</p>
