@@ -1,12 +1,12 @@
 
 
-# Phase 1: Fix Cart Price Display ($NaN per can) -- Rev 2 (Updated)
+# Phase 1: Legacy Cart Normalization (Preserve qty + price)
 
 ---
 
 ## Problem
 
-Cart line items display `$NaN / can` or `$NaN` totals in up to three UI surfaces. The root cause is that stored cart items may lack valid `priceCents` due to legacy field naming (`price` in dollars) or corrupted data, and some UI components still reference legacy fields (`item.price`, `item.quantity`, `item.strength`) directly.
+The Rev 2 self-healing normalization fixed `$NaN / can` for known field names, but it only handles numeric `qtyCans`/`quantity` and `priceCents`/`price`/`totalPriceCents`. Legacy cart data stored with **string values** (e.g., `qtyCans: "59"`, `unitPrice: "24.99"`), alternative field names (`unitPriceCents`, `unitPrice`, `qty`, `totalPrice`), or other unexpected shapes will collapse to `qtyCans=1` and `priceCents=0`, silently losing user intent.
 
 ---
 
@@ -15,138 +15,107 @@ Cart line items display `$NaN / can` or `$NaN` totals in up to three UI surfaces
 - Phase 1: mock/localStorage only, no backend
 - No new dependencies
 - UI components must not access localStorage directly (services only)
+- Migration-ready: keep cents as integers; canonical shapes map cleanly to future backend tables
 
 ---
 
 ## Design Decisions
 
-1. **Canonical fields**: `priceCents` (per-can unit price in cents) and `qtyCans` are the source of truth on every `CartItem`. Line totals are computed as `priceCents * qtyCans`. Cart-level `subtotalCents` and `totalCans` are always derived from items.
+1. **Canonical persisted shape** (per item): `{ id, productId, variantId, name, brand, flavor, strengthMg, qtyCans, priceCents, totalPriceCents }`. The field `totalPriceCents` is always `priceCents * qtyCans` and is stored for read convenience but never trusted on load (always recomputed).
 
-2. **Single normalization point**: `cartService.getStoredCart()` normalizes every item via `normalizeCartItem()`. Legacy fields (`price`, `quantity`, `strength`) and missing/corrupted `priceCents` are all resolved here. Additional derivation: if `priceCents` and `price` are both missing but a `totalPriceCents` field exists with `qtyCans > 0`, derive `priceCents = Math.round(totalPriceCents / qtyCans)`. Always guard `qtyCans > 0` before division.
+2. **Canonical cart shape**: `{ items: CartItem[], subtotalCents, totalCans, itemCount }`. Legacy fields (`subtotal`, `price`, `quantity`, `strength`) are written back for backward compatibility but never read for display.
 
-3. **Self-healing write-back**: After normalization, `getStoredCart()` persists the clean cart back to localStorage so subsequent reads never re-encounter corrupted data.
+3. **Parse-then-validate strategy**: All incoming raw values are first coerced via `parseFloat`/`parseInt` (to handle strings like `"59"` or `"24.99"`), then validated as finite and non-negative. This is the key change from Rev 2 which only checked `typeof === 'number'`.
 
-4. **UI display rule**: All UI surfaces display per-can price from `priceCents` only (`$${(item.priceCents / 100).toFixed(2)}`). No UI component may compute per-can by dividing subtotal/qty.
+4. **Drop vs keep**: An item is dropped (filtered out) only if `qtyCans <= 0` after all parsing attempts AND no valid price can be derived. If qty is recoverable but price is not, keep the item with `priceCents = 0` (visible to user as `$0.00/can`). If price is recoverable but qty is not, default qty to 1.
 
-5. **Defensive fallback**: Every price render checks `typeof x === 'number' && !isNaN(x) && x >= 0`. If invalid, show "--" and log a warning with item id, name, flavor, strengthMg, and the received value.
+5. **UI display rule unchanged**: All UI renders per-can price from `priceCents` only. Defensive fallback shows "—" if somehow invalid post-normalization.
 
 ---
 
 ## File-by-File Changes
 
-### A. `src/services/cartService.ts`
+### A. `src/types/shop.ts` -- Add `totalPriceCents` to CartItem
 
-**StoredCartItem type** (already exists at lines 13-17) -- add one more legacy field:
+Add optional `totalPriceCents` to the `CartItem` interface (line 38, after `qtyCans`):
+
+```typescript
+export interface CartItem {
+  // ... existing fields ...
+  qtyCans: number;
+  totalPriceCents?: number; // Derived: priceCents * qtyCans (convenience field)
+  // ...
+}
+```
+
+This keeps the type compatible with existing code (optional field) while allowing the service to persist it.
+
+---
+
+### B. `src/services/cartService.ts` -- Expand normalization coverage
+
+**B1. Expand `StoredCartItem` type** (lines 13-18) to cover all known legacy shapes:
 
 ```typescript
 type StoredCartItem = Partial<CartItem> & {
-  price?: number;           // Legacy: dollars (e.g., 9.95)
-  quantity?: number;        // Legacy: same as qtyCans
-  strength?: number;        // Legacy: same as strengthMg
-  totalPriceCents?: number; // Legacy: line total in cents
+  // Legacy price fields (any could be string or number)
+  price?: string | number;           // dollars (e.g., 9.95 or "9.95")
+  unitPrice?: string | number;       // dollars (alias)
+  unitPriceCents?: string | number;  // cents (alias for priceCents)
+  totalPriceCents?: string | number; // line total in cents
+  totalPrice?: string | number;      // line total in dollars
+  // Legacy qty fields
+  quantity?: string | number;        // alias for qtyCans
+  qty?: string | number;             // alias for qtyCans
+  // Legacy strength
+  strength?: string | number;        // alias for strengthMg
 };
 ```
 
-**normalizeCartItem()** (lines 24-75) -- add `totalPriceCents / qtyCans` derivation step. Updated cascade for `priceCents`:
+**B2. Replace `normalizeCartItem()`** (lines 25-81) with expanded parsing logic:
 
-```
-1. If item.priceCents is valid number >= 0 --> use it
-2. Else if item.price is valid number >= 0 --> Math.round(item.price * 100)
-3. Else if item.totalPriceCents is valid number >= 0 AND qtyCans > 0
-       --> Math.round(item.totalPriceCents / qtyCans)
-4. Else --> 0, log console.error with { itemId, itemName, flavor, strengthMg, priceCents, price, totalPriceCents }
-```
+Helper: `safeParseNumber(val): number | null` -- attempts `parseFloat(String(val))`, returns the result only if `isFinite()` and `>= 0`, else `null`.
 
-All numeric outputs use `Math.round()` to avoid float artifacts.
+Qty cascade (all via `safeParseNumber`, then `Math.round`):
+1. `raw.qtyCans`
+2. `raw.quantity`
+3. `raw.qty`
+4. Default: `1` (minimum safe value)
+5. Post-check: if result `<= 0`, set to `1`
 
-**getStoredCart()** (lines 77-104) -- add self-healing write-back after normalization:
+Price cascade (all via `safeParseNumber`):
+1. `raw.priceCents` -- use directly (already cents)
+2. `raw.unitPriceCents` -- use directly (alias)
+3. `raw.price` -- `Math.round(val * 100)` (dollars to cents)
+4. `raw.unitPrice` -- `Math.round(val * 100)` (dollars to cents)
+5. `raw.totalPriceCents` with `qtyCans > 0` -- `Math.round(val / qtyCans)`
+6. `raw.totalPrice` with `qtyCans > 0` -- `Math.round(parseFloat(val) * 100 / qtyCans)`
+7. Else: `0`, log `console.error` with full raw item dump
 
-```typescript
-const normalizedCart: Cart = {
-  items: normalizedItems,
-  subtotalCents: freshTotals.subtotalCents,
-  totalCans: freshTotals.totalCans,
-  subtotal: freshTotals.subtotalCents / 100,
-  itemCount: freshTotals.totalCans,
-};
-this.saveCart(normalizedCart); // Self-healing: persist clean data
-return normalizedCart;
-```
+After deriving `priceCents` and `qtyCans`:
+- `totalPriceCents = priceCents * qtyCans` (always recomputed)
 
----
+Return the full `CartItem` with all canonical fields set, plus legacy compat fields (`price`, `quantity`, `strength`) written from canonical values.
 
-### B. `src/components/shop/CartDrawer.tsx`
+**B3. Update `getStoredCart()`** (lines 83-114):
 
-**Lines 79-86**: Already has defensive guard. Update the `console.warn` to include flavor and strengthMg for debugging specificity:
+After normalizing all items, filter out any with `qtyCans <= 0` (should not happen after defaulting to 1, but safety net). Recalculate totals. Write back to storage (self-healing, already present). Add `totalPriceCents` to each item in the persisted shape.
 
-```tsx
-console.warn('CartDrawer: item has invalid priceCents:', {
-  id: item.id,
-  name: item.name,
-  flavor: item.flavor,
-  strengthMg: item.strengthMg,
-  priceCents: item.priceCents,
-  normalizationAttempted: true,
-});
-```
+**B4. Update `addItem()` and `updateQuantity()`** (lines 134-198):
 
-No other changes needed in this file.
+When creating or updating items, also set `totalPriceCents = item.priceCents * item.qtyCans` before saving so the persisted shape is always canonical.
 
 ---
 
-### C. `src/components/checkout/OrderReview.tsx`
+### C. UI Components -- No changes needed
 
-**Line 70**: Replace `item.strength` with `item.strengthMg`:
-```tsx
-<span className="text-xs text-muted-foreground">{item.strengthMg}mg</span>
-```
-
-**Line 74**: Replace `item.strength` with `item.strengthMg`:
-```tsx
-<p className="text-sm text-muted-foreground">{item.flavor} - {item.strengthMg}mg</p>
-```
-
-**Lines 77-78**: Replace legacy `item.price * item.quantity` with canonical fields + defensive guard:
-```tsx
-<p className="font-medium">
-  {typeof item.priceCents === 'number' && !isNaN(item.priceCents) && item.priceCents >= 0
-    ? `$${((item.priceCents * item.qtyCans) / 100).toFixed(2)}`
-    : (() => {
-        console.warn('OrderReview: item has invalid priceCents:', {
-          id: item.id, name: item.name, flavor: item.flavor,
-          strengthMg: item.strengthMg, priceCents: item.priceCents,
-          normalizationAttempted: true,
-        });
-        return '--';
-      })()}
-</p>
-<p className="text-sm text-muted-foreground">Qty: {item.qtyCans}</p>
-```
-
-**Line 88**: Replace `cart.subtotal.toFixed(2)` with canonical:
-```tsx
-<span>${(cart.subtotalCents / 100).toFixed(2)}</span>
-```
+`CartDrawer.tsx`, `OrderReview.tsx`, and `Checkout.tsx` already use `priceCents` and `qtyCans` with defensive guards from Rev 2. No modifications required.
 
 ---
 
-### D. `src/pages/patient/Checkout.tsx`
+### D. `src/pages/patient/OrderSuccess.tsx` -- Verify only
 
-**Line 263**: Add defensive guard to order summary sidebar:
-```tsx
-<span>
-  {typeof item.priceCents === 'number' && !isNaN(item.priceCents) && item.priceCents >= 0
-    ? `$${((item.priceCents * item.qtyCans) / 100).toFixed(2)}`
-    : (() => {
-        console.warn('Checkout sidebar: item has invalid priceCents:', {
-          id: item.id, name: item.name, flavor: item.flavor,
-          strengthMg: item.strengthMg, priceCents: item.priceCents,
-          normalizationAttempted: true,
-        });
-        return '--';
-      })()}
-</span>
-```
+Line 99 already uses `item.unitPriceCents * item.qtyCans` which references `OrderItem.unitPriceCents` (not `CartItem`). This is correct and unaffected since `orderService.ts` (line 59) maps `item.priceCents` to `unitPriceCents` at order creation time. No changes needed.
 
 ---
 
@@ -154,119 +123,126 @@ No other changes needed in this file.
 
 | File | Change | Purpose |
 |------|--------|---------|
-| `src/services/cartService.ts` | UPDATE | Add `totalPriceCents` to `StoredCartItem`; add derivation step 3 to `normalizeCartItem()`; add self-healing write-back in `getStoredCart()` |
-| `src/components/shop/CartDrawer.tsx` | UPDATE | Enhance console.warn with flavor, strengthMg, normalizationAttempted |
-| `src/components/checkout/OrderReview.tsx` | UPDATE | Replace legacy fields (`item.strength`, `item.price * item.quantity`, `cart.subtotal`) with canonical fields + defensive guards |
-| `src/pages/patient/Checkout.tsx` | UPDATE | Add defensive guard on line 263 price display |
+| `src/types/shop.ts` | UPDATE | Add optional `totalPriceCents` to `CartItem` interface |
+| `src/services/cartService.ts` | UPDATE | Expand `StoredCartItem` to cover string values and all legacy field aliases; rewrite `normalizeCartItem()` with `parseFloat`/`parseInt` coercion; set `totalPriceCents` on write paths |
 
 ---
 
 ## Implementation Order
 
-1. Update `StoredCartItem` type in `cartService.ts`
-2. Update `normalizeCartItem()` with `totalPriceCents` derivation step
-3. Add self-healing write-back in `getStoredCart()`
-4. Update `CartDrawer.tsx` console.warn specificity
-5. Migrate `OrderReview.tsx` from legacy to canonical fields
-6. Add defensive guard in `Checkout.tsx` sidebar
-7. Run all manual acceptance tests
+1. Add `totalPriceCents` to `CartItem` in `shop.ts`
+2. Expand `StoredCartItem` type in `cartService.ts`
+3. Add `safeParseNumber()` helper in `cartService.ts`
+4. Rewrite `normalizeCartItem()` with full cascade
+5. Update `addItem()` and `updateQuantity()` to set `totalPriceCents`
+6. Run manual acceptance tests
 
 ---
 
 ## Manual Acceptance Tests
 
-### 1. Fresh cart -- add single item
-- Clear localStorage, add 1 can, open cart drawer
-- **Expected**: `$X.XX / can` correct
-
-### 2. Increase to 59 via +/- buttons
-- Click + repeatedly to 59 cans
-- **Expected**: Per-can price never shows NaN
-
-### 3. Page refresh persistence
-- Refresh page, reopen cart
-- **Expected**: Prices correct; localStorage now contains normalized data (self-healing verified)
-
-### 4. Legacy cart (price field only, no priceCents)
+### 1. Legacy cart with string qty and string unitPrice
 ```javascript
 localStorage.setItem('nicopatch_cart', JSON.stringify({
   items: [{
-    id: 'legacy-1', productId: 'p1', variantId: 'v1',
+    id: 'str-test', productId: 'p1', variantId: 'v1',
     name: 'Mint', brand: 'B', flavor: 'Mint', strengthMg: 6,
-    price: 9.95, quantity: 5
-  }],
-  subtotal: 49.75, itemCount: 5
+    qtyCans: "59", unitPrice: "24.99"
+  }]
 }));
 ```
-- Refresh, open cart
-- **Expected**: `$9.95 / can`, subtotal `$49.75`
+- Reload, open cart
+- **Expected**: 59 cans, `$24.99 / can`, subtotal `$1,474.41`
 
-### 5. Explicit legacy test: priceCents set to null
+### 2. Legacy cart with totalPriceCents, no unit price
 ```javascript
-// Add item at $1.99/can normally, then corrupt it:
 localStorage.setItem('nicopatch_cart', JSON.stringify({
   items: [{
-    id: 'null-test', productId: 'p1', variantId: 'v1',
+    id: 'total-test', productId: 'p1', variantId: 'v1',
+    name: 'Cherry', brand: 'B', flavor: 'Cherry', strengthMg: 6,
+    totalPriceCents: 5970, qtyCans: 6
+  }]
+}));
+```
+- Reload, open cart
+- **Expected**: 6 cans, `$9.95 / can`, subtotal `$59.70`
+
+### 3. Legacy cart with totalPrice (dollars string), no unit price
+```javascript
+localStorage.setItem('nicopatch_cart', JSON.stringify({
+  items: [{
+    id: 'dollar-total', productId: 'p1', variantId: 'v1',
+    name: 'Berry', brand: 'B', flavor: 'Berry', strengthMg: 3,
+    totalPrice: "59.70", qty: "6"
+  }]
+}));
+```
+- Reload, open cart
+- **Expected**: 6 cans, `$9.95 / can`
+
+### 4. Malformed / unrecoverable cart
+```javascript
+localStorage.setItem('nicopatch_cart', JSON.stringify({
+  items: [
+    { id: '1', name: 'Good', priceCents: 995, qtyCans: 2,
+      productId: 'p1', variantId: 'v1', brand: 'B', flavor: 'F', strengthMg: 3 },
+    { id: '2', name: 'Bad' }
+  ]
+}));
+```
+- Reload, open cart
+- **Expected**: "Good" shows `$9.95 / can` x 2. "Bad" shows `$0.00 / can` x 1 (kept with defaults), console error logged. No crash.
+
+### 5. Normal UI flow: add item, +/- to 59
+- Add 1 can of any product
+- Click + repeatedly to 59 cans
+- **Expected**: Per-can price never shows NaN; subtotal updates correctly each click
+
+### 6. Page refresh persistence + self-healing
+- After test 1, refresh page, open cart
+- Inspect `localStorage.getItem('nicopatch_cart')` in console
+- **Expected**: Stored data now has canonical `priceCents`, `qtyCans`, `totalPriceCents` fields (no more string values or legacy aliases)
+
+### 7. priceCents explicitly null with price fallback
+```javascript
+localStorage.setItem('nicopatch_cart', JSON.stringify({
+  items: [{
+    id: 'null-pc', productId: 'p1', variantId: 'v1',
     name: 'Spearmint', brand: 'B', flavor: 'Spearmint', strengthMg: 3,
     priceCents: null, price: 1.99, qtyCans: 10
   }]
 }));
 ```
-- Refresh, open cart
-- **Expected**: `$1.99 / can` (normalized from legacy `price` fallback), no NaN
+- Reload, open cart
+- **Expected**: `$1.99 / can`, no NaN
 
-### 6. totalPriceCents derivation test
+### 8. Float precision
 ```javascript
 localStorage.setItem('nicopatch_cart', JSON.stringify({
   items: [{
-    id: 'total-derive', productId: 'p1', variantId: 'v1',
-    name: 'Cherry', brand: 'B', flavor: 'Cherry', strengthMg: 6,
-    totalPriceCents: 5970, qtyCans: 6
-    // No priceCents, no price -- should derive 5970/6 = 995
-  }]
-}));
-```
-- Refresh, open cart
-- **Expected**: `$9.95 / can`
-
-### 7. Division guard: totalPriceCents with qtyCans=0
-```javascript
-localStorage.setItem('nicopatch_cart', JSON.stringify({
-  items: [{
-    id: 'div-zero', productId: 'p1', variantId: 'v1',
-    name: 'Bad', brand: 'B', flavor: 'F', strengthMg: 3,
-    totalPriceCents: 1000, qtyCans: 0
-  }]
-}));
-```
-- Refresh, open cart
-- **Expected**: qtyCans normalizes to 1, priceCents falls through to 0 (totalPriceCents/qtyCans skipped because original qtyCans was invalid), console error logged
-
-### 8. Corrupted data -- all fields missing
-```javascript
-localStorage.setItem('nicopatch_cart', JSON.stringify({
-  items: [{ id: '1', productId: 'p1', variantId: 'v1',
-    name: 'Bad', brand: 'B', flavor: 'F', strengthMg: 3 }]
-}));
-```
-- Refresh, open cart
-- **Expected**: `$0.00 / can` (fallback 0), qtyCans = 1, console error logged with item details
-
-### 9. Checkout order review
-- Add items, proceed to checkout Review step
-- **Expected**: OrderReview shows correct per-item totals using `strengthMg`, `priceCents`, `qtyCans` -- no NaN, no `undefined`mg
-
-### 10. Price precision edge case
-```javascript
-localStorage.setItem('nicopatch_cart', JSON.stringify({
-  items: [{
-    id: '1', productId: 'p1', variantId: 'v1', name: 'Test',
+    id: 'fp', productId: 'p1', variantId: 'v1', name: 'Test',
     brand: 'B', flavor: 'F', strengthMg: 3,
     price: 9.999
   }]
 }));
 ```
-- **Expected**: `$10.00 / can` (Math.round(999.9) = 1000 cents)
+- **Expected**: `$10.00 / can` (`Math.round(999.9) = 1000` cents)
+
+---
+
+## Migration-Ready Note
+
+The canonical persisted shape maps directly to future backend columns:
+
+```text
+CartItem.priceCents      -> order_items.unit_price_cents
+CartItem.totalPriceCents -> order_items.total_price_cents
+CartItem.qtyCans         -> order_items.qty_cans
+Cart.subtotalCents       -> orders.subtotal_cents
+Cart.totalCans           -> orders.total_cans
+```
+
+All values are integers (cents), avoiding floating-point issues in both localStorage and future SQL columns.
 
 ---
 
