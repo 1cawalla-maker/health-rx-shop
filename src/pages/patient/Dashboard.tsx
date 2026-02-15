@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { shopPrescriptionService } from '@/services/shopPrescriptionService';
 import { mockBookingService } from '@/services/consultationService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -89,18 +89,9 @@ export default function PatientDashboard() {
   const fetchPrescriptionData = async () => {
     if (!user) return;
 
-    // Fetch latest prescription
-    const { data: prescriptions } = await supabase
-      .from('prescriptions')
-      .select('*')
-      .eq('patient_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    if (prescriptions && prescriptions.length > 0) {
-      setPrescriptionStatus(prescriptions[0]);
-    }
-
+    // Phase 1: localStorage-only prescription entitlement. No Supabase, no network.
+    const latest = shopPrescriptionService.getLatestPrescription(user.id);
+    setPrescriptionStatus(latest.prescription);
     setLoading(false);
   };
 
