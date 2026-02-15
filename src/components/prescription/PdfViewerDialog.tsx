@@ -8,8 +8,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2, ExternalLink } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { prescriptionFileService } from "@/services/prescriptionFileService";
 
 interface PdfViewerDialogProps {
   open: boolean;
@@ -30,22 +30,22 @@ export function PdfViewerDialog({
 
   const fetchPdf = async () => {
     if (pdfUrl || !storagePath) return;
-    
+
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("get-prescription-file", {
-        body: { storagePath },
-      });
+      // Phase 1: no PDF fetching. Phase 2 will provide a signed URL implementation.
+      const url = await prescriptionFileService.getPrescriptionFileUrl(storagePath);
 
-      if (error) throw error;
-      if (!data?.signedUrl) throw new Error("No signed URL returned");
+      if (!url) {
+        throw new Error('Prescription PDF viewing will be enabled in Phase 2');
+      }
 
-      setPdfUrl(data.signedUrl);
+      setPdfUrl(url);
     } catch (err: any) {
       console.error("Error fetching PDF:", err);
       toast({
-        title: "Error loading PDF",
-        description: err.message || "Could not load the PDF file",
+        title: "PDF unavailable",
+        description: err.message || "Prescription PDF viewing will be enabled in Phase 2",
         variant: "destructive",
       });
       onOpenChange(false);
