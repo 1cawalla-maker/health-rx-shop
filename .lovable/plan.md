@@ -1,248 +1,341 @@
 
 
-# Phase 1: Legacy Cart Normalization (Preserve qty + price)
+# Phase 1: Hardening + Shipping Method Mock (Standard/Express + Free Express at 60 cans) -- Rev 2
 
 ---
 
 ## Problem
 
-The Rev 2 self-healing normalization fixed `$NaN / can` for known field names, but it only handles numeric `qtyCans`/`quantity` and `priceCents`/`price`/`totalPriceCents`. Legacy cart data stored with **string values** (e.g., `qtyCans: "59"`, `unitPrice: "24.99"`), alternative field names (`unitPriceCents`, `unitPrice`, `qty`, `totalPrice`), or other unexpected shapes will collapse to `qtyCans=1` and `priceCents=0`, silently losing user intent.
+The checkout currently uses a hardcoded shipping cost calculation on line 41 of `Checkout.tsx`. There is no user-facing shipping method selector, no promo logic for 60-can orders, and the shipping draft does not persist a selected method. The shipping cost rule does not match the business requirements (Standard $20 / Express $40 / Express free at exactly 60 cans).
 
 ---
 
 ## Hard Constraints
 
-- Phase 1: mock/localStorage only, no backend
-- No new dependencies
-- UI components must not access localStorage directly (services only)
-- Migration-ready: keep cents as integers; canonical shapes map cleanly to future backend tables
+- Phase 1: mock/localStorage only. No Supabase queries, no Stripe/Shopify wiring.
+- No new dependencies.
+- UI must not touch localStorage directly (services/hooks only).
+- Keep money in integer cents in state/storage.
 
 ---
 
 ## Design Decisions
 
-1. **Canonical persisted shape** (per item): `{ id, productId, variantId, name, brand, flavor, strengthMg, qtyCans, priceCents, totalPriceCents }`. The field `totalPriceCents` is always `priceCents * qtyCans` and is stored for read convenience but never trusted on load (always recomputed).
+1. **ShippingQuote includes `isFree: boolean`**: Explicit flag for UI rendering ("Free" badge, strikethrough) without requiring `costCents === 0` checks scattered across components.
 
-2. **Canonical cart shape**: `{ items: CartItem[], subtotalCents, totalCans, itemCount }`. Legacy fields (`subtotal`, `price`, `quantity`, `strength`) are written back for backward compatibility but never read for display.
+2. **Type-guard `validateShippingMethod`**: A proper TypeScript type-guard (`method is ShippingMethod`) that narrows `unknown` to `ShippingMethod`. Invalid/missing values normalize to `'standard'` with a `console.warn`.
 
-3. **Parse-then-validate strategy**: All incoming raw values are first coerced via `parseFloat`/`parseInt` (to handle strings like `"59"` or `"24.99"`), then validated as finite and non-negative. This is the key change from Rev 2 which only checked `typeof === 'number'`.
+3. **Order stores both `shippingMethod` and `shippingCostCents`**: The `Order` type gains both fields so Phase 2 migration to Supabase/Stripe/Shopify is a direct column mapping (no re-derivation needed).
 
-4. **Drop vs keep**: An item is dropped (filtered out) only if `qtyCans <= 0` after all parsing attempts AND no valid price can be derived. If qty is recoverable but price is not, keep the item with `priceCents = 0` (visible to user as `$0.00/can`). If price is recoverable but qty is not, default qty to 1.
+4. **Free Express rule is strictly `totalCans === 60`**: Not `>= 60`. If a user orders 59 or 61 cans, Express is $40.
 
-5. **UI display rule unchanged**: All UI renders per-can price from `priceCents` only. Defensive fallback shows "—" if somehow invalid post-normalization.
+5. **Single source of truth for pricing**: `shippingService.ts` owns all cost logic. No component computes shipping costs directly.
 
 ---
 
 ## File-by-File Changes
 
-### A. `src/types/shop.ts` -- Add `totalPriceCents` to CartItem
+### A. `src/types/shop.ts` -- Add shipping types + extend Order
 
-Add optional `totalPriceCents` to the `CartItem` interface (line 38, after `qtyCans`):
+Add new types after the existing `ShippingAddress` interface (around line 65):
 
 ```typescript
-export interface CartItem {
-  // ... existing fields ...
-  qtyCans: number;
-  totalPriceCents?: number; // Derived: priceCents * qtyCans (convenience field)
-  // ...
+export type ShippingMethod = 'standard' | 'express';
+
+export interface ShippingQuote {
+  method: ShippingMethod;
+  label: string;
+  costCents: number;
+  isFree: boolean;
+  description?: string;
 }
 ```
 
-This keeps the type compatible with existing code (optional field) while allowing the service to persist it.
-
----
-
-### B. `src/services/cartService.ts` -- Expand normalization coverage
-
-**B1. Expand `StoredCartItem` type** (lines 13-18) to cover all known legacy shapes:
+Extend the `Order` interface (line 76) to add both fields:
 
 ```typescript
-type StoredCartItem = Partial<CartItem> & {
-  // Legacy price fields (any could be string or number)
-  price?: string | number;           // dollars (e.g., 9.95 or "9.95")
-  unitPrice?: string | number;       // dollars (alias)
-  unitPriceCents?: string | number;  // cents (alias for priceCents)
-  totalPriceCents?: string | number; // line total in cents
-  totalPrice?: string | number;      // line total in dollars
-  // Legacy qty fields
-  quantity?: string | number;        // alias for qtyCans
-  qty?: string | number;             // alias for qtyCans
-  // Legacy strength
-  strength?: string | number;        // alias for strengthMg
-};
+export interface Order {
+  // ... existing fields ...
+  shippingMethod?: ShippingMethod;
+  // shippingCents already exists (line 83) -- no change needed
+}
 ```
 
-**B2. Replace `normalizeCartItem()`** (lines 25-81) with expanded parsing logic:
-
-Helper: `safeParseNumber(val): number | null` -- attempts `parseFloat(String(val))`, returns the result only if `isFinite()` and `>= 0`, else `null`.
-
-Qty cascade (all via `safeParseNumber`, then `Math.round`):
-1. `raw.qtyCans`
-2. `raw.quantity`
-3. `raw.qty`
-4. Default: `1` (minimum safe value)
-5. Post-check: if result `<= 0`, set to `1`
-
-Price cascade (all via `safeParseNumber`):
-1. `raw.priceCents` -- use directly (already cents)
-2. `raw.unitPriceCents` -- use directly (alias)
-3. `raw.price` -- `Math.round(val * 100)` (dollars to cents)
-4. `raw.unitPrice` -- `Math.round(val * 100)` (dollars to cents)
-5. `raw.totalPriceCents` with `qtyCans > 0` -- `Math.round(val / qtyCans)`
-6. `raw.totalPrice` with `qtyCans > 0` -- `Math.round(parseFloat(val) * 100 / qtyCans)`
-7. Else: `0`, log `console.error` with full raw item dump
-
-After deriving `priceCents` and `qtyCans`:
-- `totalPriceCents = priceCents * qtyCans` (always recomputed)
-
-Return the full `CartItem` with all canonical fields set, plus legacy compat fields (`price`, `quantity`, `strength`) written from canonical values.
-
-**B3. Update `getStoredCart()`** (lines 83-114):
-
-After normalizing all items, filter out any with `qtyCans <= 0` (should not happen after defaulting to 1, but safety net). Recalculate totals. Write back to storage (self-healing, already present). Add `totalPriceCents` to each item in the persisted shape.
-
-**B4. Update `addItem()` and `updateQuantity()`** (lines 134-198):
-
-When creating or updating items, also set `totalPriceCents = item.priceCents * item.qtyCans` before saving so the persisted shape is always canonical.
+Note: `shippingCents` already exists on `Order` (line 83), so the cost is already persisted. We only need to add `shippingMethod`.
 
 ---
 
-### C. UI Components -- No changes needed
+### B. `src/services/shippingService.ts` -- NEW file, pure shipping logic
 
-`CartDrawer.tsx`, `OrderReview.tsx`, and `Checkout.tsx` already use `priceCents` and `qtyCans` with defensive guards from Rev 2. No modifications required.
+```typescript
+import type { ShippingMethod, ShippingQuote } from '@/types/shop';
+
+const STANDARD_COST_CENTS = 2000;
+const EXPRESS_COST_CENTS = 4000;
+const FREE_EXPRESS_CAN_THRESHOLD = 60;
+
+// Type-guard: narrows unknown to ShippingMethod
+export function validateShippingMethod(
+  method: unknown
+): method is ShippingMethod {
+  if (method === 'standard' || method === 'express') return true;
+  if (method !== undefined && method !== null) {
+    console.warn(
+      `Invalid shipping method "${String(method)}", defaulting to "standard"`
+    );
+  }
+  return false;
+}
+
+// Normalize unknown to safe ShippingMethod
+export function safeShippingMethod(method: unknown): ShippingMethod {
+  return validateShippingMethod(method) ? method : 'standard';
+}
+
+export function getAvailableShippingQuotes(totalCans: number): ShippingQuote[] {
+  const expressIsFree = totalCans === FREE_EXPRESS_CAN_THRESHOLD;
+  return [
+    {
+      method: 'standard',
+      label: 'Standard Shipping',
+      costCents: STANDARD_COST_CENTS,
+      isFree: false,
+      description: '5-7 business days',
+    },
+    {
+      method: 'express',
+      label: 'Express Shipping',
+      costCents: expressIsFree ? 0 : EXPRESS_COST_CENTS,
+      isFree: expressIsFree,
+      description: expressIsFree
+        ? 'Free for 60-can orders — 1-3 business days'
+        : '1-3 business days',
+    },
+  ];
+}
+
+export function getShippingCostCents(
+  totalCans: number,
+  method: ShippingMethod
+): number {
+  const quotes = getAvailableShippingQuotes(totalCans);
+  const quote = quotes.find(q => q.method === method);
+  return quote?.costCents ?? STANDARD_COST_CENTS;
+}
+```
 
 ---
 
-### D. `src/pages/patient/OrderSuccess.tsx` -- Verify only
+### C. `src/services/shippingFormService.ts` -- Extend draft to include shippingMethod
 
-Line 99 already uses `item.unitPriceCents * item.qtyCans` which references `OrderItem.unitPriceCents` (not `CartItem`). This is correct and unaffected since `orderService.ts` (line 59) maps `item.priceCents` to `unitPriceCents` at order creation time. No changes needed.
+**C1.** Import types and validation:
+
+```typescript
+import type { ShippingAddress, ShippingMethod } from '@/types/shop';
+import { safeShippingMethod } from '@/services/shippingService';
+```
+
+**C2.** Extend draft shape:
+
+```typescript
+type ShippingDraft = Partial<ShippingAddress> & {
+  shippingMethod?: string; // stored as string, validated on read
+};
+type DraftStore = Record<string, ShippingDraft>;
+```
+
+**C3.** Update `getDraft()` return type to `ShippingDraft | null`. When returning, normalize `shippingMethod` via `safeShippingMethod(draft.shippingMethod)`.
+
+**C4.** Update `saveDraft()` to accept `ShippingDraft`.
+
+**C5.** Add convenience method:
+
+```typescript
+getSelectedMethod(userId: string): ShippingMethod {
+  if (!userId) return 'standard';
+  const draft = this.getDraft(userId);
+  return safeShippingMethod(draft?.shippingMethod);
+}
+```
+
+---
+
+### D. `src/components/checkout/ShippingMethodSelector.tsx` -- NEW component
+
+Props:
+
+```typescript
+interface ShippingMethodSelectorProps {
+  quotes: ShippingQuote[];
+  selectedMethod: ShippingMethod;
+  onMethodChange: (method: ShippingMethod) => void;
+}
+```
+
+Renders each quote as a Radix `RadioGroup` card showing:
+- Method label (e.g., "Standard Shipping")
+- Cost: `isFree ? "Free" : `$${(costCents / 100).toFixed(2)}``
+- Description text
+- Visual highlight on selected
+
+---
+
+### E. `src/components/checkout/ShippingForm.tsx` -- Integrate method selector
+
+**E1.** Accept new props: `totalCans`, `selectedMethod`, `onMethodChange`.
+
+**E2.** Render `ShippingMethodSelector` below address fields, passing quotes from `getAvailableShippingQuotes(totalCans)`.
+
+**E3.** On method change, persist via `shippingFormService.saveDraft(userId, { ...address, shippingMethod })`.
+
+**E4.** On mount, restore method from `shippingFormService.getSelectedMethod(userId)`.
+
+---
+
+### F. `src/pages/patient/Checkout.tsx` -- Wire shipping method state
+
+**F1.** Replace hardcoded shipping cost (line 41):
+
+```typescript
+const [shippingMethod, setShippingMethod] = useState<ShippingMethod>('standard');
+// On mount: restore from draft
+useEffect(() => {
+  if (user?.id) setShippingMethod(shippingFormService.getSelectedMethod(user.id));
+}, [user?.id]);
+
+const shippingCostCents = getShippingCostCents(cart.totalCans, shippingMethod);
+const totalCents = subtotalCents + shippingCostCents;
+```
+
+**F2.** Pass `totalCans`, `selectedMethod`, `onMethodChange` to `ShippingForm`.
+
+**F3.** Pass `shippingCostCents` (cents) and `shippingMethod` to `OrderReview` and `PaymentPlaceholder`.
+
+**F4.** Update sidebar promo text: replace "free shipping over $100" with dynamic text based on quotes (e.g., "Order 60 cans for free Express shipping").
+
+**F5.** Pass `shippingMethod` to `orderService.placeOrder()`.
+
+---
+
+### G. `src/components/checkout/OrderReview.tsx` -- Cents props + method label
+
+**G1.** Change `shippingCost` prop to `shippingCostCents: number`, add `shippingMethod: ShippingMethod`.
+
+**G2.** Display method label alongside cost:
+
+```
+Shipping (Express)     Free
+Shipping (Standard)    $20.00
+```
+
+**G3.** Use `isFree` logic: if `shippingCostCents === 0`, display "Free".
+
+---
+
+### H. `src/components/checkout/PaymentPlaceholder.tsx` -- Accept cents
+
+**H1.** Change `total` prop to `totalCents: number`.
+
+**H2.** Format as `(totalCents / 100).toFixed(2)`.
+
+---
+
+### I. `src/services/orderService.ts` -- Persist shippingMethod
+
+**I1.** Update `CreateOrderData` to include `shippingMethod?: ShippingMethod`.
+
+**I2.** In `placeOrder()`, set `order.shippingMethod = safeShippingMethod(data.shippingMethod)`.
+
+`shippingCents` is already set from `data.shippingCents` (line 72 of current file), so both fields are persisted.
 
 ---
 
 ## Files Summary
 
-| File | Change | Purpose |
+| File | Action | Purpose |
 |------|--------|---------|
-| `src/types/shop.ts` | UPDATE | Add optional `totalPriceCents` to `CartItem` interface |
-| `src/services/cartService.ts` | UPDATE | Expand `StoredCartItem` to cover string values and all legacy field aliases; rewrite `normalizeCartItem()` with `parseFloat`/`parseInt` coercion; set `totalPriceCents` on write paths |
+| `src/types/shop.ts` | UPDATE | Add `ShippingMethod`, `ShippingQuote` (with `isFree`); add `shippingMethod` to `Order` |
+| `src/services/shippingService.ts` | ADD | Pure pricing logic + `validateShippingMethod` type-guard + `safeShippingMethod` |
+| `src/services/shippingFormService.ts` | UPDATE | Extend draft to include `shippingMethod`; add `getSelectedMethod()` |
+| `src/components/checkout/ShippingMethodSelector.tsx` | ADD | Radio-card UI for Standard/Express |
+| `src/components/checkout/ShippingForm.tsx` | UPDATE | Integrate selector; persist method in draft |
+| `src/pages/patient/Checkout.tsx` | UPDATE | Wire method state; replace hardcoded cost; pass cents to children |
+| `src/components/checkout/OrderReview.tsx` | UPDATE | Accept `shippingCostCents` + `shippingMethod`; display method label |
+| `src/components/checkout/PaymentPlaceholder.tsx` | UPDATE | Accept `totalCents` instead of dollars |
+| `src/services/orderService.ts` | UPDATE | Persist `shippingMethod` via `safeShippingMethod()` |
 
 ---
 
 ## Implementation Order
 
-1. Add `totalPriceCents` to `CartItem` in `shop.ts`
-2. Expand `StoredCartItem` type in `cartService.ts`
-3. Add `safeParseNumber()` helper in `cartService.ts`
-4. Rewrite `normalizeCartItem()` with full cascade
-5. Update `addItem()` and `updateQuantity()` to set `totalPriceCents`
-6. Run manual acceptance tests
+1. Add types to `shop.ts`
+2. Create `shippingService.ts` (pricing + type-guard)
+3. Update `shippingFormService.ts` (extend draft)
+4. Create `ShippingMethodSelector.tsx`
+5. Update `ShippingForm.tsx` (integrate selector)
+6. Update `OrderReview.tsx` (cents props + method label)
+7. Update `PaymentPlaceholder.tsx` (cents prop)
+8. Update `orderService.ts` (persist method)
+9. Update `Checkout.tsx` (wire everything)
+
+---
+
+## Migration-Ready Notes
+
+```text
+ShippingQuote.method      -> orders.shipping_method (text/enum)
+ShippingQuote.costCents   -> orders.shipping_cents (int, already exists)
+ShippingQuote.isFree      -> derived at query time or stored as boolean
+Order.shippingMethod      -> orders.shipping_method column
+Order.shippingCents       -> orders.shipping_cents column (already exists)
+```
+
+In Phase 2, `shippingService.ts` becomes async (Shopify carrier rates or backend function). UI and draft persistence remain unchanged.
 
 ---
 
 ## Manual Acceptance Tests
 
-### 1. Legacy cart with string qty and string unitPrice
-```javascript
-localStorage.setItem('nicopatch_cart', JSON.stringify({
-  items: [{
-    id: 'str-test', productId: 'p1', variantId: 'v1',
-    name: 'Mint', brand: 'B', flavor: 'Mint', strengthMg: 6,
-    qtyCans: "59", unitPrice: "24.99"
-  }]
-}));
-```
-- Reload, open cart
-- **Expected**: 59 cans, `$24.99 / can`, subtotal `$1,474.41`
+### 1. Standard shipping default
+- Go to checkout with any cart
+- **Expected**: "Standard Shipping" pre-selected, sidebar shows "$20.00" shipping
 
-### 2. Legacy cart with totalPriceCents, no unit price
-```javascript
-localStorage.setItem('nicopatch_cart', JSON.stringify({
-  items: [{
-    id: 'total-test', productId: 'p1', variantId: 'v1',
-    name: 'Cherry', brand: 'B', flavor: 'Cherry', strengthMg: 6,
-    totalPriceCents: 5970, qtyCans: 6
-  }]
-}));
-```
-- Reload, open cart
-- **Expected**: 6 cans, `$9.95 / can`, subtotal `$59.70`
+### 2. Express shipping selection
+- Select "Express Shipping"
+- **Expected**: Sidebar shows "$40.00" shipping, total recalculates
 
-### 3. Legacy cart with totalPrice (dollars string), no unit price
-```javascript
-localStorage.setItem('nicopatch_cart', JSON.stringify({
-  items: [{
-    id: 'dollar-total', productId: 'p1', variantId: 'v1',
-    name: 'Berry', brand: 'B', flavor: 'Berry', strengthMg: 3,
-    totalPrice: "59.70", qty: "6"
-  }]
-}));
-```
-- Reload, open cart
-- **Expected**: 6 cans, `$9.95 / can`
+### 3. Free Express at exactly 60 cans
+- Set cart to exactly 60 cans
+- **Expected**: Express shows "Free" with `isFree` badge/text, cost = $0, total = subtotal only
 
-### 4. Malformed / unrecoverable cart
-```javascript
-localStorage.setItem('nicopatch_cart', JSON.stringify({
-  items: [
-    { id: '1', name: 'Good', priceCents: 995, qtyCans: 2,
-      productId: 'p1', variantId: 'v1', brand: 'B', flavor: 'F', strengthMg: 3 },
-    { id: '2', name: 'Bad' }
-  ]
-}));
-```
-- Reload, open cart
-- **Expected**: "Good" shows `$9.95 / can` x 2. "Bad" shows `$0.00 / can` x 1 (kept with defaults), console error logged. No crash.
+### 4. 59 cans: Express is NOT free
+- Set cart to 59 cans, select Express
+- **Expected**: Express shows "$40.00", no free promo
 
-### 5. Normal UI flow: add item, +/- to 59
-- Add 1 can of any product
-- Click + repeatedly to 59 cans
-- **Expected**: Per-can price never shows NaN; subtotal updates correctly each click
+### 5. 61 cans: Express is NOT free
+- Set cart to 61 cans (if allowance permits), select Express
+- **Expected**: Express shows "$40.00", no free promo
 
-### 6. Page refresh persistence + self-healing
-- After test 1, refresh page, open cart
-- Inspect `localStorage.getItem('nicopatch_cart')` in console
-- **Expected**: Stored data now has canonical `priceCents`, `qtyCans`, `totalPriceCents` fields (no more string values or legacy aliases)
+### 6. Method persists across refresh
+- Select Express, refresh, return to checkout
+- **Expected**: Express still selected
 
-### 7. priceCents explicitly null with price fallback
-```javascript
-localStorage.setItem('nicopatch_cart', JSON.stringify({
-  items: [{
-    id: 'null-pc', productId: 'p1', variantId: 'v1',
-    name: 'Spearmint', brand: 'B', flavor: 'Spearmint', strengthMg: 3,
-    priceCents: null, price: 1.99, qtyCans: 10
-  }]
-}));
-```
-- Reload, open cart
-- **Expected**: `$1.99 / can`, no NaN
+### 7. Method persists on placed order
+- Place order with Express
+- Check `nicopatch_orders` in localStorage: latest order has `shippingMethod: 'express'` AND `shippingCents` matches selected cost
 
-### 8. Float precision
-```javascript
-localStorage.setItem('nicopatch_cart', JSON.stringify({
-  items: [{
-    id: 'fp', productId: 'p1', variantId: 'v1', name: 'Test',
-    brand: 'B', flavor: 'F', strengthMg: 3,
-    price: 9.999
-  }]
-}));
-```
-- **Expected**: `$10.00 / can` (`Math.round(999.9) = 1000` cents)
+### 8. Legacy draft normalization
+- Set draft in localStorage with `shippingMethod: "bogus"`
+- Open checkout
+- **Expected**: Defaults to Standard, `console.warn` logged
 
----
+### 9. Invalid method type-guard
+- Call `validateShippingMethod(42)` mentally / in console
+- **Expected**: Returns `false`, warns, `safeShippingMethod(42)` returns `'standard'`
 
-## Migration-Ready Note
-
-The canonical persisted shape maps directly to future backend columns:
-
-```text
-CartItem.priceCents      -> order_items.unit_price_cents
-CartItem.totalPriceCents -> order_items.total_price_cents
-CartItem.qtyCans         -> order_items.qty_cans
-Cart.subtotalCents       -> orders.subtotal_cents
-Cart.totalCans           -> orders.total_cans
-```
-
-All values are integers (cents), avoiding floating-point issues in both localStorage and future SQL columns.
+### 10. Cart normalization unchanged
+- Inject legacy cart with string qty/price, reload
+- **Expected**: No NaN, correct values (existing Rev 2 tests still pass)
 
 ---
 
