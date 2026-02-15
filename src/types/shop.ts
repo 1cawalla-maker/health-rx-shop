@@ -36,6 +36,7 @@ export interface CartItem {
   strengthMg: 3 | 6 | 9;
   priceCents: number;
   qtyCans: number; // Quantity in cans
+  totalPriceCents?: number; // Derived: priceCents * qtyCans (convenience field)
   imageUrl?: string;
   // Legacy fields for compatibility
   strength?: number;
