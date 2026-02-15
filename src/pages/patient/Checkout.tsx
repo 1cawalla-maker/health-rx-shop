@@ -260,7 +260,18 @@ export default function PatientCheckout() {
                   <span>
                     {item.name} ({item.strengthMg}mg) x{item.qtyCans}
                   </span>
-                  <span>${((item.priceCents * item.qtyCans) / 100).toFixed(2)}</span>
+                  <span>
+                    {typeof item.priceCents === 'number' && !isNaN(item.priceCents) && item.priceCents >= 0
+                      ? `$${((item.priceCents * item.qtyCans) / 100).toFixed(2)}`
+                      : (() => {
+                          console.warn('Checkout sidebar: item has invalid priceCents:', {
+                            id: item.id, name: item.name, flavor: item.flavor,
+                            strengthMg: item.strengthMg, priceCents: item.priceCents,
+                            normalizationAttempted: true,
+                          });
+                          return '—';
+                        })()}
+                  </span>
                 </div>
               ))}
               

@@ -80,7 +80,7 @@ export function CartDrawer({ remainingCans, maxContainers }: CartDrawerProps) {
                       {typeof item.priceCents === 'number' && !isNaN(item.priceCents) && item.priceCents >= 0
                         ? `$${(item.priceCents / 100).toFixed(2)} / can`
                         : (() => {
-                            console.warn('CartDrawer: item has invalid priceCents:', { id: item.id, name: item.name, priceCents: item.priceCents });
+                            console.warn('CartDrawer: item has invalid priceCents:', { id: item.id, name: item.name, flavor: item.flavor, strengthMg: item.strengthMg, priceCents: item.priceCents, normalizationAttempted: true });
                             return '—';
                           })()}
                     </p>
