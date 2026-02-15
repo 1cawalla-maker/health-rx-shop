@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
+import { shopPrescriptionService } from '@/services/shopPrescriptionService';
 import {
   Stethoscope,
   LayoutDashboard,
@@ -45,44 +45,13 @@ export function PatientLayout() {
 
   const checkActivePrescription = async () => {
     if (!user) return;
-    
-    // Check for doctor-issued prescriptions (from platform consultations)
-    const { data: issuedData } = await supabase
-      .rpc('has_active_issued_prescription', { _patient_id: user.id });
-    
-    if (issuedData === true) {
-      setHasActivePrescription(true);
-      setHasPendingPrescription(false);
-      return;
-    }
-    
-    // Check for admin-approved uploaded prescriptions
-    const { data: uploadedData } = await supabase
-      .from('prescriptions')
-      .select('id')
-      .eq('patient_id', user.id)
-      .eq('status', 'active')
-      .eq('prescription_type', 'uploaded')
-      .or('expires_at.is.null,expires_at.gt.now()')
-      .limit(1);
 
-    if (uploadedData && uploadedData.length > 0) {
-      setHasActivePrescription(true);
-      setHasPendingPrescription(false);
-      return;
-    }
-    
-    // Check for pending uploaded prescriptions awaiting admin approval
-    const { data: pendingData } = await supabase
-      .from('prescriptions')
-      .select('id')
-      .eq('patient_id', user.id)
-      .eq('status', 'pending_review')
-      .eq('prescription_type', 'uploaded')
-      .limit(1);
+    // Phase 1: localStorage-only gating. No Supabase, no network.
+    const active = shopPrescriptionService.getActivePrescription(user.id);
+    setHasActivePrescription(!!active);
 
-    setHasActivePrescription(false);
-    setHasPendingPrescription(pendingData && pendingData.length > 0);
+    // Phase 1: no review workflow. Pending is always false.
+    setHasPendingPrescription(false);
   };
 
   const handleSignOut = async () => {
