@@ -6,75 +6,98 @@ import type { Cart, CartItem, Product, ProductVariant } from '@/types/shop';
 import { STORAGE_KEYS } from '@/lib/storageKeys';
 
 /**
- * Type for cart items as stored in localStorage
- * Includes legacy fields that may exist in older stored data
- * TODO Phase 2: Remove after migration to backend storage
+ * Type for cart items as stored in localStorage.
+ * Covers all known legacy shapes: string or number values, alternative field names.
  */
 type StoredCartItem = Partial<CartItem> & {
-  price?: number;           // Legacy: dollars (e.g., 9.95)
-  quantity?: number;        // Legacy: same as qtyCans
-  strength?: number;        // Legacy: same as strengthMg
-  totalPriceCents?: number; // Legacy: line total in cents
+  // Legacy price fields (any could be string or number)
+  price?: string | number;           // dollars (e.g., 9.95 or "9.95")
+  unitPrice?: string | number;       // dollars (alias)
+  unitPriceCents?: string | number;  // cents (alias for priceCents)
+  totalPriceCents?: string | number; // line total in cents
+  totalPrice?: string | number;      // line total in dollars
+  // Legacy qty fields
+  quantity?: string | number;        // alias for qtyCans
+  qty?: string | number;             // alias for qtyCans
+  // Legacy strength
+  strength?: string | number;        // alias for strengthMg
 };
+
+/**
+ * Safely parse a value (string or number) into a non-negative finite number.
+ * Returns null if the value is null, undefined, NaN, Infinity, or negative.
+ */
+function safeParseNumber(val: unknown): number | null {
+  if (val === null || val === undefined) return null;
+  const n = parseFloat(String(val));
+  return isFinite(n) && n >= 0 ? n : null;
+}
 
 class CartService {
   /**
-   * Normalize a cart item from localStorage to ensure all required fields are valid numbers
-   * Handles legacy fields (price, quantity, strength) for backward compatibility
+   * Normalize a cart item from localStorage to ensure all required fields are valid numbers.
+   * Handles legacy fields, string values, and alternative field names.
    */
-  private normalizeCartItem(item: StoredCartItem): CartItem {
-    // Derive qtyCans first (needed for totalPriceCents derivation)
-    let qtyCans: number;
-    if (typeof item.qtyCans === 'number' && !isNaN(item.qtyCans) && item.qtyCans > 0) {
-      qtyCans = item.qtyCans;
-    } else if (typeof item.quantity === 'number' && !isNaN(item.quantity) && item.quantity > 0) {
-      qtyCans = item.quantity;
-    } else {
-      qtyCans = 1;
-    }
+  private normalizeCartItem(raw: StoredCartItem): CartItem {
+    // --- Qty cascade ---
+    let qtyCans =
+      safeParseNumber(raw.qtyCans) ??
+      safeParseNumber(raw.quantity) ??
+      safeParseNumber(raw.qty) ??
+      1;
+    qtyCans = Math.round(qtyCans);
+    if (qtyCans <= 0) qtyCans = 1;
 
-    // Derive priceCents with cascade: priceCents -> price*100 -> totalPriceCents/qtyCans -> 0
+    // --- Price cascade (unit price in cents) ---
     let priceCents: number;
-    if (typeof item.priceCents === 'number' && !isNaN(item.priceCents) && item.priceCents >= 0) {
-      priceCents = item.priceCents;
-    } else if (typeof item.price === 'number' && !isNaN(item.price) && item.price >= 0) {
-      priceCents = Math.round(item.price * 100);
-    } else if (
-      typeof item.totalPriceCents === 'number' && !isNaN(item.totalPriceCents) && item.totalPriceCents >= 0
-      && qtyCans > 0
-    ) {
-      priceCents = Math.round(item.totalPriceCents / qtyCans);
+    const pc = safeParseNumber(raw.priceCents);
+    const upc = safeParseNumber(raw.unitPriceCents);
+    const pDollars = safeParseNumber(raw.price);
+    const upDollars = safeParseNumber(raw.unitPrice);
+    const tpc = safeParseNumber(raw.totalPriceCents);
+    const tpDollars = safeParseNumber(raw.totalPrice);
+
+    if (pc !== null) {
+      priceCents = Math.round(pc);
+    } else if (upc !== null) {
+      priceCents = Math.round(upc);
+    } else if (pDollars !== null) {
+      priceCents = Math.round(pDollars * 100);
+    } else if (upDollars !== null) {
+      priceCents = Math.round(upDollars * 100);
+    } else if (tpc !== null && qtyCans > 0) {
+      priceCents = Math.round(tpc / qtyCans);
+    } else if (tpDollars !== null && qtyCans > 0) {
+      priceCents = Math.round(tpDollars * 100 / qtyCans);
     } else {
-      console.error('CartItem missing valid priceCents, falling back to 0:', {
-        itemId: item.id,
-        itemName: item.name,
-        flavor: item.flavor,
-        strengthMg: item.strengthMg ?? item.strength,
-        priceCents: item.priceCents,
-        price: item.price,
-        totalPriceCents: item.totalPriceCents,
+      console.error('CartItem missing valid price, falling back to 0:', {
+        itemId: raw.id,
+        itemName: raw.name,
+        flavor: raw.flavor,
+        strengthMg: raw.strengthMg ?? raw.strength,
+        raw: { priceCents: raw.priceCents, unitPriceCents: raw.unitPriceCents, price: raw.price, unitPrice: raw.unitPrice, totalPriceCents: raw.totalPriceCents, totalPrice: raw.totalPrice },
       });
       priceCents = 0;
     }
 
-    // Derive strengthMg: prefer strengthMg, fall back to legacy strength
-    const strengthMg = (item.strengthMg ?? item.strength ?? 3) as 3 | 6 | 9;
+    const strengthMg = (Math.round(safeParseNumber(raw.strengthMg) ?? safeParseNumber(raw.strength) ?? 3)) as 3 | 6 | 9;
+    const totalPriceCents = priceCents * qtyCans;
 
     return {
-      id: item.id || `cart-item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      productId: item.productId || '',
-      variantId: item.variantId || '',
-      name: item.name || 'Unknown Product',
-      brand: item.brand || '',
-      flavor: item.flavor || '',
+      id: raw.id || `cart-item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      productId: raw.productId || '',
+      variantId: raw.variantId || '',
+      name: raw.name || 'Unknown Product',
+      brand: raw.brand || '',
+      flavor: raw.flavor || '',
       strengthMg,
       priceCents,
       qtyCans,
-      imageUrl: item.imageUrl,
-      // Legacy fields maintained for backward compatibility only
-      // TODO Phase 2: Remove after migration to backend storage
+      totalPriceCents,
+      imageUrl: raw.imageUrl,
+      // Legacy compat fields (written from canonical values)
       strength: strengthMg,
-      packSize: item.packSize ?? 20,
+      packSize: 20,
       price: priceCents / 100,
       quantity: qtyCans,
     };
@@ -85,15 +108,13 @@ class CartService {
       const stored = localStorage.getItem(STORAGE_KEYS.cart);
       if (stored) {
         const parsed = JSON.parse(stored);
-        
-        // Normalize each item to ensure priceCents and qtyCans are valid numbers
-        const normalizedItems = (parsed.items || []).map(
-          (item: StoredCartItem) => this.normalizeCartItem(item)
-        );
-        
-        // Always recalculate totals from normalized items (don't trust stored totals)
+
+        const normalizedItems = (parsed.items || [])
+          .map((item: StoredCartItem) => this.normalizeCartItem(item))
+          .filter((item: CartItem) => item.qtyCans > 0);
+
         const freshTotals = this.calculateTotals(normalizedItems);
-        
+
         const normalizedCart: Cart = {
           items: normalizedItems,
           subtotalCents: freshTotals.subtotalCents,
@@ -104,7 +125,6 @@ class CartService {
 
         // Self-healing: persist normalized data back to storage
         this.saveCart(normalizedCart);
-
         return normalizedCart;
       }
     } catch (error) {
@@ -133,15 +153,15 @@ class CartService {
 
   async addItem(product: Product, variant: ProductVariant, qtyCans: number = 1): Promise<Cart> {
     const cart = this.getStoredCart();
-    
+
     const existingItemIndex = cart.items.findIndex(
       item => item.productId === product.id && item.variantId === variant.id
     );
 
     if (existingItemIndex >= 0) {
       cart.items[existingItemIndex].qtyCans += qtyCans;
-      // Also update legacy quantity
       cart.items[existingItemIndex].quantity = cart.items[existingItemIndex].qtyCans;
+      cart.items[existingItemIndex].totalPriceCents = cart.items[existingItemIndex].priceCents * cart.items[existingItemIndex].qtyCans;
     } else {
       const newItem: CartItem = {
         id: `cart-item-${Date.now()}`,
@@ -153,6 +173,7 @@ class CartService {
         strengthMg: variant.strengthMg,
         priceCents: variant.priceCents,
         qtyCans,
+        totalPriceCents: variant.priceCents * qtyCans,
         imageUrl: product.imageUrl,
         // Legacy fields
         strength: variant.strengthMg,
@@ -166,17 +187,16 @@ class CartService {
     const totals = this.calculateTotals(cart.items);
     cart.subtotalCents = totals.subtotalCents;
     cart.totalCans = totals.totalCans;
-    // Legacy fields
     cart.subtotal = totals.subtotalCents / 100;
     cart.itemCount = totals.totalCans;
-    
+
     this.saveCart(cart);
     return cart;
   }
 
   async updateQuantity(itemId: string, qtyCans: number): Promise<Cart> {
     const cart = this.getStoredCart();
-    
+
     const itemIndex = cart.items.findIndex(item => item.id === itemId);
     if (itemIndex >= 0) {
       if (qtyCans <= 0) {
@@ -184,6 +204,7 @@ class CartService {
       } else {
         cart.items[itemIndex].qtyCans = qtyCans;
         cart.items[itemIndex].quantity = qtyCans;
+        cart.items[itemIndex].totalPriceCents = cart.items[itemIndex].priceCents * qtyCans;
       }
     }
 
@@ -192,7 +213,7 @@ class CartService {
     cart.totalCans = totals.totalCans;
     cart.subtotal = totals.subtotalCents / 100;
     cart.itemCount = totals.totalCans;
-    
+
     this.saveCart(cart);
     return cart;
   }
@@ -202,9 +223,9 @@ class CartService {
   }
 
   async clearCart(): Promise<Cart> {
-    const emptyCart: Cart = { 
-      items: [], 
-      subtotalCents: 0, 
+    const emptyCart: Cart = {
+      items: [],
+      subtotalCents: 0,
       totalCans: 0,
       subtotal: 0,
       itemCount: 0,
