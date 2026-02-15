@@ -64,6 +64,17 @@ export interface ShippingAddress {
   postcode: string;
 }
 
+// Shipping method types (Phase 1 mock, Phase 2 Shopify rates)
+export type ShippingMethod = 'standard' | 'express';
+
+export interface ShippingQuote {
+  method: ShippingMethod;
+  label: string;
+  costCents: number;
+  isFree: boolean;
+  description?: string;
+}
+
 export interface OrderItem {
   productId: string;
   variantId: string;
@@ -83,6 +94,7 @@ export interface Order {
   shippingCents: number;
   totalCents: number;
   totalCans: number;
+  shippingMethod?: ShippingMethod;
   status: 'processing' | 'shipped' | 'delivered' | 'cancelled';
   createdAt: string;
   prescriptionId?: string;

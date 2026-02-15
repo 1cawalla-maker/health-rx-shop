@@ -2,8 +2,9 @@
 // MVP: Uses localStorage
 // Future: Insert into Supabase orders table + sync with Shopify
 
-import type { Order, OrderItem, Cart, ShippingAddress } from '@/types/shop';
+import type { Order, OrderItem, Cart, ShippingAddress, ShippingMethod } from '@/types/shop';
 import { STORAGE_KEYS } from '@/lib/storageKeys';
+import { safeShippingMethod } from '@/services/shippingService';
 
 interface CreateOrderData {
   userId: string;
@@ -11,6 +12,7 @@ interface CreateOrderData {
   shippingAddress: ShippingAddress;
   shippingCents: number;
   prescriptionId?: string;
+  shippingMethod?: ShippingMethod;
 }
 
 class OrderService {
@@ -72,6 +74,7 @@ class OrderService {
       shippingCents,
       totalCents,
       totalCans,
+      shippingMethod: safeShippingMethod(data.shippingMethod),
       status: 'processing',
       createdAt: new Date().toISOString(),
       prescriptionId,
