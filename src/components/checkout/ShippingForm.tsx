@@ -4,17 +4,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { ShippingAddress } from '@/types/shop';
+import type { ShippingAddress, ShippingMethod } from '@/types/shop';
 import { AUSTRALIAN_STATES } from '@/types/shop';
 import { shippingFormService } from '@/services/shippingFormService';
+import { getAvailableShippingQuotes } from '@/services/shippingService';
+import { ShippingMethodSelector } from '@/components/checkout/ShippingMethodSelector';
 
 interface ShippingFormProps {
   userId?: string;
   initialData: ShippingAddress | null;
   onSubmit: (data: ShippingAddress) => void;
+  totalCans: number;
+  selectedMethod: ShippingMethod;
+  onMethodChange: (method: ShippingMethod) => void;
 }
 
-export function ShippingForm({ userId, initialData, onSubmit }: ShippingFormProps) {
+export function ShippingForm({ userId, initialData, onSubmit, totalCans, selectedMethod, onMethodChange }: ShippingFormProps) {
   const {
     register,
     handleSubmit,
@@ -42,7 +47,7 @@ export function ShippingForm({ userId, initialData, onSubmit }: ShippingFormProp
       const savedDraft = shippingFormService.getDraft(userId);
       if (savedDraft) {
         Object.entries(savedDraft).forEach(([key, value]) => {
-          if (value) setValue(key as keyof ShippingAddress, value);
+          if (value && key !== 'shippingMethod') setValue(key as keyof ShippingAddress, value);
         });
       }
     }
@@ -52,7 +57,16 @@ export function ShippingForm({ userId, initialData, onSubmit }: ShippingFormProp
   const handleFieldBlur = () => {
     if (userId) {
       const currentValues = getValues();
-      shippingFormService.saveDraft(userId, currentValues);
+      shippingFormService.saveDraft(userId, { ...currentValues, shippingMethod: selectedMethod });
+    }
+  };
+
+  // Handle shipping method change: update parent + persist draft
+  const handleMethodChange = (method: ShippingMethod) => {
+    onMethodChange(method);
+    if (userId) {
+      const currentValues = getValues();
+      shippingFormService.saveDraft(userId, { ...currentValues, shippingMethod: method });
     }
   };
 
@@ -65,17 +79,17 @@ export function ShippingForm({ userId, initialData, onSubmit }: ShippingFormProp
   };
 
   const validatePhone = (value: string) => {
-    // Australian phone format: 04XX XXX XXX or +614XX XXX XXX
     const phoneRegex = /^(\+?61|0)4\d{8}$/;
     const cleaned = value.replace(/\s/g, '');
     return phoneRegex.test(cleaned) || 'Please enter a valid Australian mobile number';
   };
 
   const validatePostcode = (value: string) => {
-    // Australian postcodes are 4 digits
     const postcodeRegex = /^\d{4}$/;
     return postcodeRegex.test(value) || 'Please enter a valid 4-digit postcode';
   };
+
+  const quotes = getAvailableShippingQuotes(totalCans);
 
   return ( 
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
@@ -196,6 +210,13 @@ export function ShippingForm({ userId, initialData, onSubmit }: ShippingFormProp
           )}
         </div>
       </div>
+
+      {/* Shipping Method Selector */}
+      <ShippingMethodSelector
+        quotes={quotes}
+        selectedMethod={selectedMethod}
+        onMethodChange={handleMethodChange}
+      />
 
       <Button type="submit" className="w-full" size="lg">
         Continue to Review
