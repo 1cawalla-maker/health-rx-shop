@@ -67,15 +67,26 @@ export function OrderReview({
           {cart.items.map((item) => (
             <div key={item.id} className="flex items-center gap-4">
               <div className="h-16 w-16 rounded-md bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center shrink-0">
-                <span className="text-xs text-muted-foreground">{item.strength}mg</span>
+                <span className="text-xs text-muted-foreground">{item.strengthMg}mg</span>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate">{item.name}</p>
-                <p className="text-sm text-muted-foreground">{item.flavor} • {item.strength}mg</p>
+                <p className="text-sm text-muted-foreground">{item.flavor} • {item.strengthMg}mg</p>
               </div>
               <div className="text-right">
-                <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
-                <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
+                <p className="font-medium">
+                  {typeof item.priceCents === 'number' && !isNaN(item.priceCents) && item.priceCents >= 0
+                    ? `$${((item.priceCents * item.qtyCans) / 100).toFixed(2)}`
+                    : (() => {
+                        console.warn('OrderReview: item has invalid priceCents:', {
+                          id: item.id, name: item.name, flavor: item.flavor,
+                          strengthMg: item.strengthMg, priceCents: item.priceCents,
+                          normalizationAttempted: true,
+                        });
+                        return '—';
+                      })()}
+                </p>
+                <p className="text-sm text-muted-foreground">Qty: {item.qtyCans}</p>
               </div>
             </div>
           ))}
@@ -85,7 +96,7 @@ export function OrderReview({
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>Subtotal</span>
-              <span>${cart.subtotal.toFixed(2)}</span>
+              <span>${(cart.subtotalCents / 100).toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span>Shipping</span>

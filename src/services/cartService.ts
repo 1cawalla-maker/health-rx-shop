@@ -11,9 +11,10 @@ import { STORAGE_KEYS } from '@/lib/storageKeys';
  * TODO Phase 2: Remove after migration to backend storage
  */
 type StoredCartItem = Partial<CartItem> & {
-  price?: number;       // Legacy: dollars (e.g., 9.95)
-  quantity?: number;    // Legacy: same as qtyCans
-  strength?: number;    // Legacy: same as strengthMg
+  price?: number;           // Legacy: dollars (e.g., 9.95)
+  quantity?: number;        // Legacy: same as qtyCans
+  strength?: number;        // Legacy: same as strengthMg
+  totalPriceCents?: number; // Legacy: line total in cents
 };
 
 class CartService {
@@ -22,33 +23,38 @@ class CartService {
    * Handles legacy fields (price, quantity, strength) for backward compatibility
    */
   private normalizeCartItem(item: StoredCartItem): CartItem {
-    // Derive priceCents: prefer priceCents, fall back to legacy price * 100
-    let priceCents: number;
-    if (typeof item.priceCents === 'number' && !isNaN(item.priceCents) && item.priceCents >= 0) {
-      priceCents = item.priceCents;
-    } else if (typeof item.price === 'number' && !isNaN(item.price) && item.price >= 0) {
-      // Legacy field: convert dollars to cents, round to avoid floating point issues
-      priceCents = Math.round(item.price * 100);
-    } else {
-      // Corrupted data: log error and fall back to 0
-      console.error('CartItem missing valid priceCents, falling back to 0:', {
-        itemId: item.id,
-        itemName: item.name,
-        priceCents: item.priceCents,
-        price: item.price,
-      });
-      priceCents = 0;
-    }
-
-    // Derive qtyCans: prefer qtyCans, fall back to legacy quantity, minimum 1
+    // Derive qtyCans first (needed for totalPriceCents derivation)
     let qtyCans: number;
     if (typeof item.qtyCans === 'number' && !isNaN(item.qtyCans) && item.qtyCans > 0) {
       qtyCans = item.qtyCans;
     } else if (typeof item.quantity === 'number' && !isNaN(item.quantity) && item.quantity > 0) {
       qtyCans = item.quantity;
     } else {
-      // Invalid quantity: default to 1 (minimum safe value)
       qtyCans = 1;
+    }
+
+    // Derive priceCents with cascade: priceCents -> price*100 -> totalPriceCents/qtyCans -> 0
+    let priceCents: number;
+    if (typeof item.priceCents === 'number' && !isNaN(item.priceCents) && item.priceCents >= 0) {
+      priceCents = item.priceCents;
+    } else if (typeof item.price === 'number' && !isNaN(item.price) && item.price >= 0) {
+      priceCents = Math.round(item.price * 100);
+    } else if (
+      typeof item.totalPriceCents === 'number' && !isNaN(item.totalPriceCents) && item.totalPriceCents >= 0
+      && qtyCans > 0
+    ) {
+      priceCents = Math.round(item.totalPriceCents / qtyCans);
+    } else {
+      console.error('CartItem missing valid priceCents, falling back to 0:', {
+        itemId: item.id,
+        itemName: item.name,
+        flavor: item.flavor,
+        strengthMg: item.strengthMg ?? item.strength,
+        priceCents: item.priceCents,
+        price: item.price,
+        totalPriceCents: item.totalPriceCents,
+      });
+      priceCents = 0;
     }
 
     // Derive strengthMg: prefer strengthMg, fall back to legacy strength
@@ -88,14 +94,18 @@ class CartService {
         // Always recalculate totals from normalized items (don't trust stored totals)
         const freshTotals = this.calculateTotals(normalizedItems);
         
-        return {
+        const normalizedCart: Cart = {
           items: normalizedItems,
           subtotalCents: freshTotals.subtotalCents,
           totalCans: freshTotals.totalCans,
-          // Legacy fields derived from fresh totals
           subtotal: freshTotals.subtotalCents / 100,
           itemCount: freshTotals.totalCans,
         };
+
+        // Self-healing: persist normalized data back to storage
+        this.saveCart(normalizedCart);
+
+        return normalizedCart;
       }
     } catch (error) {
       console.error('Error reading cart from localStorage:', error);
