@@ -37,10 +37,16 @@ class ShippingFormService {
     const drafts = this.getAllDrafts();
     const draft = drafts[userId];
     if (!draft || !draft.fullName) return null;
-    // Normalize shippingMethod on read
+    // Normalize shippingMethod on read + write-back if changed
+    const normalized = safeShippingMethod(draft.shippingMethod);
+    if (draft.shippingMethod !== normalized) {
+      draft.shippingMethod = normalized;
+      drafts[userId] = draft;
+      this.saveDrafts(drafts);
+    }
     return {
       ...draft,
-      shippingMethod: safeShippingMethod(draft.shippingMethod),
+      shippingMethod: normalized,
     };
   }
 
@@ -58,7 +64,14 @@ class ShippingFormService {
     if (!userId) return 'standard';
     const drafts = this.getAllDrafts();
     const draft = drafts[userId];
-    return safeShippingMethod(draft?.shippingMethod);
+    const normalized = safeShippingMethod(draft?.shippingMethod);
+    // Write-back if stored value was invalid/missing
+    if (draft && draft.shippingMethod !== normalized) {
+      draft.shippingMethod = normalized;
+      drafts[userId] = draft;
+      this.saveDrafts(drafts);
+    }
+    return normalized;
   }
 
   clearDraft(userId: string): void {

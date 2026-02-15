@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface PaymentPlaceholderProps {
-  total: number;
+  totalCents: number;
   isProcessing: boolean;
   onPlaceOrder: () => void;
   onBack: () => void;
@@ -14,12 +14,13 @@ interface PaymentPlaceholderProps {
 }
 
 export function PaymentPlaceholder({
-  total,
+  totalCents,
   isProcessing,
   onPlaceOrder,
   onBack,
   disabled = false,
 }: PaymentPlaceholderProps) {
+  const totalFormatted = (totalCents / 100).toFixed(2);
   return (
     <div className="space-y-6">
       <Alert className="bg-amber-500/10 border-amber-500/30">
@@ -96,7 +97,7 @@ export function PaymentPlaceholder({
         <CardContent className="pt-6">
           <div className="flex justify-between items-center">
             <span className="text-lg font-medium">Total to Pay</span>
-            <span className="text-2xl font-bold text-primary">${total.toFixed(2)} AUD</span>
+            <span className="text-2xl font-bold text-primary">${totalFormatted} AUD</span>
           </div>
         </CardContent>
       </Card>
@@ -117,7 +118,7 @@ export function PaymentPlaceholder({
           ) : (
             <>
               <Lock className="h-4 w-4 mr-2" />
-              Place Order (${total.toFixed(2)})
+              Place Order (${totalFormatted})
             </>
           )}
         </Button>

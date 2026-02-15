@@ -12,7 +12,9 @@ import { allowanceUtils } from '@/lib/allowanceUtils';
 import { ShippingForm } from '@/components/checkout/ShippingForm';
 import { OrderReview } from '@/components/checkout/OrderReview';
 import { PaymentPlaceholder } from '@/components/checkout/PaymentPlaceholder';
-import type { ShippingAddress } from '@/types/shop';
+import type { ShippingAddress, ShippingMethod } from '@/types/shop';
+import { getShippingCostCents } from '@/services/shippingService';
+import { shippingFormService } from '@/services/shippingFormService';
 import { toast } from 'sonner';
 
 type CheckoutStep = 'shipping' | 'review' | 'payment';
@@ -35,11 +37,19 @@ export default function PatientCheckout() {
   const [orderConfirmed, setOrderConfirmed] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [cansOrdered, setCansOrdered] = useState(0);
+  const [shippingMethod, setShippingMethod] = useState<ShippingMethod>('standard');
 
-  // Calculate amounts in cents
+  // Restore shipping method from draft on mount
+  useEffect(() => {
+    if (user?.id) {
+      setShippingMethod(shippingFormService.getSelectedMethod(user.id));
+    }
+  }, [user?.id]);
+
+  // Calculate amounts in cents — shipping derived from service
   const subtotalCents = cart.subtotalCents;
-  const SHIPPING_COST_CENTS = subtotalCents >= 10000 ? 0 : 995; // Free shipping over $100
-  const totalCents = subtotalCents + SHIPPING_COST_CENTS;
+  const shippingCostCents = getShippingCostCents(cart.totalCans, shippingMethod);
+  const totalCents = subtotalCents + shippingCostCents;
 
   // Calculate remaining allowance using centralized utils (for display - recalculated at submit)
   const remainingCans = allowanceUtils.remainingAtCheckout(cansOrdered);
@@ -101,13 +111,17 @@ export default function PatientCheckout() {
     setIsProcessing(true);
 
     try {
+      // FRESH RECOMPUTE: derive shipping cost immediately before placing order
+      const freshShippingCents = getShippingCostCents(cart.totalCans, shippingMethod);
+
       // ATOMIC: Order persists first
       const order = await orderService.placeOrder({
         userId: user.id,
         cart,
         shippingAddress,
-        shippingCents: SHIPPING_COST_CENTS,
+        shippingCents: freshShippingCents,
         prescriptionId,
+        shippingMethod,
       });
 
       // ONLY clear cart after successful order persistence
@@ -124,6 +138,7 @@ export default function PatientCheckout() {
   };
 
   const currentStepIndex = steps.findIndex(s => s.id === currentStep);
+  const methodLabel = shippingMethod === 'express' ? 'Express' : 'Standard';
 
   return (
     <div className="space-y-8">
@@ -216,6 +231,9 @@ export default function PatientCheckout() {
                   userId={user?.id}
                   initialData={shippingAddress}
                   onSubmit={handleShippingSubmit}
+                  totalCans={cart.totalCans}
+                  selectedMethod={shippingMethod}
+                  onMethodChange={setShippingMethod}
                 />
               </CardContent>
             </Card>
@@ -225,8 +243,9 @@ export default function PatientCheckout() {
             <OrderReview
               cart={cart}
               shippingAddress={shippingAddress}
-              shippingCost={SHIPPING_COST_CENTS / 100}
-              total={totalCents / 100}
+              shippingCostCents={shippingCostCents}
+              totalCents={totalCents}
+              shippingMethod={shippingMethod}
               prescriptionRef={referenceId}
               maxContainers={remainingCans}
               agreedToTerms={agreedToTerms}
@@ -238,7 +257,7 @@ export default function PatientCheckout() {
 
           {currentStep === 'payment' && (
             <PaymentPlaceholder
-              total={totalCents / 100}
+              totalCents={totalCents}
               isProcessing={isProcessing}
               onPlaceOrder={handlePlaceOrder}
               onBack={() => setCurrentStep('review')}
@@ -281,8 +300,8 @@ export default function PatientCheckout() {
                   <span>${(subtotalCents / 100).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>Shipping</span>
-                  <span>{SHIPPING_COST_CENTS === 0 ? 'Free' : `$${(SHIPPING_COST_CENTS / 100).toFixed(2)}`}</span>
+                  <span>Shipping ({methodLabel})</span>
+                  <span>{shippingCostCents === 0 ? 'Free' : `$${(shippingCostCents / 100).toFixed(2)}`}</span>
                 </div>
                 <div className="flex justify-between font-semibold text-lg border-t pt-2">
                   <span>Total</span>
@@ -290,11 +309,9 @@ export default function PatientCheckout() {
                 </div>
               </div>
 
-              {subtotalCents < 10000 && (
-                <p className="text-xs text-muted-foreground">
-                  Add ${((10000 - subtotalCents) / 100).toFixed(2)} more for free shipping
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground">
+                Order exactly 60 cans for free Express shipping
+              </p>
             </CardContent>
           </Card>
         </div>

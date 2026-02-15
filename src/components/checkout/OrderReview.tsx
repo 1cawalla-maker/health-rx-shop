@@ -5,13 +5,14 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import type { Cart, ShippingAddress } from '@/types/shop';
+import type { Cart, ShippingAddress, ShippingMethod } from '@/types/shop';
 
 interface OrderReviewProps {
   cart: Cart;
   shippingAddress: ShippingAddress;
-  shippingCost: number;
-  total: number;
+  shippingCostCents: number;
+  totalCents: number;
+  shippingMethod: ShippingMethod;
   prescriptionRef?: string;
   maxContainers?: number;
   agreedToTerms: boolean;
@@ -23,8 +24,9 @@ interface OrderReviewProps {
 export function OrderReview({
   cart,
   shippingAddress,
-  shippingCost,
-  total,
+  shippingCostCents,
+  totalCents,
+  shippingMethod,
   prescriptionRef,
   maxContainers,
   agreedToTerms,
@@ -32,6 +34,7 @@ export function OrderReview({
   onEditShipping,
   onProceedToPayment,
 }: OrderReviewProps) {
+  const methodLabel = shippingMethod === 'express' ? 'Express' : 'Standard';
   return (
     <div className="space-y-6">
       {/* Shipping Address Card */}
@@ -99,12 +102,12 @@ export function OrderReview({
               <span>${(cart.subtotalCents / 100).toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span>Shipping</span>
-              <span>{shippingCost === 0 ? 'Free' : `$${shippingCost.toFixed(2)}`}</span>
+              <span>Shipping ({methodLabel})</span>
+              <span>{shippingCostCents === 0 ? 'Free' : `$${(shippingCostCents / 100).toFixed(2)}`}</span>
             </div>
             <div className="flex justify-between font-semibold text-lg pt-2 border-t">
               <span>Total</span>
-              <span>${total.toFixed(2)} AUD</span>
+              <span>${(totalCents / 100).toFixed(2)} AUD</span>
             </div>
           </div>
         </CardContent>
