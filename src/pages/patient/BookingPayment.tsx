@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { mockBookingService } from '@/services/consultationService';
+import { mockAvailabilityService } from '@/services/availabilityService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -31,8 +32,7 @@ export default function BookingPayment() {
         
         // Calculate time remaining from reservation
         if (foundBooking.reservationId) {
-          const reservations = JSON.parse(localStorage.getItem('nicopatch_reservations') || '[]');
-          const reservation = reservations.find((r: any) => r.id === foundBooking.reservationId);
+          const reservation = mockAvailabilityService.getReservations().find((r: any) => r.id === foundBooking.reservationId);
           if (reservation) {
             const expiresAt = new Date(reservation.expiresAt).getTime();
             const remaining = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
