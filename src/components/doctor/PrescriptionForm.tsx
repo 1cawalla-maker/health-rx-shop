@@ -8,7 +8,8 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Loader2, FileText, CheckCircle, XCircle, Lock, Pill } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { prescriptionFileService } from '@/services/prescriptionFileService';
+import { ENABLE_PRESCRIPTION_PDF } from '@/config/features';
 import type { NicotineStrength, UsageTier } from '@/types/telehealth';
 import { calculatePrescriptionQuantities, usageTierLabels, nicotineStrengthLabels } from '@/types/telehealth';
 
@@ -65,59 +66,19 @@ export function PrescriptionForm({
       return;
     }
 
+    // Phase 1: doctor-side prescription issuance is disabled (no Supabase writes).
     setIsIssuing(true);
 
     try {
-      // Generate reference ID
-      const referenceId = `RX-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-
-      // Calculate expiry (90 days from now)
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 90);
-
-      // Create prescription
-      const { data: prescription, error: prescriptionError } = await supabase
-        .from('doctor_issued_prescriptions')
-        .insert({
-          booking_id: bookingId,
-          patient_id: patientId,
-          doctor_id: doctorId,
-          reference_id: referenceId,
-          nicotine_strength: nicotineStrength,
-          usage_tier: usageTier,
-          daily_max_pouches: quantities.dailyMaxPouches,
-          total_pouches: quantities.totalPouches,
-          containers_allowed: quantities.containersAllowed,
-          supply_days: 90,
-          expires_at: expiresAt.toISOString(),
-          status: 'active',
-        })
-        .select()
-        .single();
-
-      if (prescriptionError) throw prescriptionError;
-
-      // Generate PDF
-      const { error: pdfError } = await supabase.functions.invoke('generate-prescription-pdf', {
-        body: { prescriptionId: prescription.id },
-      });
-
-      if (pdfError) {
-        console.error('PDF generation error:', pdfError);
-        toast.warning('Prescription created but PDF generation failed');
+      if (!ENABLE_PRESCRIPTION_PDF) {
+        toast.error('Prescription issuing will be enabled in Phase 2');
+        return;
       }
 
-      // Update booking status to completed
-      await supabase
-        .from('consultation_bookings')
-        .update({ status: 'completed' })
-        .eq('id', bookingId);
-
-      toast.success('Prescription issued successfully!');
-      onComplete();
+      // If someone flips ENABLE_PRESCRIPTION_PDF without wiring Phase 2, fail loudly.
+      await prescriptionFileService.uploadPrescriptionFile(new File([], 'placeholder.pdf'), doctorId);
     } catch (err: any) {
-      console.error('Prescription error:', err);
-      toast.error(err.message || 'Failed to issue prescription');
+      toast.error(err.message || 'Prescription issuing will be enabled in Phase 2');
     } finally {
       setIsIssuing(false);
     }
@@ -129,23 +90,14 @@ export function PrescriptionForm({
       return;
     }
 
+    // Phase 1: no backend writes.
     setIsDeclining(true);
 
     try {
-      // Update booking status to completed (consultation is done, just no prescription)
-      await supabase
-        .from('consultation_bookings')
-        .update({ 
-          status: 'completed',
-          doctor_notes: `Prescription declined: ${declineReason.trim()}`
-        })
-        .eq('id', bookingId);
-
-      toast.success('Consultation completed without prescription');
+      toast.success('Recorded for Phase 2 (no changes saved in Phase 1)');
       onComplete();
     } catch (err: any) {
-      console.error('Decline error:', err);
-      toast.error(err.message || 'Failed to complete consultation');
+      toast.error(err.message || 'This will be enabled in Phase 2');
     } finally {
       setIsDeclining(false);
     }
