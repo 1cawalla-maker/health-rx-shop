@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import type { EligibilityAnswers, EligibilityQuizResult, EligibilityQuizQuestion } from '@/types/eligibility';
 
 const SESSION_STORAGE_KEY = 'eligibility_responses';
+// Canonical key used for Phase 1 import-on-auth into localStorage
+const SESSION_STORAGE_KEY_V2 = 'healthrx_quiz_result';
 
 // Quiz questions configuration
 export const eligibilityQuestions: EligibilityQuizQuestion[] = [
@@ -85,6 +87,8 @@ export const consentItems = [
 // Store quiz result in session storage (before account creation)
 export function saveQuizToSession(result: EligibilityQuizResult): void {
   sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(result));
+  // Also save under canonical key for Phase 1 (migrated to localStorage after auth)
+  sessionStorage.setItem(SESSION_STORAGE_KEY_V2, JSON.stringify(result));
 }
 
 // Get quiz result from session storage

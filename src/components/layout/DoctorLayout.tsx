@@ -23,6 +23,7 @@ const navItems = [
   { href: '/doctor/availability', label: 'Availability', icon: Clock },
   { href: '/doctor/patients', label: 'Patients', icon: Users },
   { href: '/doctor/prescriptions', label: 'Prescriptions', icon: FileText },
+  { href: '/doctor/earnings', label: 'Earnings', icon: Calendar },
 ];
 
 export function DoctorLayout() {

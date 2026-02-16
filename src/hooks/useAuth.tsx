@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import { cartService } from '@/services/cartService';
+import { eligibilityQuizService } from '@/services/eligibilityQuizService';
 
 export type AppRole = Database['public']['Enums']['app_role'];
 export type UserStatus = Database['public']['Enums']['user_status'];
@@ -86,8 +87,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-        
+
         if (session?.user) {
+          // Phase 1: if the user completed the public eligibility quiz pre-signup,
+          // import it into localStorage scoped to this user.
+          eligibilityQuizService.importFromSession(session.user.id);
+
           setTimeout(() => {
             fetchUserRole(session.user.id).then(setUserRole);
           }, 0);
