@@ -4,6 +4,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { doctorPortalService } from '@/services/doctorPortalService';
 import { shopPrescriptionService } from '@/services/shopPrescriptionService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { EligibilityQuizCard } from '@/components/doctor/EligibilityQuizCard';
+import { PaymentsCard } from '@/components/doctor/PaymentsCard';
+import { MedicationGuideCard } from '@/components/doctor/MedicationGuideCard';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -188,17 +191,19 @@ export default function DoctorBookingDetail() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Prescription Decision
-          </CardTitle>
-          <CardDescription>
-            Issuing a prescription sets the patient’s shop entitlement (max strength gates variants).
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Prescription Decision
+              </CardTitle>
+              <CardDescription>
+                Issuing a prescription sets the patient’s shop entitlement (max strength gates variants).
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
           {activeRx ? (
             <div className="border rounded-lg p-4 bg-muted/30">
               <p className="text-sm text-muted-foreground">Existing active prescription</p>
@@ -241,6 +246,14 @@ export default function DoctorBookingDetail() {
           </div>
         </CardContent>
       </Card>
+        </div>
+
+        <div className="space-y-6">
+          <EligibilityQuizCard patientId={booking.patientId} />
+          <PaymentsCard doctorId={booking.doctorId} bookingId={booking.id} />
+          <MedicationGuideCard />
+        </div>
+      </div>
     </div>
   );
 }
