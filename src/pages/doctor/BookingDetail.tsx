@@ -71,7 +71,7 @@ export default function DoctorBookingDetail() {
 
   const issuePrescription = () => {
     if (!booking) return;
-    doctorPortalService.issuePrescription({ patientId: booking.patientId, maxStrengthMg: maxStrength });
+    doctorPortalService.issuePrescription({ doctorId: booking.doctorId, patientId: booking.patientId, maxStrengthMg: maxStrength });
     toast.success(`Prescription issued (max strength ${maxStrength}mg)`);
 
     // Mark booking completed in Phase 1 when prescription is issued.

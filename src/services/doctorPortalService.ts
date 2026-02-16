@@ -1,5 +1,7 @@
 import { mockBookingService } from '@/services/consultationService';
 import { shopPrescriptionService } from '@/services/shopPrescriptionService';
+import { issuedPrescriptionService } from '@/services/issuedPrescriptionService';
+import { doctorSignatureService } from '@/services/doctorSignatureService';
 import type { MockBooking, BookingStatus } from '@/types/telehealth';
 
 // Phase 1 Doctor Portal Service
@@ -77,9 +79,22 @@ class DoctorPortalService {
     return all[idx];
   }
 
-  issuePrescription(input: IssuePrescriptionInput) {
+  issuePrescription(input: IssuePrescriptionInput & { doctorId?: string }) {
     // Phase 1: issuing a prescription = create localStorage entitlement for patient.
-    return shopPrescriptionService.createMockPrescription(input.patientId, input.maxStrengthMg);
+    const entitlement = shopPrescriptionService.createMockPrescription(input.patientId, input.maxStrengthMg);
+
+    // Also create a doctor-facing issued prescription record (includes signature if present)
+    if (input.doctorId) {
+      const sig = doctorSignatureService.getSignature(input.doctorId);
+      issuedPrescriptionService.create({
+        doctorId: input.doctorId,
+        patientId: input.patientId,
+        maxStrengthMg: input.maxStrengthMg,
+        signatureDataUrl: sig?.signatureDataUrl,
+      });
+    }
+
+    return entitlement;
   }
 
   declinePrescription(bookingId: string, reason: string): MockBooking | null {
