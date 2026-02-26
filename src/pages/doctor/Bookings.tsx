@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { doctorPortalService } from '@/services/doctorPortalService';
+import { userPreferencesService } from '@/services/userPreferencesService';
+import { getTimezoneAbbr } from '@/lib/datetime';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -44,6 +46,8 @@ export default function DoctorBookings() {
   const { user } = useAuth();
   const [bookings, setBookings] = useState<MockBooking[]>([]);
 
+  const doctorTz = useMemo(() => user?.id ? userPreferencesService.getTimezone(user.id) : 'Australia/Brisbane', [user?.id]);
+
   useEffect(() => {
     if (!user?.id) return;
     setBookings(doctorPortalService.getDoctorBookings(user.id));
@@ -69,14 +73,6 @@ export default function DoctorBookings() {
     .filter((r) => isPast(r.scheduledAt) || ['completed', 'cancelled', 'no_answer'].includes(r.status))
     .sort((a, b) => b.scheduledAt.getTime() - a.scheduledAt.getTime());
 
-  const getTimezoneAbbr = (date: Date, timezone: string): string => {
-    return (
-      new Intl.DateTimeFormat('en-AU', { timeZone: timezone, timeZoneName: 'short' })
-        .formatToParts(date)
-        .find((p) => p.type === 'timeZoneName')?.value || ''
-    );
-  };
-
   const BookingCard = ({ b }: { b: RowBooking }) => (
     <Card>
       <CardContent className="pt-6">
@@ -97,7 +93,7 @@ export default function DoctorBookings() {
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
-                  {format(b.scheduledAt, 'h:mm a')} {getTimezoneAbbr(b.scheduledAt, b.displayTimezone || 'Australia/Brisbane')}
+                  {format(b.scheduledAt, 'h:mm a')} {getTimezoneAbbr(b.scheduledAt, doctorTz)}
                 </span>
                 <CountdownChip targetMs={b.scheduledAt.getTime()} />
               </div>
@@ -122,7 +118,7 @@ export default function DoctorBookings() {
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-3xl font-bold">Bookings</h1>
-        <p className="text-muted-foreground mt-1">Phase 1: mock/localStorage doctor queue</p>
+        <p className="text-muted-foreground mt-1">Phase 1: mock/localStorage doctor queue · Times shown in {doctorTz}</p>
       </div>
 
       <Tabs defaultValue="upcoming" className="w-full">

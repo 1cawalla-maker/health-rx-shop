@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { doctorPortalService } from '@/services/doctorPortalService';
 import { shopPrescriptionService } from '@/services/shopPrescriptionService';
+import { userPreferencesService } from '@/services/userPreferencesService';
+import { getTimezoneAbbr } from '@/lib/datetime';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { EligibilityQuizCard } from '@/components/doctor/EligibilityQuizCard';
 import { PaymentsCard } from '@/components/doctor/PaymentsCard';
@@ -36,13 +38,6 @@ const statusBadge = (status: string) => {
   return <Badge className={`${s.bg} ${s.text}`}>{s.label}</Badge>;
 };
 
-const getTimezoneAbbr = (date: Date, timezone: string): string => {
-  try {
-    return new Intl.DateTimeFormat('en-AU', { timeZone: timezone, timeZoneName: 'short' })
-      .formatToParts(date).find((p) => p.type === 'timeZoneName')?.value || 'AEST';
-  } catch { return 'AEST'; }
-};
-
 export default function DoctorConsultationView() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -55,6 +50,8 @@ export default function DoctorConsultationView() {
   const [rxOpen, setRxOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+
+  const doctorTz = useMemo(() => user?.id ? userPreferencesService.getTimezone(user.id) : 'Australia/Brisbane', [user?.id]);
 
   const reload = () => {
     if (!id) return;
@@ -146,7 +143,7 @@ export default function DoctorConsultationView() {
             {scheduledAt && (
               <>
                 <span className="flex items-center gap-1"><Calendar className="h-4 w-4" />{format(scheduledAt, 'MMM d, yyyy')}</span>
-                <span className="flex items-center gap-1"><Clock className="h-4 w-4" />{format(scheduledAt, 'h:mm a')} {getTimezoneAbbr(scheduledAt, booking.displayTimezone || 'Australia/Brisbane')}</span>
+                <span className="flex items-center gap-1"><Clock className="h-4 w-4" />{format(scheduledAt, 'h:mm a')} {getTimezoneAbbr(scheduledAt, doctorTz)}</span>
               </>
             )}
             {statusBadge(booking.status)}

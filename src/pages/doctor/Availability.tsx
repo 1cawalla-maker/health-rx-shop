@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { mockAvailabilityService } from '@/services/availabilityService';
+import { userPreferencesService } from '@/services/userPreferencesService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -10,8 +11,6 @@ import { Clock, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { MockAvailabilityBlock } from '@/types/telehealth';
 import { dayOfWeekLabels } from '@/types/telehealth';
-
-const DEFAULT_TZ = 'Australia/Brisbane';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
 const MINUTES = ['00', '15', '30', '45'];
@@ -24,6 +23,8 @@ export default function DoctorAvailability() {
   const [startMin, setStartMin] = useState('00');
   const [endHour, setEndHour] = useState('12');
   const [endMin, setEndMin] = useState('00');
+
+  const doctorTz = useMemo(() => user?.id ? userPreferencesService.getTimezone(user.id) : 'Australia/Brisbane', [user?.id]);
 
   const refresh = () => {
     if (!user?.id) return;
@@ -43,7 +44,7 @@ export default function DoctorAvailability() {
       specificDate: null,
       startTime,
       endTime,
-      timezone: DEFAULT_TZ,
+      timezone: doctorTz,
       isRecurring: true,
     });
     toast.success('Availability block added');
@@ -69,7 +70,7 @@ export default function DoctorAvailability() {
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-3xl font-bold">Availability</h1>
-        <p className="text-muted-foreground mt-1">Set your weekly recurring availability blocks (all times {DEFAULT_TZ})</p>
+        <p className="text-muted-foreground mt-1">Set your weekly recurring availability blocks · All times shown in {doctorTz}</p>
       </div>
 
       {/* Add Block */}
@@ -119,7 +120,7 @@ export default function DoctorAvailability() {
             </div>
             <div className="space-y-1">
               <Label>Timezone</Label>
-              <div className="h-10 flex items-center text-sm text-muted-foreground">{DEFAULT_TZ}</div>
+              <div className="h-10 flex items-center text-sm text-muted-foreground">{doctorTz}</div>
             </div>
             <Button onClick={handleAdd}>Add Block</Button>
           </div>
