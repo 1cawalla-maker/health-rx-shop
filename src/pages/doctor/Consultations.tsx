@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { doctorPortalService } from '@/services/doctorPortalService';
+import { userPreferencesService } from '@/services/userPreferencesService';
+import { getTimezoneAbbr } from '@/lib/datetime';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -31,19 +33,13 @@ const statusBadge = (status: string) => {
   return <Badge className={`${s.bg} ${s.text} border-${s.text.replace('text-', '')}/20`}>{s.label}</Badge>;
 };
 
-const getTimezoneAbbr = (date: Date, timezone: string): string => {
-  try {
-    return new Intl.DateTimeFormat('en-AU', { timeZone: timezone, timeZoneName: 'short' })
-      .formatToParts(date)
-      .find((p) => p.type === 'timeZoneName')?.value || 'AEST';
-  } catch { return 'AEST'; }
-};
-
 export default function DoctorConsultations() {
   const { user } = useAuth();
   const [bookings, setBookings] = useState<MockBooking[]>([]);
   const [cancelTarget, setCancelTarget] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState('');
+
+  const doctorTz = useMemo(() => user?.id ? userPreferencesService.getTimezone(user.id) : 'Australia/Brisbane', [user?.id]);
 
   const refresh = () => {
     if (!user?.id) return;
@@ -106,7 +102,7 @@ export default function DoctorConsultations() {
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
-                    {format(b.scheduledAt, 'h:mm a')} {getTimezoneAbbr(b.scheduledAt, b.displayTimezone || 'Australia/Brisbane')}
+                    {format(b.scheduledAt, 'h:mm a')} {getTimezoneAbbr(b.scheduledAt, doctorTz)}
                   </span>
                   {!isTerminal && <CountdownChip targetMs={b.scheduledAt.getTime()} />}
                 </div>
@@ -137,7 +133,7 @@ export default function DoctorConsultations() {
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-3xl font-bold">Consultations</h1>
-        <p className="text-muted-foreground mt-1">Phone consultation queue</p>
+        <p className="text-muted-foreground mt-1">Phone consultation queue · Times shown in {doctorTz}</p>
       </div>
 
       <Tabs defaultValue="upcoming" className="w-full">

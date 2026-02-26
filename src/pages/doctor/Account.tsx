@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { doctorSignatureService } from '@/services/doctorSignatureService';
+import { userPreferencesService } from '@/services/userPreferencesService';
+import { AU_TIMEZONES, timezoneLabel } from '@/lib/timezones';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Trash2, User } from 'lucide-react';
 import { toast } from 'sonner';
-
-const TZ_KEY_PREFIX = 'doctor:timezone:';
 
 export default function DoctorAccount() {
   const { user } = useAuth();
@@ -22,8 +23,7 @@ export default function DoctorAccount() {
     if (!user?.id) return;
     const sig = doctorSignatureService.getSignature(user.id);
     setSignature(sig?.signatureDataUrl || null);
-    const storedTz = localStorage.getItem(`${TZ_KEY_PREFIX}${user.id}`);
-    if (storedTz) setTimezone(storedTz);
+    setTimezone(userPreferencesService.getTimezone(user.id));
   }, [user?.id]);
 
   const ctx = useMemo(() => {
@@ -78,7 +78,7 @@ export default function DoctorAccount() {
 
   const saveTz = () => {
     if (!user?.id) return;
-    localStorage.setItem(`${TZ_KEY_PREFIX}${user.id}`, timezone);
+    userPreferencesService.setTimezone(user.id, timezone);
     toast.success('Timezone saved');
   };
 
@@ -136,10 +136,19 @@ export default function DoctorAccount() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center gap-3">
-            <Input value={timezone} onChange={(e) => setTimezone(e.target.value)} className="max-w-xs" placeholder="Australia/Brisbane" />
+            <Select value={timezone} onValueChange={setTimezone}>
+              <SelectTrigger className="max-w-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {AU_TIMEZONES.map((tz) => (
+                  <SelectItem key={tz} value={tz}>{timezoneLabel(tz)} ({tz})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button variant="outline" size="sm" onClick={saveTz}>Save</Button>
           </div>
-          <p className="text-xs text-muted-foreground">Default: Australia/Brisbane. Use IANA timezone format.</p>
+          <p className="text-xs text-muted-foreground">Default: Australia/Brisbane. Only Australian timezones are supported.</p>
         </CardContent>
       </Card>
 

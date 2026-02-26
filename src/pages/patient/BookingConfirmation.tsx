@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import { mockBookingService } from '@/services/consultationService';
+import { userPreferencesService } from '@/services/userPreferencesService';
+import { getTimezoneAbbr as getTzAbbr } from '@/lib/datetime';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,8 +14,11 @@ import type { MockBooking } from '@/types/telehealth';
 
 export default function BookingConfirmation() {
   const { bookingId } = useParams<{ bookingId: string }>();
+  const { user } = useAuth();
   const [booking, setBooking] = useState<MockBooking | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const patientTz = useMemo(() => user?.id ? userPreferencesService.getTimezone(user.id) : 'Australia/Brisbane', [user?.id]);
 
   useEffect(() => {
     if (bookingId) {
@@ -40,13 +46,6 @@ export default function BookingConfirmation() {
       </div>
     );
   }
-
-  const getTimezoneAbbr = () => {
-    if (booking.displayTimezone === 'Australia/Brisbane') {
-      return 'AEST';
-    }
-    return booking.displayTimezone;
-  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -91,7 +90,7 @@ export default function BookingConfirmation() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Time</p>
-                <p className="font-medium">{booking.timeWindowStart} {getTimezoneAbbr()}</p>
+                <p className="font-medium">{booking.timeWindowStart} {getTzAbbr(new Date(`${booking.scheduledDate}T${booking.timeWindowStart}:00`), patientTz)}</p>
               </div>
             </div>
           </div>

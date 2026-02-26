@@ -1,37 +1,37 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { userPreferencesService } from '@/services/userPreferencesService';
+import { AU_TIMEZONES, timezoneLabel } from '@/lib/timezones';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Mail, User, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Mail, User, Globe } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function PatientAccount() {
   const { user } = useAuth();
-
   const email = useMemo(() => user?.email || '', [user?.email]);
+
+  const [timezone, setTimezone] = useState('Australia/Brisbane');
+
+  useEffect(() => {
+    if (!user?.id) return;
+    setTimezone(userPreferencesService.getTimezone(user.id));
+  }, [user?.id]);
+
+  const saveTz = () => {
+    if (!user?.id) return;
+    userPreferencesService.setTimezone(user.id, timezone);
+    toast.success('Timezone saved');
+  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
         <h1 className="font-display text-3xl font-bold text-foreground">Account Settings</h1>
-        <p className="text-muted-foreground mt-1">Phase 1: profile editing is stubbed (no backend writes)</p>
+        <p className="text-muted-foreground mt-1">Manage your profile and preferences</p>
       </div>
-
-      <Card className="border-primary/20 bg-primary/5">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5" />
-            Phase 1 Stub
-          </CardTitle>
-          <CardDescription>
-            Profile persistence will be wired in Phase 2 (Supabase table + RLS). In Phase 1 we avoid Supabase writes.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          <p>
-            You can still use the app normally. This page is kept for UX completeness, but does not save changes yet.
-          </p>
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader>
@@ -49,6 +49,33 @@ export default function PatientAccount() {
             </div>
             <Badge variant="outline">Read-only</Badge>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Timezone */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            Timezone
+          </CardTitle>
+          <CardDescription>All consultation and booking times are displayed in this timezone</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-3">
+            <Select value={timezone} onValueChange={setTimezone}>
+              <SelectTrigger className="max-w-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {AU_TIMEZONES.map((tz) => (
+                  <SelectItem key={tz} value={tz}>{timezoneLabel(tz)} ({tz})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="sm" onClick={saveTz}>Save</Button>
+          </div>
+          <p className="text-xs text-muted-foreground">Default: Australia/Brisbane. Only Australian timezones are supported.</p>
         </CardContent>
       </Card>
     </div>

@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { doctorPortalService } from '@/services/doctorPortalService';
 import { shopPrescriptionService } from '@/services/shopPrescriptionService';
+import { userPreferencesService } from '@/services/userPreferencesService';
+import { getTimezoneAbbr } from '@/lib/datetime';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { EligibilityQuizCard } from '@/components/doctor/EligibilityQuizCard';
 import { PaymentsCard } from '@/components/doctor/PaymentsCard';
@@ -41,6 +43,8 @@ export default function DoctorBookingDetail() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  const doctorTz = useMemo(() => user?.id ? userPreferencesService.getTimezone(user.id) : 'Australia/Brisbane', [user?.id]);
+
   const booking = useMemo(() => {
     if (!id) return null;
     return doctorPortalService.getBooking(id);
@@ -76,8 +80,6 @@ export default function DoctorBookingDetail() {
     if (!booking) return;
     doctorPortalService.issuePrescription({ doctorId: booking.doctorId, patientId: booking.patientId, maxStrengthMg: maxStrength });
     toast.success(`Prescription issued (max strength ${maxStrength}mg)`);
-
-    // Mark booking completed in Phase 1 when prescription is issued.
     if (id) doctorPortalService.setBookingStatus(id, 'completed');
   };
 
@@ -137,7 +139,7 @@ export default function DoctorBookingDetail() {
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
-                  {format(scheduledAt, 'h:mm a')}
+                  {format(scheduledAt, 'h:mm a')} {getTimezoneAbbr(scheduledAt, doctorTz)}
                 </span>
               </>
             )}
@@ -200,7 +202,7 @@ export default function DoctorBookingDetail() {
                 Prescription Decision
               </CardTitle>
               <CardDescription>
-                Issuing a prescription sets the patient’s shop entitlement (max strength gates variants).
+                Issuing a prescription sets the patient's shop entitlement (max strength gates variants).
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

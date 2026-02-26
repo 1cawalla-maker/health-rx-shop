@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { mockBookingService } from '@/services/consultationService';
 import { mockAvailabilityService } from '@/services/availabilityService';
+import { userPreferencesService } from '@/services/userPreferencesService';
+import { getTimezoneAbbr } from '@/lib/datetime';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,6 +19,8 @@ export default function BookingPayment() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  const patientTz = useMemo(() => user?.id ? userPreferencesService.getTimezone(user.id) : 'Australia/Brisbane', [user?.id]);
 
   const [booking, setBooking] = useState<ReturnType<typeof mockBookingService.getBooking>>(null);
   const [loading, setLoading] = useState(true);
@@ -158,7 +162,7 @@ export default function BookingPayment() {
               </div>
               <div className="flex items-center gap-3">
                 <Clock className="h-4 w-4 text-muted-foreground" />
-                <span>{booking.timeWindowStart} {booking.displayTimezone === 'Australia/Brisbane' ? 'AEST' : booking.displayTimezone}</span>
+                <span>{booking.timeWindowStart} {getTimezoneAbbr(new Date(`${booking.scheduledDate}T${booking.timeWindowStart}:00`), patientTz)}</span>
               </div>
               <div className="flex items-center gap-3">
                 <Phone className="h-4 w-4 text-muted-foreground" />

@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { mockBookingService } from '@/services/consultationService';
+import { userPreferencesService } from '@/services/userPreferencesService';
+import { getTimezoneAbbr } from '@/lib/datetime';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +35,8 @@ export default function PatientConsultations() {
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
   const [selectedBookingForManage, setSelectedBookingForManage] = useState<CombinedBooking | null>(null);
 
+  const patientTz = useMemo(() => user?.id ? userPreferencesService.getTimezone(user.id) : 'Australia/Brisbane', [user?.id]);
+
   const refreshBookings = () => {
     if (!user) return;
     const bookings = mockBookingService.getPatientBookings(user.id);
@@ -45,8 +49,6 @@ export default function PatientConsultations() {
       setLoading(false);
       return;
     }
-
-    // Phase 1: localStorage-only bookings.
     refreshBookings();
     setLoading(false);
   }, [user?.id]);
@@ -68,17 +70,6 @@ export default function PatientConsultations() {
   const openDetails = (booking: CombinedBooking) => {
     setSelectedBooking(booking);
     setDialogOpen(true);
-  };
-
-  const getTimezoneAbbr = (date: Date, timezone: string): string => {
-    return (
-      new Intl.DateTimeFormat('en-AU', {
-        timeZone: timezone,
-        timeZoneName: 'short',
-      })
-        .formatToParts(date)
-        .find((p) => p.type === 'timeZoneName')?.value || ''
-    );
   };
 
   const upcomingBookings = allBookings.filter(
@@ -128,7 +119,7 @@ export default function PatientConsultations() {
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
-                  {format(booking.scheduledAt, 'h:mm a')} {getTimezoneAbbr(booking.scheduledAt, booking.displayTimezone || 'Australia/Brisbane')}
+                  {format(booking.scheduledAt, 'h:mm a')} {getTimezoneAbbr(booking.scheduledAt, patientTz)}
                 </span>
                 <CountdownChip targetMs={booking.scheduledAt.getTime()} />
               </div>
@@ -177,7 +168,7 @@ export default function PatientConsultations() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground">Consultations</h1>
-          <p className="text-muted-foreground mt-1">Phase 1: local/mock bookings only</p>
+          <p className="text-muted-foreground mt-1">Times shown in {patientTz}</p>
         </div>
         <Button asChild>
           <Link to="/patient/book">Book New</Link>
