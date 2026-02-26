@@ -80,6 +80,7 @@ export default function DoctorAccount() {
     if (!user?.id) return;
     userPreferencesService.setTimezone(user.id, timezone);
     toast.success('Timezone saved');
+    toast.warning('Changing timezone may require reviewing your availability blocks to ensure times are still correct.', { duration: 6000 });
   };
 
   return (
