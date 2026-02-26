@@ -55,6 +55,8 @@ import DoctorPatients from "./pages/doctor/Patients";
 import DoctorPatientDetail from "./pages/doctor/PatientDetail";
 import DoctorConsultationView from "./pages/doctor/ConsultationView";
 import DoctorEarnings from "./pages/doctor/Earnings";
+import DoctorInfo from "./pages/doctor/Info";
+import DoctorAccount from "./pages/doctor/Account";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -116,10 +118,13 @@ const App = () => (
                 <Route path="bookings" element={<DoctorBookings />} />
                 <Route path="booking/:id" element={<DoctorBookingDetail />} />
                 <Route path="consultations" element={<DoctorConsultations />} />
+                <Route path="consultation/:id" element={<DoctorConsultationView />} />
                 <Route path="patients" element={<DoctorPatients />} />
                 <Route path="patient/:id" element={<DoctorPatientDetail />} />
                 <Route path="prescriptions" element={<DoctorPrescriptions />} />
                 <Route path="earnings" element={<DoctorEarnings />} />
+                <Route path="info" element={<DoctorInfo />} />
+                <Route path="account" element={<DoctorAccount />} />
               </Route>
 
               {/* Admin routes */}

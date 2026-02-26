@@ -3,27 +3,25 @@ import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import {
   Stethoscope,
-  LayoutDashboard,
-  Calendar,
-  CalendarDays,
+  Phone,
   Clock,
   FileText,
+  DollarSign,
+  Info,
   Menu,
   X,
   LogOut,
   User,
-  Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { href: '/doctor/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/doctor/bookings', label: 'Bookings', icon: Calendar },
-  { href: '/doctor/calendar', label: 'Calendar', icon: CalendarDays },
+  { href: '/doctor/consultations', label: 'Consultations', icon: Phone },
   { href: '/doctor/availability', label: 'Availability', icon: Clock },
-  { href: '/doctor/patients', label: 'Patients', icon: Users },
   { href: '/doctor/prescriptions', label: 'Prescriptions', icon: FileText },
-  { href: '/doctor/earnings', label: 'Earnings', icon: Calendar },
+  { href: '/doctor/earnings', label: 'Earnings', icon: DollarSign },
+  { href: '/doctor/info', label: 'Info', icon: Info },
+  { href: '/doctor/account', label: 'Account', icon: User },
 ];
 
 export function DoctorLayout() {
