@@ -17,7 +17,9 @@ export default function PatientAccount() {
 
   useEffect(() => {
     if (!user?.id) return;
-    setTimezone(userPreferencesService.getTimezone(user.id));
+    const { timezone: tz, wasReset } = userPreferencesService.getTimezoneWithMeta(user.id);
+    setTimezone(tz);
+    if (wasReset) toast.info('Your timezone preference was reset to the default (Australia/Brisbane) because the stored value was invalid.');
   }, [user?.id]);
 
   const saveTz = () => {
