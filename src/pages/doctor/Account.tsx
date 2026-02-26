@@ -23,7 +23,9 @@ export default function DoctorAccount() {
     if (!user?.id) return;
     const sig = doctorSignatureService.getSignature(user.id);
     setSignature(sig?.signatureDataUrl || null);
-    setTimezone(userPreferencesService.getTimezone(user.id));
+    const { timezone: tz, wasReset } = userPreferencesService.getTimezoneWithMeta(user.id);
+    setTimezone(tz);
+    if (wasReset) toast.info('Your timezone preference was reset to the default (Australia/Brisbane) because the stored value was invalid.');
   }, [user?.id]);
 
   const ctx = useMemo(() => {
