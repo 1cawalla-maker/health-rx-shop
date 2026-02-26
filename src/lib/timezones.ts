@@ -23,7 +23,11 @@ export function validateAuTimezone(tz: string | null | undefined): AuTimezone {
 
 /**
  * UI display labels for timezone selector.
- * Includes "Canberra (Sydney)" mapped to Australia/Sydney.
+ *
+ * "Canberra (Sydney)" is a convenience label that stores as Australia/Sydney.
+ * There is NO Australia/Canberra IANA zone — Canberra observes the same
+ * rules as Sydney (AEST/AEDT). We intentionally exclude Australia/Canberra
+ * from AU_TIMEZONES and map the UI option to Australia/Sydney instead.
  */
 export const AU_TIMEZONE_OPTIONS: { value: AuTimezone; label: string }[] = [
   { value: 'Australia/Brisbane', label: 'Brisbane' },

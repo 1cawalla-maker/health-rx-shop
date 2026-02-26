@@ -5,6 +5,12 @@ interface UserPrefs {
   updatedAt: string;
 }
 
+export interface GetTimezoneResult {
+  timezone: AuTimezone;
+  /** True if the stored value was invalid and was cleared/reset to default */
+  wasReset: boolean;
+}
+
 const KEY_PREFIX = 'user:prefs:';
 
 function prefsKey(uid: string): string {
@@ -28,24 +34,32 @@ function writePrefs(uid: string, prefs: UserPrefs): void {
 export const userPreferencesService = {
   /**
    * Get the user's timezone preference.
-   * Validates against AU_TIMEZONES.
+   * Validates against AU_TIMEZONES on EVERY read.
    * If stored value is invalid: console.warn, clear key, return default.
    */
   getTimezone(uid: string): AuTimezone {
-    if (!uid) return DEFAULT_AU_TIMEZONE;
-    const prefs = readPrefs(uid);
-    if (!prefs?.timezone) return DEFAULT_AU_TIMEZONE;
+    return this.getTimezoneWithMeta(uid).timezone;
+  },
 
-    // Validate stored value
+  /**
+   * Same as getTimezone but also returns whether the preference was reset
+   * due to an invalid stored value (so callers can show a toast/banner).
+   */
+  getTimezoneWithMeta(uid: string): GetTimezoneResult {
+    if (!uid) return { timezone: DEFAULT_AU_TIMEZONE, wasReset: false };
+    const prefs = readPrefs(uid);
+    if (!prefs?.timezone) return { timezone: DEFAULT_AU_TIMEZONE, wasReset: false };
+
+    // Validate stored value on every read
     if (!(AU_TIMEZONES as readonly string[]).includes(prefs.timezone)) {
       console.warn(
         `[userPreferencesService] Invalid stored timezone "${prefs.timezone}" for user ${uid}. Clearing preference and using default "${DEFAULT_AU_TIMEZONE}".`
       );
       localStorage.removeItem(prefsKey(uid));
-      return DEFAULT_AU_TIMEZONE;
+      return { timezone: DEFAULT_AU_TIMEZONE, wasReset: true };
     }
 
-    return prefs.timezone as AuTimezone;
+    return { timezone: prefs.timezone as AuTimezone, wasReset: false };
   },
 
   /**
