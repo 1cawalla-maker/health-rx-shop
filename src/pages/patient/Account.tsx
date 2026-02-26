@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { userPreferencesService } from '@/services/userPreferencesService';
-import { AU_TIMEZONES, timezoneLabel } from '@/lib/timezones';
+import { AU_TIMEZONE_OPTIONS, timezoneLabel } from '@/lib/timezones';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -68,8 +68,8 @@ export default function PatientAccount() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {AU_TIMEZONES.map((tz) => (
-                  <SelectItem key={tz} value={tz}>{timezoneLabel(tz)} ({tz})</SelectItem>
+                {AU_TIMEZONE_OPTIONS.map((opt, i) => (
+                  <SelectItem key={`${opt.value}-${i}`} value={opt.value}>{opt.label} ({opt.value})</SelectItem>
                 ))}
               </SelectContent>
             </Select>

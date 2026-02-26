@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { doctorSignatureService } from '@/services/doctorSignatureService';
 import { userPreferencesService } from '@/services/userPreferencesService';
-import { AU_TIMEZONES, timezoneLabel } from '@/lib/timezones';
+import { AU_TIMEZONE_OPTIONS, timezoneLabel } from '@/lib/timezones';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -141,8 +141,8 @@ export default function DoctorAccount() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {AU_TIMEZONES.map((tz) => (
-                  <SelectItem key={tz} value={tz}>{timezoneLabel(tz)} ({tz})</SelectItem>
+                {AU_TIMEZONE_OPTIONS.map((opt, i) => (
+                  <SelectItem key={`${opt.value}-${i}`} value={opt.value}>{opt.label} ({opt.value})</SelectItem>
                 ))}
               </SelectContent>
             </Select>

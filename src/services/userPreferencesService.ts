@@ -1,4 +1,4 @@
-import { validateAuTimezone, DEFAULT_AU_TIMEZONE, type AuTimezone } from '@/lib/timezones';
+import { validateAuTimezone, DEFAULT_AU_TIMEZONE, AU_TIMEZONES, type AuTimezone } from '@/lib/timezones';
 
 interface UserPrefs {
   timezone: string;
@@ -28,12 +28,24 @@ function writePrefs(uid: string, prefs: UserPrefs): void {
 export const userPreferencesService = {
   /**
    * Get the user's timezone preference.
-   * Validates against AU_TIMEZONES; returns DEFAULT if missing/invalid.
+   * Validates against AU_TIMEZONES.
+   * If stored value is invalid: console.warn, clear key, return default.
    */
   getTimezone(uid: string): AuTimezone {
     if (!uid) return DEFAULT_AU_TIMEZONE;
     const prefs = readPrefs(uid);
-    return validateAuTimezone(prefs?.timezone);
+    if (!prefs?.timezone) return DEFAULT_AU_TIMEZONE;
+
+    // Validate stored value
+    if (!(AU_TIMEZONES as readonly string[]).includes(prefs.timezone)) {
+      console.warn(
+        `[userPreferencesService] Invalid stored timezone "${prefs.timezone}" for user ${uid}. Clearing preference and using default "${DEFAULT_AU_TIMEZONE}".`
+      );
+      localStorage.removeItem(prefsKey(uid));
+      return DEFAULT_AU_TIMEZONE;
+    }
+
+    return prefs.timezone as AuTimezone;
   },
 
   /**

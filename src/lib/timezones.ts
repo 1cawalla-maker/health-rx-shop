@@ -7,7 +7,6 @@ export const AU_TIMEZONES = [
   'Australia/Adelaide',
   'Australia/Hobart',
   'Australia/Darwin',
-  'Australia/Canberra',
 ] as const;
 
 export type AuTimezone = typeof AU_TIMEZONES[number];
@@ -21,6 +20,21 @@ export function validateAuTimezone(tz: string | null | undefined): AuTimezone {
   }
   return DEFAULT_AU_TIMEZONE;
 }
+
+/**
+ * UI display labels for timezone selector.
+ * Includes "Canberra (Sydney)" mapped to Australia/Sydney.
+ */
+export const AU_TIMEZONE_OPTIONS: { value: AuTimezone; label: string }[] = [
+  { value: 'Australia/Brisbane', label: 'Brisbane' },
+  { value: 'Australia/Sydney', label: 'Sydney' },
+  { value: 'Australia/Sydney', label: 'Canberra (Sydney)' },
+  { value: 'Australia/Melbourne', label: 'Melbourne' },
+  { value: 'Australia/Perth', label: 'Perth' },
+  { value: 'Australia/Adelaide', label: 'Adelaide' },
+  { value: 'Australia/Hobart', label: 'Hobart' },
+  { value: 'Australia/Darwin', label: 'Darwin' },
+];
 
 /** Human-readable label for a timezone */
 export function timezoneLabel(tz: string): string {
