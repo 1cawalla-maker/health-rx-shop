@@ -367,6 +367,36 @@ export const mockAvailabilityService = {
     
     return dates;
   },
+
+  // Doctor-scoped CRUD for Phase 1 availability management
+  getDoctorBlocks(doctorId: string): MockAvailabilityBlock[] {
+    return this.getMockDoctorBlocks().filter((b) => b.doctorId === doctorId);
+  },
+
+  addDoctorBlock(
+    doctorId: string,
+    block: Omit<MockAvailabilityBlock, 'id' | 'doctorId' | 'doctorName' | 'isActive'>
+  ): MockAvailabilityBlock {
+    const blocks = this.getMockDoctorBlocks();
+    const newBlock: MockAvailabilityBlock = {
+      id: crypto.randomUUID(),
+      doctorId,
+      doctorName: '',
+      isActive: true,
+      ...block,
+    };
+    blocks.push(newBlock);
+    localStorage.setItem(MOCK_AVAILABILITY_KEY, JSON.stringify(blocks));
+    return newBlock;
+  },
+
+  removeDoctorBlock(doctorId: string, blockId: string): boolean {
+    const blocks = this.getMockDoctorBlocks();
+    const filtered = blocks.filter((b) => !(b.id === blockId && b.doctorId === doctorId));
+    if (filtered.length === blocks.length) return false;
+    localStorage.setItem(MOCK_AVAILABILITY_KEY, JSON.stringify(filtered));
+    return true;
+  },
 };
 
 export const availabilityService = {

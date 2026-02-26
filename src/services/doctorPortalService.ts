@@ -62,11 +62,10 @@ class DoctorPortalService {
 
     attempts.push({
       id: crypto.randomUUID(),
-      bookingId,
-      doctorId: booking.doctorId,
       attemptNumber: attempts.length + 1,
       attemptedAt: new Date().toISOString(),
       notes: input.notes || null,
+      answered: false,
     });
 
     all[idx] = {
@@ -98,7 +97,6 @@ class DoctorPortalService {
   }
 
   declinePrescription(bookingId: string, reason: string): MockBooking | null {
-    // Phase 1: record decline reason on booking notes (local only).
     const all = mockBookingService.getBookings();
     const idx = all.findIndex((b) => b.id === bookingId);
     if (idx === -1) return null;
@@ -107,11 +105,46 @@ class DoctorPortalService {
     all[idx] = {
       ...booking,
       updatedAt: new Date().toISOString(),
-      // Store lightweight note; Phase 2 will store structured notes.
       doctorNotes: `Prescription declined: ${reason.trim()}`,
       status: 'completed',
     } as any;
 
+    localStorage.setItem('nicopatch_mock_bookings', JSON.stringify(all));
+    return all[idx];
+  }
+
+  cancelBooking(bookingId: string, reason: string): MockBooking | null {
+    const booking = this.getBooking(bookingId);
+    if (!booking) return null;
+    const terminal: BookingStatus[] = ['completed', 'no_answer', 'cancelled'];
+    if (terminal.includes(booking.status)) return null;
+
+    const all = mockBookingService.getBookings();
+    const idx = all.findIndex((b) => b.id === bookingId);
+    if (idx === -1) return null;
+
+    all[idx] = {
+      ...all[idx],
+      status: 'cancelled',
+      updatedAt: new Date().toISOString(),
+    };
+    (all[idx] as any).doctorNotes = `Cancelled by doctor: ${reason.trim()}`;
+
+    localStorage.setItem('nicopatch_mock_bookings', JSON.stringify(all));
+    return all[idx];
+  }
+
+  markCallAnswered(bookingId: string, attemptId: string, answered: boolean): MockBooking | null {
+    const all = mockBookingService.getBookings();
+    const idx = all.findIndex((b) => b.id === bookingId);
+    if (idx === -1) return null;
+
+    const booking = all[idx];
+    const attempts = (booking.callAttempts || []).map((a) =>
+      a.id === attemptId ? { ...a, answered } : a
+    );
+
+    all[idx] = { ...booking, callAttempts: attempts, updatedAt: new Date().toISOString() };
     localStorage.setItem('nicopatch_mock_bookings', JSON.stringify(all));
     return all[idx];
   }

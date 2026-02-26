@@ -224,6 +224,7 @@ export interface MockBooking {
 }
 
 export interface MockCallAttempt {
+  id?: string;
   attemptNumber: number;
   attemptedAt: string;
   notes: string | null;
