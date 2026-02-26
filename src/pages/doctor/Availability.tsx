@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Plus, Trash2 } from 'lucide-react';
+import { Clock, Plus, Trash2, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import type { MockAvailabilityBlock } from '@/types/telehealth';
 import { dayOfWeekLabels } from '@/types/telehealth';
@@ -70,8 +71,15 @@ export default function DoctorAvailability() {
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-3xl font-bold">Availability</h1>
-        <p className="text-muted-foreground mt-1">Set your weekly recurring availability blocks · All times shown in {doctorTz}</p>
+        <p className="text-muted-foreground mt-1">Set your weekly recurring availability blocks</p>
       </div>
+
+      <Alert className="border-blue-500/50 bg-blue-500/10">
+        <AlertTriangle className="h-4 w-4 text-blue-500" />
+        <AlertDescription className="text-blue-700 dark:text-blue-400">
+          All times shown in your timezone: <strong>{doctorTz}</strong>. If you change your timezone in Account settings, review your availability blocks to ensure times are still correct.
+        </AlertDescription>
+      </Alert>
 
       {/* Add Block */}
       <Card>
