@@ -222,9 +222,6 @@ export default function BookingPayment() {
               </div>
             </div>
 
-            <p className="text-xs text-muted-foreground italic">
-              Mock payment form - no real payment will be processed
-            </p>
           </CardContent>
         </Card>
       </div>

@@ -8,7 +8,6 @@ import {
   LayoutDashboard,
   Calendar,
   FileText,
-  Upload,
   ShoppingBag,
   Package,
   Menu,
@@ -21,12 +20,12 @@ import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/patient/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/patient/shop', label: 'Shop', icon: ShoppingBag, requiresPrescription: true },
   { href: '/patient/book', label: 'Book Consultation', icon: Calendar },
   { href: '/patient/consultations', label: 'Consultations', icon: FileText },
-  { href: '/patient/upload-prescription', label: 'Upload Prescription', icon: Upload },
   { href: '/patient/prescriptions', label: 'Prescriptions', icon: FileText },
-  { href: '/patient/shop', label: 'Shop', icon: ShoppingBag, requiresPrescription: true },
   { href: '/patient/orders', label: 'Orders', icon: Package },
+  { href: '/patient/account', label: 'Account', icon: User },
 ];
 
 export function PatientLayout() {
@@ -45,12 +44,8 @@ export function PatientLayout() {
 
   const checkActivePrescription = async () => {
     if (!user) return;
-
-    // Phase 1: localStorage-only gating. No Supabase, no network.
     const active = shopPrescriptionService.getActivePrescription(user.id);
     setHasActivePrescription(!!active);
-
-    // Phase 1: no review workflow. Pending is always false.
     setHasPendingPrescription(false);
   };
 
@@ -120,13 +115,6 @@ export function PatientLayout() {
           </nav>
 
           <div className="p-4 border-t border-border space-y-2">
-            <Link
-              to="/patient/profile"
-              className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            >
-              <User className="h-5 w-5" />
-              <span>Profile</span>
-            </Link>
             <button
               onClick={handleSignOut}
               className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors w-full"

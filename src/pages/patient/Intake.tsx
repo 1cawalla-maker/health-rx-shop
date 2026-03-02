@@ -2,9 +2,9 @@ import { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { mockBookingService } from '@/services/consultationService';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Info } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function PatientIntake() {
@@ -14,7 +14,6 @@ export default function PatientIntake() {
 
   const booking = useMemo(() => {
     if (!bookingId) return null;
-    // Phase 1: localStorage-only booking lookup.
     return mockBookingService.getBooking(bookingId);
   }, [bookingId]);
 
@@ -24,7 +23,6 @@ export default function PatientIntake() {
     return format(dt, 'MMMM d, yyyy at h:mm a');
   }, [booking]);
 
-  // Basic access guard: must be logged in and must own the booking.
   const hasAccess = !!(user?.id && booking?.patientId === user.id);
 
   if (!hasAccess) {
@@ -44,15 +42,15 @@ export default function PatientIntake() {
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
         <h1 className="font-display text-3xl font-bold text-foreground">Complete Intake Form</h1>
-        <p className="text-muted-foreground mt-1">Phase 1: intake form submission is disabled</p>
+        <p className="text-muted-foreground mt-1">Prepare for your consultation</p>
       </div>
 
-      <Card className="border-primary/20 bg-primary/5">
+      <Card>
         <CardHeader>
-          <CardTitle>Phase 1 Stub</CardTitle>
-          <CardDescription>
-            Intake forms will be stored in Phase 2 (Supabase table + validation). For Phase 1 we avoid Supabase writes.
-          </CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <Info className="h-5 w-5 text-primary" />
+            Intake Form
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           {scheduledText && (
@@ -61,7 +59,7 @@ export default function PatientIntake() {
             </p>
           )}
           <p>
-            For testing, continue using the booking + rescheduling flows. We’ll wire intake persistence in Phase 2.
+            Your intake form will be available closer to your consultation date.
           </p>
           <div>
             <Button onClick={() => navigate('/patient/consultations')}>Back to Consultations</Button>

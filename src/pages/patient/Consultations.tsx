@@ -123,6 +123,9 @@ export default function PatientConsultations() {
                 </span>
                 <CountdownChip targetMs={booking.scheduledAt.getTime()} />
               </div>
+              {['booked', 'confirmed'].includes(booking.status) && (
+                <p className="text-sm text-primary mt-1">You'll receive a call from the doctor at this time.</p>
+              )}
               {booking.doctorName && (
                 <div className="flex items-center gap-1 mt-2 text-sm">
                   <User className="h-4 w-4 text-muted-foreground" />
