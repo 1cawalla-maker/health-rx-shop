@@ -7,16 +7,15 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAuth, AppRole } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { Stethoscope, User, Mail, Lock, ArrowRight, Loader2, Phone, MapPin, FileText, CalendarIcon } from 'lucide-react';
-import { persistQuizToProfile, getQuizFromSession } from '@/services/eligibilityService';
+import { Stethoscope, User, Mail, Lock, ArrowRight, Loader2, Phone, MapPin, FileText } from 'lucide-react';
+import { persistQuizToProfile } from '@/services/eligibilityService';
+import { AU_TIMEZONE_OPTIONS } from '@/lib/timezones';
+import { userPreferencesService } from '@/services/userPreferencesService';
 
 const emailSchema = z.string().email('Please enter a valid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
@@ -45,6 +44,36 @@ const SPECIALTIES = [
   'Other',
 ];
 
+function validateDob(day: string, month: string, year: string): { valid: boolean; error?: string; date?: Date } {
+  const dd = parseInt(day, 10);
+  const mm = parseInt(month, 10);
+  const yyyy = parseInt(year, 10);
+
+  if (!day || !month || !year) return { valid: false, error: 'Please enter your full date of birth' };
+  if (isNaN(dd) || isNaN(mm) || isNaN(yyyy)) return { valid: false, error: 'Date of birth must be numeric' };
+  if (mm < 1 || mm > 12) return { valid: false, error: 'Month must be between 1 and 12' };
+  if (dd < 1 || dd > 31) return { valid: false, error: 'Day must be between 1 and 31' };
+  const currentYear = new Date().getFullYear();
+  if (yyyy < 1900 || yyyy > currentYear) return { valid: false, error: `Year must be between 1900 and ${currentYear}` };
+
+  const constructed = new Date(yyyy, mm - 1, dd);
+  if (constructed.getDate() !== dd || constructed.getMonth() !== mm - 1 || constructed.getFullYear() !== yyyy) {
+    return { valid: false, error: 'Invalid date (e.g. 31/02 does not exist)' };
+  }
+
+  const today = new Date();
+  let age = today.getFullYear() - yyyy;
+  const monthDiff = today.getMonth() - (mm - 1);
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dd)) age--;
+  if (age < 18) return { valid: false, error: 'You must be at least 18 years old' };
+
+  return { valid: true, date: constructed };
+}
+
+function formatDobForStorage(day: string, month: string, year: string): string {
+  return `${year.padStart(4, '0')}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+}
+
 export default function Auth() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -62,8 +91,13 @@ export default function Auth() {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   // Patient-specific fields
-  const [patientPhone, setPatientPhone] = useState('+61');
-  const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>();
+  const [patientPhone, setPatientPhone] = useState('');
+  const [dobDay, setDobDay] = useState('');
+  const [dobMonth, setDobMonth] = useState('');
+  const [dobYear, setDobYear] = useState('');
+  const [dobError, setDobError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [patientTimezone, setPatientTimezone] = useState('Australia/Brisbane');
 
   // Doctor-specific fields
   const [phoneNumber, setPhoneNumber] = useState('+61');
@@ -91,6 +125,25 @@ export default function Auth() {
       }
     }
   }, [user, userRole, loading, navigate]);
+
+  const handlePatientPhoneChange = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 9);
+    setPatientPhone(digits);
+    setPhoneError('');
+  };
+
+  const validatePatientPhone = (digits: string): boolean => {
+    if (digits.length !== 9) {
+      setPhoneError('Phone number must be exactly 9 digits');
+      return false;
+    }
+    if (!digits.startsWith('4')) {
+      setPhoneError('Phone number must start with 4');
+      return false;
+    }
+    setPhoneError('');
+    return true;
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,12 +180,16 @@ export default function Auth() {
       passwordSchema.parse(password);
       
       if (selectedRole === 'patient') {
-        phoneSchema.parse(patientPhone);
-        if (!dateOfBirth) throw new Error('Please select your date of birth');
-        // Check patient is at least 18
-        const today = new Date();
-        const age = today.getFullYear() - dateOfBirth.getFullYear();
-        if (age < 18) throw new Error('You must be at least 18 years old to sign up');
+        // Validate phone
+        if (!validatePatientPhone(patientPhone)) return;
+        
+        // Validate DOB
+        const dobResult = validateDob(dobDay, dobMonth, dobYear);
+        if (!dobResult.valid) {
+          setDobError(dobResult.error || 'Invalid date of birth');
+          return;
+        }
+        setDobError('');
       }
       
       if (selectedRole === 'doctor') {
@@ -155,7 +212,6 @@ export default function Auth() {
 
     setIsSubmitting(true);
     
-    // First create the base account
     const { error } = await signUp(email, password, fullName, selectedRole);
 
     if (error) {
@@ -170,11 +226,9 @@ export default function Auth() {
 
     // If doctor, save additional info
     if (selectedRole === 'doctor') {
-      // Get the user we just created
       const { data: { user: newUser } } = await supabase.auth.getUser();
       
       if (newUser) {
-        // Update doctors table with additional info
         const { error: doctorError } = await supabase
           .from('doctors')
           .upsert({
@@ -192,7 +246,6 @@ export default function Auth() {
           console.error('Error saving doctor details:', doctorError);
         }
 
-        // Update doctor_profiles with specialty
         const { error: profileError } = await supabase
           .from('doctor_profiles')
           .upsert({
@@ -205,7 +258,6 @@ export default function Auth() {
           console.error('Error saving doctor profile:', profileError);
         }
 
-        // Update main profile with phone
         await supabase
           .from('profiles')
           .update({ phone: phoneNumber })
@@ -219,22 +271,29 @@ export default function Auth() {
       toast.success('Account created! Your application is pending approval.');
       navigate('/doctor/pending');
     } else {
-      // For patients, persist quiz data and profile info
       const { data: { user: newPatientUser } } = await supabase.auth.getUser();
       if (newPatientUser) {
-        // Update profile with phone and DOB
+        const storedPhone = `+61${patientPhone}`;
+        const storedDob = formatDobForStorage(dobDay, dobMonth, dobYear);
+        
         await supabase
           .from('profiles')
           .update({ 
-            phone: patientPhone,
-            date_of_birth: dateOfBirth ? format(dateOfBirth, 'yyyy-MM-dd') : null
+            phone: storedPhone,
+            date_of_birth: storedDob
           })
           .eq('user_id', newPatientUser.id);
+          
+        // Persist timezone preference
+        try {
+          userPreferencesService.setTimezone(newPatientUser.id, patientTimezone);
+        } catch (e) {
+          console.warn('Failed to persist timezone preference:', e);
+        }
           
         await persistQuizToProfile(newPatientUser.id);
       }
       
-      // Check if coming from eligibility with upload action
       const actionParam = searchParams.get('action');
       if (actionParam === 'upload') {
         toast.success('Account created! Now upload your prescription.');
@@ -505,57 +564,83 @@ export default function Auth() {
 
                             <div className="space-y-2">
                               <Label htmlFor="patient-phone">Phone Number</Label>
-                              <div className="relative">
-                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <div className="flex items-center gap-2">
+                                <span className="flex h-10 items-center rounded-md border border-input bg-muted px-3 text-sm font-medium text-muted-foreground">
+                                  +61
+                                </span>
                                 <Input
                                   id="patient-phone"
-                                  type="tel"
-                                  placeholder="+61412345678"
-                                  className="pl-10"
+                                  type="text"
+                                  inputMode="numeric"
+                                  placeholder="4xx xxx xxx"
+                                  maxLength={9}
                                   value={patientPhone}
-                                  onChange={(e) => setPatientPhone(e.target.value)}
+                                  onChange={(e) => handlePatientPhoneChange(e.target.value)}
                                   required
+                                  className="flex-1"
                                 />
                               </div>
+                              {phoneError && (
+                                <p className="text-xs text-destructive">{phoneError}</p>
+                              )}
                               <p className="text-xs text-muted-foreground">
-                                Format: +61XXXXXXXXX (Australian mobile)
+                                Australian mobile number starting with 4
                               </p>
                             </div>
 
                             <div className="space-y-2">
                               <Label>Date of Birth</Label>
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    className={cn(
-                                      "w-full justify-start text-left font-normal",
-                                      !dateOfBirth && "text-muted-foreground"
-                                    )}
-                                  >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {dateOfBirth ? format(dateOfBirth, "PPP") : "Select your date of birth"}
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                  <Calendar
-                                    mode="single"
-                                    selected={dateOfBirth}
-                                    onSelect={setDateOfBirth}
-                                    disabled={(date) =>
-                                      date > new Date() || date < new Date("1900-01-01")
-                                    }
-                                    initialFocus
-                                    className={cn("p-3 pointer-events-auto")}
-                                    captionLayout="dropdown-buttons"
-                                    fromYear={1920}
-                                    toYear={new Date().getFullYear()}
-                                  />
-                                </PopoverContent>
-                              </Popover>
+                              <div className="grid grid-cols-3 gap-2">
+                                <Input
+                                  type="text"
+                                  inputMode="numeric"
+                                  placeholder="DD"
+                                  maxLength={2}
+                                  value={dobDay}
+                                  onChange={(e) => { setDobDay(e.target.value.replace(/\D/g, '').slice(0, 2)); setDobError(''); }}
+                                  required
+                                />
+                                <Input
+                                  type="text"
+                                  inputMode="numeric"
+                                  placeholder="MM"
+                                  maxLength={2}
+                                  value={dobMonth}
+                                  onChange={(e) => { setDobMonth(e.target.value.replace(/\D/g, '').slice(0, 2)); setDobError(''); }}
+                                  required
+                                />
+                                <Input
+                                  type="text"
+                                  inputMode="numeric"
+                                  placeholder="YYYY"
+                                  maxLength={4}
+                                  value={dobYear}
+                                  onChange={(e) => { setDobYear(e.target.value.replace(/\D/g, '').slice(0, 4)); setDobError(''); }}
+                                  required
+                                />
+                              </div>
+                              {dobError && (
+                                <p className="text-xs text-destructive">{dobError}</p>
+                              )}
                               <p className="text-xs text-muted-foreground">
                                 You must be at least 18 years old
                               </p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label>Timezone</Label>
+                              <Select value={patientTimezone} onValueChange={setPatientTimezone}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select timezone" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {AU_TIMEZONE_OPTIONS.map((tz) => (
+                                    <SelectItem key={`${tz.value}-${tz.label}`} value={tz.value}>
+                                      {tz.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </div>
                           </>
                         )}
