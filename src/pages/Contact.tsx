@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Mail, Phone, MapPin, Clock } from "lucide-react";
+import { Mail, MapPin, Clock } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -15,15 +15,9 @@ const contactInfo = [
     description: "We'll respond within 24 hours",
   },
   {
-    icon: Phone,
-    title: "Phone",
-    value: "1800 NICO 123",
-    description: "Mon-Fri, 9am-5pm AEST",
-  },
-  {
     icon: MapPin,
     title: "Office",
-    value: "Melbourne, VIC",
+    value: "Gold Coast, QLD",
     description: "Australia",
   },
   {

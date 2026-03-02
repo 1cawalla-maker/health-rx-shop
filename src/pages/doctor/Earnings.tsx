@@ -49,8 +49,8 @@ export default function DoctorEarnings() {
     <div className="space-y-8">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl font-bold">Earnings (Mock)</h1>
-          <p className="text-muted-foreground mt-1">Phase 1: paid per appointment; payouts tracked weekly (mock)</p>
+          <h1 className="font-display text-3xl font-bold">Earnings</h1>
+          <p className="text-muted-foreground mt-1">Paid per appointment. Payments are processed weekly.</p>
         </div>
         <Button variant="outline" onClick={markAllPaid} className="gap-2">
           <CheckCircle2 className="h-4 w-4" />
@@ -95,9 +95,9 @@ export default function DoctorEarnings() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Payout Ledger (Mock)</CardTitle>
+          <CardTitle>Payout Ledger</CardTitle>
           <CardDescription>
-            Toggle paid/unpaid per consult. Phase 2 will be backed by Stripe payouts + an auditable ledger (Supabase).
+            Track payment status for each completed consultation.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">

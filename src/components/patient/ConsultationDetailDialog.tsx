@@ -111,6 +111,9 @@ export function ConsultationDetailDialog({ booking, open, onOpenChange }: Consul
             <Clock className="h-4 w-4 text-muted-foreground" />
             <span>{format(booking.scheduledAt, 'h:mm a')} {timezoneAbbr}</span>
           </div>
+          {isUpcoming && (
+            <p className="text-sm text-primary">You'll receive a call from the doctor at this time.</p>
+          )}
 
           {/* Status Badge */}
           <div className="flex items-center gap-2">
