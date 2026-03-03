@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { doctorSignatureService } from '@/services/doctorSignatureService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useEffect, useMemo } from 'react';
 
 export default function DoctorRegistration() {
   const { user } = useAuth();
@@ -77,21 +78,9 @@ export default function DoctorRegistration() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-bold">Doctor Registration (Phase 1)</h1>
+        <h1 className="font-display text-3xl font-bold">Doctor Registration</h1>
         <p className="text-muted-foreground mt-1">Save your signature once. It will be attached to issued prescriptions.</p>
       </div>
-
-      <Card className="border-primary/20 bg-primary/5">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5" />
-            Phase 1 Note
-          </CardTitle>
-          <CardDescription>
-            This is a local-only signature capture for testing. Phase 2 will store signatures securely (Storage + RLS) and embed into PDFs.
-          </CardDescription>
-        </CardHeader>
-      </Card>
 
       <Card>
         <CardHeader>

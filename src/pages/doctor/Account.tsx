@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { doctorSignatureService } from '@/services/doctorSignatureService';
 import { userPreferencesService } from '@/services/userPreferencesService';
-import { AU_TIMEZONE_OPTIONS, timezoneLabel } from '@/lib/timezones';
+import { AU_TIMEZONE_OPTIONS } from '@/lib/timezones';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -19,6 +20,12 @@ export default function DoctorAccount() {
   const [signature, setSignature] = useState<string | null>(null);
   const [timezone, setTimezone] = useState('Australia/Brisbane');
 
+  // Doctor profile fields (read-only, fetched from DB)
+  const [ahpra, setAhpra] = useState('');
+  const [providerNum, setProviderNum] = useState('');
+  const [phone, setPhone] = useState('');
+  const [practiceLocation, setPracticeLocation] = useState('');
+
   useEffect(() => {
     if (!user?.id) return;
     const sig = doctorSignatureService.getSignature(user.id);
@@ -26,6 +33,21 @@ export default function DoctorAccount() {
     const { timezone: tz, wasReset } = userPreferencesService.getTimezoneWithMeta(user.id);
     setTimezone(tz);
     if (wasReset) toast.info('Your timezone preference was reset to the default (Australia/Brisbane) because the stored value was invalid.');
+
+    // Fetch doctor record
+    supabase
+      .from('doctors')
+      .select('ahpra_number, provider_number, phone, practice_location')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setAhpra(data.ahpra_number || '');
+          setProviderNum(data.provider_number || '');
+          setPhone(data.phone || '');
+          setPracticeLocation(data.practice_location || '');
+        }
+      });
   }, [user?.id]);
 
   const ctx = useMemo(() => {
@@ -96,7 +118,7 @@ export default function DoctorAccount() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><User className="h-5 w-5 text-primary" />Profile</CardTitle>
-          <CardDescription>Read-only in Phase 1. Phase 2 will allow editing via backend.</CardDescription>
+          <CardDescription>Your registered details</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -110,22 +132,19 @@ export default function DoctorAccount() {
             </div>
             <div className="space-y-1">
               <Label>AHPRA Number</Label>
-              <Input value="—" readOnly className="bg-muted/30" />
-              <p className="text-xs text-muted-foreground">Phase 2: fetched from doctor record</p>
+              <Input value={ahpra || '—'} readOnly className="bg-muted/30" />
             </div>
             <div className="space-y-1">
               <Label>Provider Number</Label>
-              <Input value="—" readOnly className="bg-muted/30" />
-              <p className="text-xs text-muted-foreground">Optional</p>
+              <Input value={providerNum || '—'} readOnly className="bg-muted/30" />
             </div>
             <div className="space-y-1">
               <Label>Phone</Label>
-              <Input value="—" readOnly className="bg-muted/30" />
+              <Input value={phone || '—'} readOnly className="bg-muted/30" />
             </div>
             <div className="space-y-1">
               <Label>Practice Location</Label>
-              <Input value="—" readOnly className="bg-muted/30" />
-              <p className="text-xs text-muted-foreground">Optional</p>
+              <Input value={practiceLocation || '—'} readOnly className="bg-muted/30" />
             </div>
           </div>
         </CardContent>

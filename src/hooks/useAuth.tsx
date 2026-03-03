@@ -151,7 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (data.user) {
-        const status: UserStatus = role === 'doctor' ? 'pending_approval' : 'approved';
+        const status: UserStatus = 'approved';
         
         // Create user_roles record
         const { error: roleError } = await supabase
@@ -196,8 +196,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .from('doctors')
             .insert({ 
               user_id: data.user.id,
-              is_active: false,
-              registration_complete: false
+              is_active: true,
+              registration_complete: true
             });
           
           if (doctorsError && import.meta.env.DEV) {
