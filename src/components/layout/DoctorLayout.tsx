@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
+import { Link, useLocation, useNavigate, Navigate, Outlet } from 'react-router-dom';
+import { useDoctorReadiness } from '@/hooks/useDoctorReadiness';
 import { useAuth } from '@/hooks/useAuth';
 import {
   Stethoscope,
@@ -29,6 +30,12 @@ export function DoctorLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const { ready, loading: readinessLoading } = useDoctorReadiness();
+
+  // Onboarding gate: redirect incomplete doctors to onboarding
+  if (!readinessLoading && !ready && location.pathname !== '/doctor/onboarding') {
+    return <Navigate to="/doctor/onboarding" replace />;
+  }
 
   const handleSignOut = async () => {
     await signOut();
