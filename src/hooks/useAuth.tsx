@@ -151,6 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (data.user) {
+        // TODO(phase2): restore approval gate — set doctor status to 'pending_approval' and is_active to false
         const status: UserStatus = 'approved';
         
         // Create user_roles record
@@ -192,6 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         } else if (role === 'doctor') {
           // Create doctors table record
+          // TODO(phase2): restore approval gate — set is_active to false and registration_complete to false
           const { error: doctorsError } = await supabase
             .from('doctors')
             .insert({ 

@@ -16,7 +16,13 @@ export type EarningsSummary = {
   lines: EarningsLineItem[];
 };
 
-const PAID_STATUSES: BookingStatus[] = ['completed', 'no_answer'];
+/**
+ * Statuses that generate doctor earnings.
+ * Business rule: attempted consults (no_answer) are billable because
+ * the doctor's time was allocated and the call was attempted.
+ * To change this policy, remove 'no_answer' from this array.
+ */
+export const PAID_STATUSES: BookingStatus[] = ['completed', 'no_answer'];
 
 class DoctorEarningsService {
   getEarnings(doctorId: string): EarningsSummary {

@@ -57,6 +57,8 @@ import DoctorConsultationView from "./pages/doctor/ConsultationView";
 import DoctorEarnings from "./pages/doctor/Earnings";
 import DoctorInfo from "./pages/doctor/Info";
 import DoctorAccount from "./pages/doctor/Account";
+import DoctorOnboarding from "./pages/doctor/Onboarding";
+import PayslipPrint from "./pages/doctor/PayslipPrint";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -111,8 +113,13 @@ const App = () => (
               {/* Doctor routes */}
               <Route path="/doctor/pending" element={<DoctorPending />} />
               <Route path="/doctor/registration" element={<DoctorRegistration />} />
+              {/* Payslip print — outside DoctorLayout (no sidebar) */}
+              <Route path="/doctor/payslips/:payslipId/print" element={
+                <ProtectedRoute allowedRoles={['doctor']}><PayslipPrint /></ProtectedRoute>
+              } />
               <Route path="/doctor" element={<ProtectedRoute allowedRoles={['doctor']}><DoctorLayout /></ProtectedRoute>}>
                 <Route path="dashboard" element={<DoctorDashboard />} />
+                <Route path="onboarding" element={<DoctorOnboarding />} />
                 <Route path="calendar" element={<DoctorCalendar />} />
                 <Route path="availability" element={<DoctorAvailability />} />
                 <Route path="bookings" element={<DoctorBookings />} />
