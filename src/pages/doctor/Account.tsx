@@ -119,6 +119,7 @@ export default function DoctorAccount() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><User className="h-5 w-5 text-primary" />Profile</CardTitle>
           <CardDescription>Your registered details</CardDescription>
+          <p className="text-xs text-muted-foreground mt-1">To update your registered details, please contact support.</p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
