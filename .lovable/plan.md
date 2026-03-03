@@ -1,268 +1,332 @@
 
+# Phase 1 Doctor Portal — Account, Onboarding, Payslips & Signup Fixes (Rev 3)
 
-# Phase 1 Doctor Portal UI (Mock/localStorage) -- Rev 1
+## Summary
 
-## Current State
-
-The doctor portal has a working foundation:
-- **Working pages**: Bookings (list + detail/workspace), Prescriptions (list), Earnings (ledger + payouts), Registration (signature pad)
-- **Stub pages**: Dashboard, Consultations, Calendar, Availability, Patients, ConsultationView, ConsultationWorkspace -- all render `DoctorPhase1Stub`
-- **Working services**: `doctorPortalService`, `doctorEarningsService`, `doctorPayoutService`, `doctorSignatureService`, `issuedPrescriptionService`, `availabilityService` (mock)
-- **Layout**: `DoctorLayout` with sidebar nav (Dashboard, Bookings, Calendar, Availability, Patients, Prescriptions, Earnings)
-
-## Build Errors to Fix First
-
-`MockCallAttempt` (telehealth.ts line 226) lacks an `id` field, but `doctorPortalService.ts` line 64 pushes objects with `id`, and `BookingDetail.tsx` line 179 uses `a.id` as a React key. Fix: add `id?: string` to `MockCallAttempt` (optional for backward compat) and also remove the extra fields (`bookingId`, `doctorId`) that `doctorPortalService` adds but aren't on the type.
+Persist doctor/patient profiles, add doctor onboarding flow (signature + payout profile with ABN), generate payslips, add print-friendly payslip view, fix signup UX, remove approval gate (Phase 1), and clean all "Phase 1/2/stub/mock/dev" copy.
 
 ---
 
-## Plan Overview
+## Hard Constraints
 
-Replace the stub pages with functional mock UIs. Add two new routes (`/doctor/info`, `/doctor/account`). Refactor the sidebar nav. All data flows through existing services (no direct localStorage access from UI).
+- No new dependencies.
+- Business flows remain mock/localStorage for Phase 1 (Supabase Auth only).
+- **UI must never call localStorage directly** — all reads/writes go through services.
+- Remove ALL user-visible "Phase 1 / Phase 2 / stub / mock / dev" copy.
+- Money in cents; display via `formatAudFromCents()`.
 
 ---
 
-## File-by-File Changes
+## A) Service Boundary (Explicit)
 
-### 1. Fix: `src/types/telehealth.ts` -- Add `id` to MockCallAttempt
+**Rule**: No component may call `localStorage` directly. All payslip, earnings, and payout data is generated/read ONLY via:
+- `doctorEarningsService` — computes earned line items from bookings
+- `doctorPayoutService` — tracks paid/pending status per booking
+- `doctorPayslipService` (**NEW**) — generates and stores monthly payslip summaries
+
+The Earnings page and any new Payments/Payslips UI calls service methods only.
+
+---
+
+## B) Doctor Onboarding Gate
+
+### B1. New hook: `src/hooks/useDoctorReadiness.ts`
 
 ```typescript
-export interface MockCallAttempt {
-  id?: string;           // <-- add (optional for legacy data)
-  attemptNumber: number;
-  attemptedAt: string;
-  notes: string | null;
-  answered: boolean;
-}
+export function useDoctorReadiness(): { ready: boolean; loading: boolean }
 ```
 
-### 2. Fix: `src/services/doctorPortalService.ts` -- Clean up addCallAttempt
+- Checks two conditions:
+  1. **Signature saved**: `doctorSignatureService.getSignature(user.id) !== null`
+  2. **Payout profile valid**: `doctorPayoutProfileService.getProfile(user.id)` returns a profile where `isComplete === true` (ABN valid, BSB 6 digits, account number 6-10 digits, account name present)
+- Returns `{ ready: true }` only when BOTH conditions are met.
+- `loading` is true while auth is resolving.
 
-Remove the extra fields (`bookingId`, `doctorId`) from the push to `callAttempts` since they don't exist on `MockCallAttempt`. Add `answered: true` default (call attempt = doctor tried calling). The object should match `MockCallAttempt` exactly:
+### B2. Gate placement
 
-```typescript
-attempts.push({
-  id: crypto.randomUUID(),
-  attemptNumber: attempts.length + 1,
-  attemptedAt: new Date().toISOString(),
-  notes: input.notes || null,
-  answered: false,  // default: not answered (doctor logs outcome separately)
-});
-```
+- In `DoctorLayout` (or a wrapper component rendered inside the doctor `ProtectedRoute`):
+  - Call `useDoctorReadiness()`
+  - If `!ready` and current path is NOT `/doctor/onboarding`, render `<Navigate to="/doctor/onboarding" replace />`
+  - `/doctor/onboarding` is always accessible regardless of readiness.
 
-### 3. `src/components/layout/DoctorLayout.tsx` -- Update nav items
+### B3. New page: `src/pages/doctor/Onboarding.tsx`
 
-Replace current nav with:
+Two-section page:
 
-```typescript
-const navItems = [
-  { href: '/doctor/consultations', label: 'Consultations', icon: Phone },
-  { href: '/doctor/availability', label: 'Availability', icon: Clock },
-  { href: '/doctor/prescriptions', label: 'Prescriptions', icon: FileText },
-  { href: '/doctor/earnings', label: 'Earnings', icon: DollarSign },
-  { href: '/doctor/info', label: 'Info', icon: Info },
-  { href: '/doctor/account', label: 'Account', icon: User },
-];
-```
+1. **Signature** — canvas pad (reuse Registration.tsx logic). Save button persists immediately via `doctorSignatureService.saveSignature()`. Saved state shown with green check.
 
-Remove Dashboard, Bookings, Calendar, Patients from nav. Keep the routes in `App.tsx` for backward compatibility but nav focuses on the 6 active screens.
+2. **Payout Profile** — form with:
+   - ABN (11 digits, validated with ATO checksum — see section F)
+   - BSB (6 digits)
+   - Account number (6-10 digits)
+   - Account name (free text, required)
+   - Explicit "Save" button — calls `doctorPayoutProfileService.saveProfile()`
 
-### 4. `src/pages/doctor/Consultations.tsx` -- Consultation Queue (replaces stub)
+3. **Complete Onboarding** button — enabled only when signature is saved AND payout profile validates. On click, marks onboarding complete and redirects to `/doctor/consultations`.
 
-This replaces the current Phase1Stub with a full Upcoming/Past consultation list. Reuse the pattern from `Bookings.tsx` (which already works), but rename to "Consultations" semantics:
+### B4. Partial save behaviour
 
-- Uses `doctorPortalService.getDoctorBookings(user.id)`
-- Tabs: Upcoming | Past
-- Each card shows: status badge, countdown chip, scheduled time in doctor TZ (default `Australia/Brisbane`), patient ID, Open button (links to `/doctor/consultation/:id`), Cancel button (for non-terminal statuses, requires reason via dialog)
-- Cancel action: calls `doctorPortalService.setBookingStatus(id, 'cancelled')` after reason is collected
-- Status state machine enforced: terminal statuses (`completed`, `no_answer`, `cancelled`) disable all action buttons
+- Signature can be saved independently (immediately) when captured on the canvas.
+- Payout profile is saved on explicit "Save" click.
+- Onboarding completion requires BOTH signature saved + payout profile validates.
+- If doctor leaves mid-flow (closes tab, navigates away), they will be redirected back to `/doctor/onboarding` on next visit until complete.
 
-### 5. `src/pages/doctor/ConsultationView.tsx` -- Consultation Workspace (replaces stub)
-
-This is the detailed workspace for a single consultation. Currently `BookingDetail.tsx` already implements most of this. This page will be a thin wrapper that either:
-- **Option A**: Redirect `/doctor/consultation/:id` to use the existing `BookingDetail` component logic
-- **Option B**: Move `BookingDetail` logic into `ConsultationView` and have `BookingDetail` redirect
-
-Chosen approach: Rewrite `ConsultationView.tsx` as the primary workspace (absorb BookingDetail logic) with these panels:
-
-**Header**: Status badge + scheduled time + patient ID + Back button
-
-**Left column (2/3)**:
-- **Status controls**: Start Consult / Mark No Answer / Cancel (with reason dialog) / Mark Completed. Terminal statuses lock all buttons.
-- **Call Attempts**: Log attempt (notes optional, `answered` toggle). List of past attempts with attempt # + time + notes + answered badge. "Mark as No-Show" button enabled only after 3 unanswered attempts.
-- **Prescription Decision** (collapsible, collapsed by default): Issue (3/6/9mg, low/mod/high tier, step-down allowed) or Decline (reason required). Issuing calls `doctorPortalService.issuePrescription()` and sets status to `completed`.
-
-**Right column (1/3)**:
-- **Patient Summary**: Patient ID (Phase 1 no name lookup)
-- **Eligibility Quiz**: `EligibilityQuizCard`
-- **Patient History**: Scaffold card ("Phase 2: will show past consultations and prescriptions for this patient")
-- **Payment**: `PaymentsCard` showing $39.00 (3900 cents) per consult
-- **Medication Guide**: `MedicationGuideCard` with TGA links
-
-### 6. `src/pages/doctor/Availability.tsx` -- Weekly Recurring Blocks (replaces stub)
-
-Uses `mockAvailabilityService` to manage doctor-specific availability blocks.
-
-**New service method needed**: Add `addBlock(block)` and `removeBlock(blockId)` to `mockAvailabilityService` that filter by the current doctor's ID.
-
-**UI**:
-- Day-of-week grid (Mon-Sun) showing existing blocks for the logged-in doctor
-- Each block shows: start time - end time, timezone (default Australia/Brisbane), delete button
-- "Add Block" form: select day of week, start time (hour:minute dropdowns), end time, auto-set timezone to Australia/Brisbane
-- All times displayed in doctor's TZ
-- No recurring vs one-off distinction in Phase 1 (all treated as recurring weekly)
-
-### 7. `src/pages/doctor/Prescriptions.tsx` -- Already functional
-
-The current implementation is already working (lists issued prescriptions from `issuedPrescriptionService`). No changes needed.
-
-### 8. `src/pages/doctor/Earnings.tsx` -- Already functional
-
-The current implementation is already working (totals + ledger + toggle paid). No changes needed.
-
-### 9. `src/pages/doctor/Info.tsx` -- NEW page
-
-Static educational content page:
-- Product Information Sheet (PIS) overview for nicotine pouches
-- TGA regulatory context (Schedule 4, Personal Importation Scheme)
-- Links to TGA resources (external)
-- Neutral, non-promotional language
-- No clinical recommendations
-
-### 10. `src/pages/doctor/Account.tsx` -- NEW page
-
-Doctor account/profile management:
-- **Legal name**: read from Supabase `profiles.full_name` (display only in Phase 1, editable in Phase 2)
-- **AHPRA number**: read from `doctors` table or mock; display only
-- **Provider number**: optional, display only
-- **Phone**: from `profiles` or display placeholder
-- **Practice location**: optional text
-- **Timezone**: default `Australia/Brisbane`, stored in localStorage (`doctor:{uid}:timezone`)
-- **Signature pad**: Reuse the canvas logic from `Registration.tsx` -- draw, save, clear, preview. Uses `doctorSignatureService`.
-
-### 11. `src/services/doctorPortalService.ts` -- Add cancellation with reason
-
-Add method:
-```typescript
-cancelBooking(bookingId: string, reason: string): MockBooking | null {
-  // Only if current status is not terminal
-  const booking = this.getBooking(bookingId);
-  if (!booking) return null;
-  const terminal: BookingStatus[] = ['completed', 'no_answer', 'cancelled'];
-  if (terminal.includes(booking.status)) return null;
-  
-  const all = mockBookingService.getBookings();
-  const idx = all.findIndex(b => b.id === bookingId);
-  if (idx === -1) return null;
-  
-  all[idx] = {
-    ...all[idx],
-    status: 'cancelled',
-    doctorNotes: `Cancelled by doctor: ${reason.trim()}`,
-    updatedAt: new Date().toISOString(),
-  };
-  localStorage.setItem('nicopatch_mock_bookings', JSON.stringify(all));
-  return all[idx];
-}
-```
-
-### 12. `src/services/availabilityService.ts` -- Add doctor-scoped CRUD
-
-Add to `mockAvailabilityService`:
+### B5. New service: `src/services/doctorPayoutProfileService.ts`
 
 ```typescript
-addDoctorBlock(doctorId: string, block: Omit<MockAvailabilityBlock, 'id' | 'doctorId' | 'doctorName' | 'isActive'>): MockAvailabilityBlock {
-  const blocks = this.getMockDoctorBlocks();
-  const newBlock: MockAvailabilityBlock = {
-    id: crypto.randomUUID(),
-    doctorId,
-    doctorName: '', // Phase 1: no name lookup
-    isActive: true,
-    ...block,
-  };
-  blocks.push(newBlock);
-  localStorage.setItem(MOCK_AVAILABILITY_KEY, JSON.stringify(blocks));
-  return newBlock;
+export interface DoctorPayoutProfile {
+  abn: string;         // 11 digits
+  bsb: string;         // 6 digits
+  accountNumber: string; // 6-10 digits
+  accountName: string;
+  updatedAt: string;
 }
 
-removeDoctorBlock(doctorId: string, blockId: string): boolean {
-  const blocks = this.getMockDoctorBlocks();
-  const filtered = blocks.filter(b => !(b.id === blockId && b.doctorId === doctorId));
-  if (filtered.length === blocks.length) return false;
-  localStorage.setItem(MOCK_AVAILABILITY_KEY, JSON.stringify(filtered));
-  return true;
-}
-
-getDoctorBlocks(doctorId: string): MockAvailabilityBlock[] {
-  return this.getMockDoctorBlocks().filter(b => b.doctorId === doctorId);
-}
-```
-
-### 13. `src/App.tsx` -- Add new routes
-
-Add inside the `/doctor` layout route:
-
-```typescript
-<Route path="consultation/:id" element={<DoctorConsultationView />} />
-<Route path="info" element={<DoctorInfo />} />
-<Route path="account" element={<DoctorAccount />} />
-```
-
-Import the new page components. Keep existing routes (bookings, booking/:id, etc.) for backward compatibility.
-
-### 14. `src/pages/doctor/Dashboard.tsx` -- Redirect to Consultations
-
-Replace the stub with a redirect:
-```typescript
-import { Navigate } from 'react-router-dom';
-export default function DoctorDashboard() {
-  return <Navigate to="/doctor/consultations" replace />;
-}
+// Storage key: doctor:{uid}:payout_profile
+// Methods:
+//   getProfile(uid): DoctorPayoutProfile | null
+//   saveProfile(uid, profile): void
+//   isComplete(uid): boolean — checks all fields present + ABN valid
 ```
 
 ---
 
-## Files Summary
+## C) Payslip Revenue Rule (Business Rule)
+
+**Rule**: `no_answer` consults are paid (same as `completed`). An attempted consultation is billable — the doctor's time was allocated and the call was attempted regardless of patient availability.
+
+This is already implemented in `doctorEarningsService.ts` line 19:
+```typescript
+const PAID_STATUSES: BookingStatus[] = ['completed', 'no_answer'];
+```
+
+**Change**: Extract to a named constant with a JSDoc comment:
+```typescript
+/**
+ * Statuses that generate doctor earnings.
+ * Business rule: attempted consults (no_answer) are billable because
+ * the doctor's time was allocated and call was attempted.
+ * To change this policy, remove 'no_answer' from this array.
+ */
+export const PAID_STATUSES: BookingStatus[] = ['completed', 'no_answer'];
+```
+
+Export it so `doctorPayslipService` can reuse it.
+
+---
+
+## D) Payslip Service & Data
+
+### D1. New service: `src/services/doctorPayslipService.ts`
+
+```typescript
+export interface Payslip {
+  id: string;
+  doctorId: string;
+  periodLabel: string;    // e.g. "March 2026"
+  periodStart: string;    // ISO date
+  periodEnd: string;      // ISO date
+  consultCount: number;
+  totalCents: number;
+  generatedAt: string;
+  lines: PayslipLineItem[];
+}
+
+export interface PayslipLineItem {
+  bookingId: string;
+  patientId: string;
+  scheduledAtIso: string;
+  status: BookingStatus;  // 'completed' | 'no_answer'
+  feeCents: number;
+}
+```
+
+Storage key: `doctor:{uid}:payslips`
+
+Methods:
+- `generatePayslip(doctorId, year, month): Payslip` — filters earnings lines by month, creates payslip, stores it. Idempotent: if payslip for that month already exists, returns existing.
+- `getPayslips(doctorId): Payslip[]` — returns all stored payslips sorted by period descending.
+- `getPayslip(doctorId, payslipId): Payslip | null`
+
+Uses `doctorEarningsService.getEarnings()` as the source of truth for line items. Filters by `scheduledAtIso` falling within the requested month.
+
+### D2. Earnings page update
+
+Add a "Payslips" section below the existing ledger:
+- "Generate Payslip" button with month/year selector (defaults to current month)
+- List of generated payslips with: period label, consult count, total, "View" link → `/doctor/payslips/:id/print` (opens new tab)
+
+---
+
+## E) Print-Friendly Payslip View
+
+### E1. New route: `/doctor/payslips/:payslipId/print`
+
+**File**: `src/pages/doctor/PayslipPrint.tsx`
+
+- Dedicated route (added to `App.tsx` inside doctor routes)
+- Minimal layout — NO sidebar, NO header. Just the payslip content.
+- Content:
+  - Header: "Payslip" + period label + generated date
+  - Doctor info: name (from profile), ABN (from payout profile)
+  - Table: Date | Booking ID | Patient | Status | Fee
+  - Footer: Total consults, Total amount
+  - "Print" button that calls `window.print()` (hidden in print CSS)
+- Print CSS (`@media print`):
+  - Hide the Print button
+  - Remove shadows/borders for clean output
+  - Set page margins
+
+### E2. Route registration (`App.tsx`)
+
+```typescript
+<Route path="payslips/:payslipId/print" element={<PayslipPrint />} />
+```
+
+This route is inside the doctor protected area but should NOT be wrapped in `DoctorLayout` (no sidebar). Use a separate route entry outside the layout outlet, or render without layout.
+
+---
+
+## F) ABN Checksum Algorithm
+
+### F1. New util: `src/lib/abnValidation.ts`
+
+Implements the ATO ABN validation algorithm:
+
+1. Subtract 1 from the first digit of the ABN.
+2. Multiply each digit by its corresponding weighting factor: `[10, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19]`
+3. Sum all 11 products.
+4. ABN is valid if `sum % 89 === 0`.
+
+```typescript
+export function validateAbn(abn: string): { valid: boolean; error?: string } {
+  const digits = abn.replace(/\s/g, '');
+  if (digits.length !== 11) return { valid: false, error: 'ABN must be exactly 11 digits' };
+  if (!/^\d{11}$/.test(digits)) return { valid: false, error: 'ABN must contain only digits' };
+
+  const weights = [10, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19];
+  const nums = digits.split('').map(Number);
+  nums[0] -= 1; // subtract 1 from first digit
+
+  const sum = nums.reduce((acc, d, i) => acc + d * weights[i], 0);
+  if (sum % 89 !== 0) return { valid: false, error: 'Invalid ABN (checksum failed)' };
+
+  return { valid: true };
+}
+```
+
+Used by `doctorPayoutProfileService.isComplete()` and the onboarding form validation.
+
+---
+
+## G) Existing Plan Items (Carried Forward)
+
+### G1. Patient Signup — Persist Profile via Service
+
+**File: `src/pages/Auth.tsx`**
+
+After successful patient signup, call `userProfileService.upsertProfile(uid, { fullName, dateOfBirth, phoneE164, timezone })`. Timezone comes from the required `AU_TIMEZONE_OPTIONS` select (default `'Australia/Brisbane'`), no auto-detect.
+
+### G2. Patient Account Page — Editable Profile
+
+**File: `src/pages/patient/Account.tsx`** (full rewrite)
+
+- Load from `userProfileService.getProfile(user.id)` on mount.
+- Editable fields: Full Name, Email (read-only), DOB (DD/MM/YYYY numeric inputs), Phone (+61 prefix), Timezone (AU_TIMEZONE_OPTIONS select).
+- Save button:
+  - Validates DOB and phone via shared utils (`src/lib/validation.ts`)
+  - Calls `userProfileService.upsertProfile()`
+  - Calls `userPreferencesService.setTimezone()`
+  - **Syncs `profiles.full_name`** to Supabase `profiles` table (also phone + date_of_birth)
+  - Shows success toast
+
+### G3. Doctor Signup — Fix Phone UX + Add Timezone
+
+**File: `src/pages/Auth.tsx`**
+
+- Doctor phone: fixed `+61` prefix + 9-digit input starting with '4' (matching patient UX)
+- Doctor timezone: required `AU_TIMEZONE_OPTIONS` select, default `'Australia/Brisbane'`, no auto-detect
+- Post-signup: persist via `userPreferencesService.setTimezone()`
+
+### G4. Remove Doctor Approval Gate (Phase 1)
+
+**File: `src/hooks/useAuth.tsx`**
+- Set `status: 'approved'` for all roles on signup
+- Set doctor `is_active: true` and `registration_complete: true`
+- Add `// TODO(phase2): restore approval gate — set doctor status to 'pending_approval' and is_active to false`
+
+**File: `src/components/ProtectedRoute.tsx`**
+- Remove `pending_approval` redirect
+- Add `// TODO(phase2): restore pending_approval redirect for doctors`
+
+**File: `src/pages/Auth.tsx`**
+- Remove "pending approval" toast/copy; redirect doctors to `/doctor/dashboard`
+- Remove "credentials will be verified" note
+
+**File: `src/pages/doctor/Pending.tsx`**
+- Keep as redirect component: `<Navigate to="/doctor/dashboard" replace />`
+
+### G5. Doctor Account Page — Clean Phase Copy
+
+**File: `src/pages/doctor/Account.tsx`**
+
+- Fields (AHPRA, Provider Number, Phone, Practice Location) populated from Supabase `doctors` table query, displayed **read-only**.
+- Add neutral note: "To update your registered details, please contact support."
+- Remove all "Phase 1/2" copy.
+
+### G6. Doctor Registration Page — Clean Phase Copy
+
+**File: `src/pages/doctor/Registration.tsx`**
+
+- Remove "Phase 1" heading and "Phase 1 Note" card.
+
+### G7. Shared Validation Utils
+
+**File: `src/lib/validation.ts`** (already created)
+
+Contains `validateDob`, `formatDobForStorage`, `parseDobFromStorage`, `validateAuPhone`, `stripAuPrefix`. Used by both Auth.tsx and Account.tsx.
+
+---
+
+## Files Changed Summary
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `src/types/telehealth.ts` | UPDATE | Add `id?` to `MockCallAttempt` (fixes build error) |
-| `src/services/doctorPortalService.ts` | UPDATE | Fix `addCallAttempt` type conformance; add `cancelBooking` with reason + terminal guard |
-| `src/services/availabilityService.ts` | UPDATE | Add `addDoctorBlock`, `removeDoctorBlock`, `getDoctorBlocks` to mock service |
-| `src/components/layout/DoctorLayout.tsx` | UPDATE | Replace nav items (6 items: Consultations, Availability, Prescriptions, Earnings, Info, Account) |
-| `src/pages/doctor/Dashboard.tsx` | UPDATE | Redirect to `/doctor/consultations` |
-| `src/pages/doctor/Consultations.tsx` | REWRITE | Full consultation queue with Upcoming/Past tabs, cancel with reason |
-| `src/pages/doctor/ConsultationView.tsx` | REWRITE | Full workspace: status controls, call log (3-attempt no-show), Rx issue/decline, side panels |
-| `src/pages/doctor/Availability.tsx` | REWRITE | Weekly recurring blocks CRUD, doctor-scoped, times in Australia/Brisbane |
-| `src/pages/doctor/Info.tsx` | NEW | Static PIS + TGA education page |
-| `src/pages/doctor/Account.tsx` | NEW | Doctor profile display + signature pad (reuse Registration canvas logic) |
-| `src/App.tsx` | UPDATE | Add routes for `/doctor/consultation/:id`, `/doctor/info`, `/doctor/account` |
+| `src/lib/abnValidation.ts` | **NEW** | ATO ABN checksum validation |
+| `src/services/doctorPayoutProfileService.ts` | **NEW** | Payout profile (ABN, BSB, account) CRUD |
+| `src/services/doctorPayslipService.ts` | **NEW** | Monthly payslip generation & storage |
+| `src/hooks/useDoctorReadiness.ts` | **NEW** | Centralized onboarding gate hook |
+| `src/pages/doctor/Onboarding.tsx` | **NEW** | Signature + payout profile onboarding page |
+| `src/pages/doctor/PayslipPrint.tsx` | **NEW** | Print-friendly payslip view |
+| `src/services/doctorEarningsService.ts` | UPDATE | Export `PAID_STATUSES` with JSDoc justification |
+| `src/pages/doctor/Earnings.tsx` | UPDATE | Add payslip generation UI section |
+| `src/components/layout/DoctorLayout.tsx` | UPDATE | Add onboarding gate via `useDoctorReadiness()` |
+| `src/App.tsx` | UPDATE | Add routes: `/doctor/onboarding`, `/doctor/payslips/:payslipId/print` |
+| `src/pages/Auth.tsx` | UPDATE | Doctor phone/timezone UX, remove approval gate, persist profile |
+| `src/pages/patient/Account.tsx` | REWRITE | Editable profile with Supabase `profiles.full_name` sync |
+| `src/hooks/useAuth.tsx` | UPDATE | `approved` status + `is_active: true` + TODO(phase2) comments |
+| `src/components/ProtectedRoute.tsx` | UPDATE | Remove `pending_approval` + TODO(phase2) comment |
+| `src/pages/doctor/Account.tsx` | UPDATE | Read-only populated fields + "contact support" note |
+| `src/pages/doctor/Registration.tsx` | UPDATE | Remove phase copy |
+| `src/pages/doctor/Pending.tsx` | UPDATE | Keep as redirect component |
+| `src/lib/validation.ts` | EXISTS | Shared DOB/phone validation (already created) |
+| `src/services/userProfileService.ts` | EXISTS | localStorage profile service (already created) |
 
 ---
 
 ## Implementation Order
 
-1. Fix build errors: `telehealth.ts` + `doctorPortalService.ts`
-2. Service updates: `doctorPortalService` (cancelBooking) + `availabilityService` (doctor CRUD)
-3. Layout: `DoctorLayout.tsx` nav update
-4. Routes: `App.tsx` + `Dashboard.tsx` redirect
-5. Pages (parallel): `Consultations.tsx`, `ConsultationView.tsx`, `Availability.tsx`, `Info.tsx`, `Account.tsx`
-
----
-
-## Key Constraints Honored
-
-- **No new deps**: All UI uses existing Radix/shadcn components
-- **Services only**: UI never touches localStorage directly
-- **Money in cents**: `DOCTOR_FEE_CENTS_PER_CONSULT = 3900`, displayed via `formatAudFromCents()`
-- **Phone only**: All copy says "phone consultation", no video references
-- **no_answer paid**: Earnings service already includes `no_answer` in `PAID_STATUSES`
-- **Terminal lock**: `completed`, `no_answer`, `cancelled` disable all action buttons
-- **Doctor-initiated cancellation only**: `cancelBooking` requires a reason string
-- **3-call no-show**: "Mark as No-Show" enabled only when `attempts.filter(a => !a.answered).length >= 3`
-- **Signature as base64 data URL**: Existing `doctorSignatureService` pattern preserved
+1. New utils/services: `abnValidation.ts`, `doctorPayoutProfileService.ts`, `doctorPayslipService.ts`
+2. Update `doctorEarningsService.ts` (export PAID_STATUSES)
+3. New hook: `useDoctorReadiness.ts`
+4. Onboarding page: `Onboarding.tsx`
+5. Payslip print page: `PayslipPrint.tsx`
+6. Update `DoctorLayout.tsx` (onboarding gate)
+7. Update `App.tsx` (new routes)
+8. Auth/signup fixes: `Auth.tsx`, `useAuth.tsx`, `ProtectedRoute.tsx`
+9. Account pages: patient `Account.tsx`, doctor `Account.tsx`
+10. Cleanup: `Registration.tsx`, `Pending.tsx`, `Earnings.tsx` (payslip section)
 
 ---
 
 Awaiting approval.
-
