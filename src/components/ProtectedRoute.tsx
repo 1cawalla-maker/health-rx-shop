@@ -41,10 +41,6 @@ export function ProtectedRoute({ children, allowedRoles, requireApproval = true 
     }
   }
 
-  if (requireApproval && userRole.role === 'doctor' && userRole.status === 'pending_approval') {
-    return <Navigate to="/doctor/pending" replace />;
-  }
-
   if (userRole.status === 'deactivated') {
     return <Navigate to="/auth" replace />;
   }

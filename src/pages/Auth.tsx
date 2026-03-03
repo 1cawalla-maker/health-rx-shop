@@ -11,16 +11,16 @@ import { useAuth, AppRole } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import { cn } from '@/lib/utils';
 import { Stethoscope, User, Mail, Lock, ArrowRight, Loader2, Phone, MapPin, FileText } from 'lucide-react';
 import { persistQuizToProfile } from '@/services/eligibilityService';
 import { AU_TIMEZONE_OPTIONS } from '@/lib/timezones';
 import { userPreferencesService } from '@/services/userPreferencesService';
+import { userProfileService } from '@/services/userProfileService';
+import { validateDob, formatDobForStorage, validateAuPhone } from '@/lib/validation';
 
 const emailSchema = z.string().email('Please enter a valid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
 const nameSchema = z.string().min(2, 'Name must be at least 2 characters');
-const phoneSchema = z.string().regex(/^\+61\d{9}$/, 'Phone must be in format +61XXXXXXXXX');
 const ahpraSchema = z.string().regex(/^MED\d{10}$/, 'AHPRA number must be MED followed by 10 digits');
 const providerSchema = z.string().min(6, 'Provider number must be at least 6 characters');
 
@@ -43,36 +43,6 @@ const SPECIALTIES = [
   'Psychiatrist',
   'Other',
 ];
-
-function validateDob(day: string, month: string, year: string): { valid: boolean; error?: string; date?: Date } {
-  const dd = parseInt(day, 10);
-  const mm = parseInt(month, 10);
-  const yyyy = parseInt(year, 10);
-
-  if (!day || !month || !year) return { valid: false, error: 'Please enter your full date of birth' };
-  if (isNaN(dd) || isNaN(mm) || isNaN(yyyy)) return { valid: false, error: 'Date of birth must be numeric' };
-  if (mm < 1 || mm > 12) return { valid: false, error: 'Month must be between 1 and 12' };
-  if (dd < 1 || dd > 31) return { valid: false, error: 'Day must be between 1 and 31' };
-  const currentYear = new Date().getFullYear();
-  if (yyyy < 1900 || yyyy > currentYear) return { valid: false, error: `Year must be between 1900 and ${currentYear}` };
-
-  const constructed = new Date(yyyy, mm - 1, dd);
-  if (constructed.getDate() !== dd || constructed.getMonth() !== mm - 1 || constructed.getFullYear() !== yyyy) {
-    return { valid: false, error: 'Invalid date (e.g. 31/02 does not exist)' };
-  }
-
-  const today = new Date();
-  let age = today.getFullYear() - yyyy;
-  const monthDiff = today.getMonth() - (mm - 1);
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dd)) age--;
-  if (age < 18) return { valid: false, error: 'You must be at least 18 years old' };
-
-  return { valid: true, date: constructed };
-}
-
-function formatDobForStorage(day: string, month: string, year: string): string {
-  return `${year.padStart(4, '0')}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-}
 
 export default function Auth() {
   const [searchParams] = useSearchParams();
@@ -100,17 +70,17 @@ export default function Auth() {
   const [patientTimezone, setPatientTimezone] = useState('Australia/Brisbane');
 
   // Doctor-specific fields
-  const [phoneNumber, setPhoneNumber] = useState('+61');
+  const [doctorPhone, setDoctorPhone] = useState('');
+  const [doctorPhoneError, setDoctorPhoneError] = useState('');
   const [ahpraNumber, setAhpraNumber] = useState('');
   const [providerNumber, setProviderNumber] = useState('');
   const [practiceLocation, setPracticeLocation] = useState('');
   const [specialty, setSpecialty] = useState('');
+  const [doctorTimezone, setDoctorTimezone] = useState('Australia/Brisbane');
 
   useEffect(() => {
     if (!loading && user && userRole) {
-      if (userRole.role === 'doctor' && userRole.status === 'pending_approval') {
-        navigate('/doctor/pending');
-      } else if (userRole.status === 'approved') {
+      if (userRole.status === 'approved') {
         switch (userRole.role) {
           case 'patient':
             navigate('/patient/dashboard');
@@ -132,17 +102,10 @@ export default function Auth() {
     setPhoneError('');
   };
 
-  const validatePatientPhone = (digits: string): boolean => {
-    if (digits.length !== 9) {
-      setPhoneError('Phone number must be exactly 9 digits');
-      return false;
-    }
-    if (!digits.startsWith('4')) {
-      setPhoneError('Phone number must start with 4');
-      return false;
-    }
-    setPhoneError('');
-    return true;
+  const handleDoctorPhoneChange = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 9);
+    setDoctorPhone(digits);
+    setDoctorPhoneError('');
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -180,10 +143,13 @@ export default function Auth() {
       passwordSchema.parse(password);
       
       if (selectedRole === 'patient') {
-        // Validate phone
-        if (!validatePatientPhone(patientPhone)) return;
+        const patientPhoneErr = validateAuPhone(patientPhone);
+        if (patientPhoneErr) {
+          setPhoneError(patientPhoneErr);
+          return;
+        }
+        setPhoneError('');
         
-        // Validate DOB
         const dobResult = validateDob(dobDay, dobMonth, dobYear);
         if (!dobResult.valid) {
           setDobError(dobResult.error || 'Invalid date of birth');
@@ -193,7 +159,12 @@ export default function Auth() {
       }
       
       if (selectedRole === 'doctor') {
-        phoneSchema.parse(phoneNumber);
+        const doctorPhoneErr = validateAuPhone(doctorPhone);
+        if (doctorPhoneErr) {
+          setDoctorPhoneError(doctorPhoneErr);
+          return;
+        }
+        setDoctorPhoneError('');
         ahpraSchema.parse(ahpraNumber);
         providerSchema.parse(providerNumber);
         if (!practiceLocation) throw new Error('Please select your practice location');
@@ -227,6 +198,7 @@ export default function Auth() {
     // If doctor, save additional info
     if (selectedRole === 'doctor') {
       const { data: { user: newUser } } = await supabase.auth.getUser();
+      const doctorPhoneE164 = `+61${doctorPhone}`;
       
       if (newUser) {
         const { error: doctorError } = await supabase
@@ -236,10 +208,10 @@ export default function Auth() {
             ahpra_number: ahpraNumber,
             provider_number: providerNumber,
             practice_location: practiceLocation,
-            phone: phoneNumber,
+            phone: doctorPhoneE164,
             specialties: [specialty],
-            is_active: false,
-            registration_complete: false
+            is_active: true,
+            registration_complete: true
           }, { onConflict: 'user_id' });
 
         if (doctorError) {
@@ -260,16 +232,22 @@ export default function Auth() {
 
         await supabase
           .from('profiles')
-          .update({ phone: phoneNumber })
+          .update({ phone: doctorPhoneE164 })
           .eq('user_id', newUser.id);
+
+        try {
+          userPreferencesService.setTimezone(newUser.id, doctorTimezone);
+        } catch (e) {
+          console.warn('Failed to persist timezone preference:', e);
+        }
       }
     }
 
     setIsSubmitting(false);
 
     if (selectedRole === 'doctor') {
-      toast.success('Account created! Your application is pending approval.');
-      navigate('/doctor/pending');
+      toast.success('Account created successfully!');
+      navigate('/doctor/dashboard');
     } else {
       const { data: { user: newPatientUser } } = await supabase.auth.getUser();
       if (newPatientUser) {
@@ -283,8 +261,15 @@ export default function Auth() {
             date_of_birth: storedDob
           })
           .eq('user_id', newPatientUser.id);
+
+        // Persist local profile
+        userProfileService.upsertProfile(newPatientUser.id, {
+          fullName,
+          dateOfBirth: storedDob,
+          phoneE164: storedPhone,
+          timezone: patientTimezone,
+        });
           
-        // Persist timezone preference
         try {
           userPreferencesService.setTimezone(newPatientUser.id, patientTimezone);
         } catch (e) {
@@ -655,21 +640,28 @@ export default function Auth() {
                             </div>
 
                             <div className="space-y-2">
-                              <Label htmlFor="phone">Phone Number</Label>
-                              <div className="relative">
-                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Label htmlFor="doctor-phone">Phone Number</Label>
+                              <div className="flex items-center gap-2">
+                                <span className="flex h-10 items-center rounded-md border border-input bg-muted px-3 text-sm font-medium text-muted-foreground">
+                                  +61
+                                </span>
                                 <Input
-                                  id="phone"
-                                  type="tel"
-                                  placeholder="+61412345678"
-                                  className="pl-10"
-                                  value={phoneNumber}
-                                  onChange={(e) => setPhoneNumber(e.target.value)}
+                                  id="doctor-phone"
+                                  type="text"
+                                  inputMode="numeric"
+                                  placeholder="4xx xxx xxx"
+                                  maxLength={9}
+                                  value={doctorPhone}
+                                  onChange={(e) => handleDoctorPhoneChange(e.target.value)}
                                   required
+                                  className="flex-1"
                                 />
                               </div>
+                              {doctorPhoneError && (
+                                <p className="text-xs text-destructive">{doctorPhoneError}</p>
+                              )}
                               <p className="text-xs text-muted-foreground">
-                                Format: +61XXXXXXXXX
+                                Australian mobile number starting with 4
                               </p>
                             </div>
 
@@ -734,9 +726,20 @@ export default function Auth() {
                               </Select>
                             </div>
 
-                            <div className="text-xs text-muted-foreground bg-muted p-3 rounded-lg">
-                              <p className="font-medium mb-1">Note:</p>
-                              <p>Your credentials will be verified before your account is activated. You'll receive an email once approved.</p>
+                            <div className="space-y-2">
+                              <Label>Timezone</Label>
+                              <Select value={doctorTimezone} onValueChange={setDoctorTimezone}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select timezone" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {AU_TIMEZONE_OPTIONS.map((tz) => (
+                                    <SelectItem key={`dr-${tz.value}-${tz.label}`} value={tz.value}>
+                                      {tz.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </div>
                           </>
                         )}
@@ -751,7 +754,7 @@ export default function Auth() {
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
                             <>
-                              {selectedRole === 'doctor' ? 'Submit Application' : 'Create Account'}
+                              Create Account
                               <ArrowRight className="h-4 w-4" />
                             </>
                           )}
