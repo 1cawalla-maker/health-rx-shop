@@ -17,18 +17,18 @@ export type EarningsSummary = {
 };
 
 /**
- * Statuses that generate doctor earnings.
+ * Billable consultation statuses.
  * Business rule: attempted consults (no_answer) are billable because
  * the doctor's time was allocated and the call was attempted.
- * To change this policy, remove 'no_answer' from this array.
+ * To change this policy, update this constant.
  */
-export const PAID_STATUSES: BookingStatus[] = ['completed', 'no_answer'];
+export const BILLABLE_CONSULT_STATUSES: BookingStatus[] = ['completed', 'no_answer'];
 
 class DoctorEarningsService {
   getEarnings(doctorId: string): EarningsSummary {
     const bookings: MockBooking[] = doctorPortalService.getDoctorBookings(doctorId);
 
-    const paid = bookings.filter((b) => PAID_STATUSES.includes(b.status));
+    const paid = bookings.filter((b) => BILLABLE_CONSULT_STATUSES.includes(b.status));
 
     const lines: EarningsLineItem[] = paid
       .map((b) => {

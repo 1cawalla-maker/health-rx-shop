@@ -2,13 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { doctorSignatureService } from '@/services/doctorSignatureService';
-import { doctorPayoutProfileService, type DoctorPayoutProfile } from '@/services/doctorPayoutProfileService';
-import { validateAbn } from '@/lib/abnValidation';
+import { doctorPayoutProfileService } from '@/services/doctorPayoutProfileService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { Trash2, CheckCircle2, PenTool, Landmark, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -23,6 +23,9 @@ export default function DoctorOnboarding() {
 
   // Payout state
   const [abn, setAbn] = useState('');
+  const [entityName, setEntityName] = useState('');
+  const [gstRegistered, setGstRegistered] = useState(false);
+  const [remittanceEmail, setRemittanceEmail] = useState('');
   const [bsb, setBsb] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [accountName, setAccountName] = useState('');
@@ -38,6 +41,9 @@ export default function DoctorOnboarding() {
     const profile = doctorPayoutProfileService.getProfile(user.id);
     if (profile) {
       setAbn(profile.abn);
+      setEntityName(profile.entityName);
+      setGstRegistered(profile.gstRegistered);
+      setRemittanceEmail(profile.remittanceEmail);
       setBsb(profile.bsb);
       setAccountNumber(profile.accountNumber);
       setAccountName(profile.accountName);
@@ -100,7 +106,9 @@ export default function DoctorOnboarding() {
   const savePayout = () => {
     if (!user?.id) return;
 
-    const errors = doctorPayoutProfileService.validate({ abn, bsb, accountNumber, accountName });
+    const errors = doctorPayoutProfileService.validateProfile({
+      abn, entityName, gstRegistered, remittanceEmail, bsb, accountNumber, accountName,
+    });
     setPayoutErrors(errors);
 
     if (Object.keys(errors).length > 0) {
@@ -108,9 +116,16 @@ export default function DoctorOnboarding() {
       return;
     }
 
-    doctorPayoutProfileService.saveProfile(user.id, { abn, bsb, accountNumber, accountName });
+    doctorPayoutProfileService.upsertProfile(user.id, {
+      abn, entityName, gstRegistered, remittanceEmail, bsb, accountNumber, accountName,
+    });
     setPayoutSaved(true);
     toast.success('Payout profile saved');
+  };
+
+  const clearPayoutError = (field: string) => {
+    setPayoutErrors((p) => { const n = { ...p }; delete n[field]; return n; });
+    setPayoutSaved(false);
   };
 
   const canComplete = signature !== null && payoutSaved;
@@ -176,7 +191,7 @@ export default function DoctorOnboarding() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Landmark className="h-5 w-5 text-primary" />
-            Step 2: Payout Profile
+            Step 2: Payout Details
             {payoutSaved && <Badge variant="default" className="ml-2"><CheckCircle2 className="h-3 w-3 mr-1" />Saved</Badge>}
           </CardTitle>
           <CardDescription>We'll use these details to process your consultation payments.</CardDescription>
@@ -191,9 +206,37 @@ export default function DoctorOnboarding() {
                 placeholder="XX XXX XXX XXX"
                 maxLength={14}
                 value={abn}
-                onChange={(e) => { setAbn(e.target.value.replace(/[^\d\s]/g, '')); setPayoutErrors((p) => ({ ...p, abn: '' })); setPayoutSaved(false); }}
+                onChange={(e) => { setAbn(e.target.value.replace(/[^\d\s]/g, '')); clearPayoutError('abn'); }}
               />
               {payoutErrors.abn && <p className="text-xs text-destructive">{payoutErrors.abn}</p>}
+            </div>
+
+            <div className="space-y-1 sm:col-span-2">
+              <Label htmlFor="entityName">Entity / Business Name</Label>
+              <Input
+                id="entityName"
+                placeholder="e.g. Dr Jane Smith Pty Ltd"
+                value={entityName}
+                onChange={(e) => { setEntityName(e.target.value); clearPayoutError('entityName'); }}
+              />
+              {payoutErrors.entityName && <p className="text-xs text-destructive">{payoutErrors.entityName}</p>}
+            </div>
+
+            <div className="space-y-1 sm:col-span-2 flex items-center gap-3">
+              <Switch id="gst" checked={gstRegistered} onCheckedChange={setGstRegistered} />
+              <Label htmlFor="gst">Registered for GST</Label>
+            </div>
+
+            <div className="space-y-1 sm:col-span-2">
+              <Label htmlFor="remittanceEmail">Remittance Email</Label>
+              <Input
+                id="remittanceEmail"
+                type="email"
+                placeholder="accounts@example.com"
+                value={remittanceEmail}
+                onChange={(e) => { setRemittanceEmail(e.target.value); clearPayoutError('remittanceEmail'); }}
+              />
+              {payoutErrors.remittanceEmail && <p className="text-xs text-destructive">{payoutErrors.remittanceEmail}</p>}
             </div>
 
             <div className="space-y-1">
@@ -204,7 +247,7 @@ export default function DoctorOnboarding() {
                 placeholder="000000"
                 maxLength={6}
                 value={bsb}
-                onChange={(e) => { setBsb(e.target.value.replace(/\D/g, '').slice(0, 6)); setPayoutErrors((p) => ({ ...p, bsb: '' })); setPayoutSaved(false); }}
+                onChange={(e) => { setBsb(e.target.value.replace(/\D/g, '').slice(0, 6)); clearPayoutError('bsb'); }}
               />
               {payoutErrors.bsb && <p className="text-xs text-destructive">{payoutErrors.bsb}</p>}
             </div>
@@ -217,7 +260,7 @@ export default function DoctorOnboarding() {
                 placeholder="123456789"
                 maxLength={10}
                 value={accountNumber}
-                onChange={(e) => { setAccountNumber(e.target.value.replace(/\D/g, '').slice(0, 10)); setPayoutErrors((p) => ({ ...p, accountNumber: '' })); setPayoutSaved(false); }}
+                onChange={(e) => { setAccountNumber(e.target.value.replace(/\D/g, '').slice(0, 10)); clearPayoutError('accountNumber'); }}
               />
               {payoutErrors.accountNumber && <p className="text-xs text-destructive">{payoutErrors.accountNumber}</p>}
             </div>
@@ -228,14 +271,14 @@ export default function DoctorOnboarding() {
                 id="account-name"
                 placeholder="Dr. Jane Smith"
                 value={accountName}
-                onChange={(e) => { setAccountName(e.target.value); setPayoutErrors((p) => ({ ...p, accountName: '' })); setPayoutSaved(false); }}
+                onChange={(e) => { setAccountName(e.target.value); clearPayoutError('accountName'); }}
               />
               {payoutErrors.accountName && <p className="text-xs text-destructive">{payoutErrors.accountName}</p>}
             </div>
           </div>
 
           <Button onClick={savePayout} variant="outline">
-            Save Payout Profile
+            Save Payout Details
           </Button>
         </CardContent>
       </Card>
@@ -256,7 +299,7 @@ export default function DoctorOnboarding() {
       {!canComplete && (
         <p className="text-sm text-muted-foreground text-right">
           {!signature && !payoutSaved && 'Complete both steps above to continue.'}
-          {signature && !payoutSaved && 'Save your payout profile to continue.'}
+          {signature && !payoutSaved && 'Save your payout details to continue.'}
           {!signature && payoutSaved && 'Save your signature to continue.'}
         </p>
       )}
