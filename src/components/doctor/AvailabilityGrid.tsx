@@ -75,7 +75,7 @@ export function AvailabilityGrid({
   onClearWeek,
   onSetWeekdayPreset,
 }: AvailabilityGridProps) {
-  const [dragState, setDragState] = useState<{\
+  const [dragState, setDragState] = useState<{
     day: number;
     startMin: number;
     currentMin: number;
