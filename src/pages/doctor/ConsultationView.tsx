@@ -294,7 +294,6 @@ export default function DoctorConsultationView() {
             </CardHeader>
             <CardContent className="text-sm space-y-2">
               <div><span className="text-muted-foreground">Patient ID:</span> <span className="font-medium">{booking.patientId}</span></div>
-              <p className="text-xs text-muted-foreground">Phase 2: will display name, phone, DOB from patient profile.</p>
             </CardContent>
           </Card>
 
@@ -305,7 +304,7 @@ export default function DoctorConsultationView() {
               <CardTitle className="text-base">Patient History</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">Phase 2: will show past consultations and prescriptions for this patient.</p>
+              <p className="text-sm text-muted-foreground">Past consultations and prescriptions for this patient will appear here.</p>
             </CardContent>
           </Card>
 

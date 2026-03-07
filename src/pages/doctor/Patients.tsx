@@ -1,11 +1,20 @@
-import { DoctorPhase1Stub } from '@/components/doctor/Phase1Stub';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Users } from 'lucide-react';
 
 export default function DoctorPatients() {
   return (
-    <DoctorPhase1Stub
-      title="Patients"
-      description="Phase 1: patient list/history is disabled"
-      notes={['Patient history and medical files access will be implemented in Phase 2 with strict RLS.']}
-    />
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Users className="h-5 w-5 text-primary" />
+          Patients
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground">
+          Patient history and medical files will be available here soon.
+        </p>
+      </CardContent>
+    </Card>
   );
 }

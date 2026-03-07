@@ -116,7 +116,7 @@ export default function DoctorBookingDetail() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-bold">Consultation Workspace</h1>
-          <p className="text-muted-foreground mt-1">Phase 1: mock doctor workflow (localStorage)</p>
+          <p className="text-muted-foreground mt-1">Manage this consultation</p>
         </div>
         <Button variant="outline" onClick={() => navigate('/doctor/bookings')}>Back</Button>
       </div>
