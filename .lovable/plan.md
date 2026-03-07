@@ -1,5 +1,5 @@
 
-# Phase 1 Doctor Portal Fixes — Onboarding, Payslips, Availability & Cleanup (Rev 4)
+# Phase 1 Doctor Portal Fixes — Onboarding, Payslips, Availability & Cleanup (Rev 5)
 
 ## Summary
 
@@ -195,7 +195,7 @@ export const BILLABLE_CONSULT_STATUSES: BookingStatus[] = ['completed', 'no_answ
 
 ---
 
-## E) Availability UX Overhaul — Visual Weekly Grid (5-minute snap)
+## E) Availability UX — Visual Weekly Grid (5-minute snap)
 
 ### E1. Data shape (compatible with existing availability blocks)
 
@@ -203,33 +203,110 @@ export const BILLABLE_CONSULT_STATUSES: BookingStatus[] = ['completed', 'no_answ
 - Enforce 5-minute increments on start/end times
 - Service remains the only localStorage boundary (`mockAvailabilityService`)
 
-### E2. New component
+### E2. Component
 
-**File**: `src/components/doctor/AvailabilityGrid.tsx` (NEW)
+**File**: `src/components/doctor/AvailabilityGrid.tsx` (UPDATE existing)
 
 - UI:
   - Columns: days Mon–Sun
-  - Rows/time axis: 24h with visible ticks every 30/60m; selection snaps to 5m
-  - Interactions:
-    - Click+drag to create availability block
-    - Drag handles to resize; drag block to move within day
-    - Click block to delete/confirm delete
-    - Keyboard accessible fallback: selected block shows start/end dropdowns (5m increments)
+  - Rows/time axis: 6 AM–11 PM with visible ticks every 30/60m; selection snaps to 5m
+  - Interactions — see E3–E6 below
   - Helper actions:
     - "Copy Monday → Weekdays"
     - "Clear Week"
     - "Set 9–5 Weekdays" preset
   - Inline validation:
-    - Prevent overlaps per day
+    - Prevent overlaps per day (including booking-occupied intervals)
     - Ensure end > start
 
-### E3. Page integration
+### E3. Auto-scroll while dragging to create/resize blocks
+
+**File**: `src/components/doctor/AvailabilityGrid.tsx`
+
+- The time grid uses a single scroll container (the outer `overflow-x-auto` div, or a new wrapper with `overflow-y-auto` if needed). Avoid nested scroll conflicts.
+- When drag is active and pointer is within ~40 px of the top/bottom edge of the scroll container:
+  - Continuously adjust `scrollTop` using `requestAnimationFrame`.
+  - Maintain 5-minute snapping while scrolling.
+  - Speed: ~4 px/frame (~240 px/s at 60 fps).
+- Use pointer capture (`setPointerCapture`) so drag continues smoothly even if the cursor briefly leaves the column.
+- Stop auto-scroll when drag ends (mouseup / pointerup).
+
+### E4. Block selection + immediate delete
+
+**Desktop**:
+- Click a block to **select** it (visible ring/outline using `ring-2 ring-primary`).
+- Press `Backspace` or `Delete` key to remove the selected block immediately (no confirmation dialog).
+- Show a toast: `"Availability block deleted"`. No undo needed (existing toast infra doesn't support action callbacks cleanly).
+- Clicking elsewhere or pressing `Escape` deselects.
+
+**Mobile**:
+- Tap a block to open a `Popover` (from `@/components/ui/popover`) anchored to the block with two actions:
+  - **Edit times** — opens the inline time editor (see E5).
+  - **Delete** — removes immediately with toast.
+
+### E5. Edit times by clicking the time label
+
+- Clicking the **time label** (top-left of a block, the start-time text) opens an **inline editor**:
+  - Two `<Select>` dropdowns (from `@/components/ui/select`): Start time and End time, both populated with 5-minute increments within the grid range (06:00–23:00).
+  - "Save" button applies the change immediately; "Cancel" closes without saving.
+- The editor is rendered as a `Popover` anchored to the block.
+- Validation:
+  - `end > start`
+  - No overlap with other blocks on the same day (excluding the block being edited).
+  - Toast error on violation; editor stays open.
+- On save: call `onRemoveBlock(oldId)` then `onAddBlock(day, newStart, newEnd)` (atomic from UI perspective; parent page handles service calls).
+
+### E6. Booking overlay + split availability around bookings
+
+**Props change**: Add optional prop to `AvailabilityGrid`:
+```typescript
+bookings?: Array<{
+  id: string;
+  dayOfWeek: number;
+  startMin: number;  // minutes from midnight
+  endMin: number;
+  patientName?: string;
+}>;
+```
+
+**1) Derive bookings for display**
 
 **File**: `src/pages/doctor/Availability.tsx`
 
-- Replace current form UI with `AvailabilityGrid`
-- Persist via availability service methods only
-- Keep timezone warning copy but remove any phase/dev wording
+- Import `doctorPortalService.getDoctorBookings(user.id)` (existing).
+- Map upcoming bookings (status `booked` or `in_progress`) to the `bookings` prop shape:
+  - Convert `scheduledDate` + `timeWindowStart` to `dayOfWeek` and `startMin`.
+  - Assume 5-min consult duration: `endMin = startMin + 5`.
+- Pass the mapped array to `<AvailabilityGrid bookings={...} />`.
+
+**2) Split availability visually**
+
+- When rendering availability blocks, subtract booked intervals from the **visual representation**:
+  - e.g. availability 09:00–12:00 with booking at 10:00–10:05 renders as two visual segments: 09:00–10:00 and 10:05–12:00.
+  - Both segments share the same block ID for editing/deletion purposes.
+- The **underlying stored availability block is unchanged** — the split is render-time only.
+- Editing rules:
+  - Cannot create/move/resize an availability block to overlap a booking.
+  - Show inline toast error if attempted: `"Cannot overlap with a scheduled booking"`.
+
+**3) Booking chip rendering**
+
+- Each booking renders as a non-draggable chip at its scheduled time range.
+- Styling: distinct from availability blocks — use `bg-accent` background, `border-accent` border, and a small calendar/user icon.
+- Display patient name (truncated) if available.
+- Non-interactive on the grid (cannot drag/resize/delete).
+
+**4) Booking click action**
+
+- Clicking a booking chip navigates to that booking's consultation page: `/doctor/consultations/${booking.id}`.
+- Use `useNavigate()` from react-router-dom.
+
+### E7. Page integration
+
+**File**: `src/pages/doctor/Availability.tsx`
+
+- Pass `bookings` prop to `<AvailabilityGrid>`.
+- Keep timezone warning copy but remove any phase/dev wording.
 
 ---
 
@@ -261,8 +338,9 @@ Remove all user-visible text containing Phase 1/Phase 2/stub/mock/dev/[DEV] in d
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `src/constants/routing.ts` | **NEW** | `PRE_ONBOARDING_ALLOWED_ROUTE_PREFIXES` constant |
-| `src/components/doctor/AvailabilityGrid.tsx` | **NEW** | Visual weekly availability grid component |
+| `src/constants/routing.ts` | NEW | `PRE_ONBOARDING_ALLOWED_ROUTE_PREFIXES` constant |
+| `src/components/doctor/AvailabilityGrid.tsx` | UPDATE | Auto-scroll drag, selection+delete, inline time edit, booking overlay |
+| `src/pages/doctor/Availability.tsx` | UPDATE | Pass bookings prop to grid |
 | `src/services/doctorPayoutProfileService.ts` | UPDATE | Add entityName, gstRegistered, remittanceEmail; upsertProfile/validateProfile API |
 | `src/services/doctorPayslipService.ts` | UPDATE | Weekly (Mon–Sun) auto-derived payslips; ensurePayslipsUpToDate |
 | `src/services/doctorEarningsService.ts` | UPDATE | Rename to BILLABLE_CONSULT_STATUSES |
@@ -272,7 +350,6 @@ Remove all user-visible text containing Phase 1/Phase 2/stub/mock/dev/[DEV] in d
 | `src/pages/doctor/Account.tsx` | UPDATE | Add editable Payout Details section with masked display |
 | `src/pages/doctor/Earnings.tsx` | UPDATE | Auto-derived weekly payslips; remove generate button |
 | `src/pages/doctor/PayslipPrint.tsx` | UPDATE | Use grossCents/createdAtUtc |
-| `src/pages/doctor/Availability.tsx` | REWRITE | Replace form with AvailabilityGrid |
 | `src/pages/doctor/Patients.tsx` | UPDATE | Remove phase copy |
 | `src/pages/doctor/PatientDetail.tsx` | UPDATE | Remove phase copy |
 | `src/pages/doctor/ConsultationView.tsx` | UPDATE | Remove phase copy from patient summary/history |
@@ -288,8 +365,22 @@ Remove all user-visible text containing Phase 1/Phase 2/stub/mock/dev/[DEV] in d
 5. Update `Account.tsx` (payout details section)
 6. Update `Earnings.tsx` (auto-derived weekly payslips)
 7. Update `PayslipPrint.tsx` (fix field names)
-8. Build `AvailabilityGrid.tsx` + rewrite `Availability.tsx`
-9. Copy sweep: `Patients.tsx`, `PatientDetail.tsx`, `ConsultationView.tsx`
+8. **Update `AvailabilityGrid.tsx`** (E3: auto-scroll, E4: selection+delete, E5: inline time edit, E6: booking overlay)
+9. **Update `Availability.tsx`** (E7: pass bookings prop)
+10. Copy sweep: `Patients.tsx`, `PatientDetail.tsx`, `ConsultationView.tsx`
+
+---
+
+## QA Checklist (Section E)
+
+- [ ] Drag-create a block, keep dragging beyond bottom edge → grid auto-scrolls; blocks can be created past 7 PM.
+- [ ] Desktop: click block to select (ring visible) → press Backspace/Delete → block removed immediately with toast.
+- [ ] Mobile: tap block → popover with "Edit times" and "Delete" → Delete removes immediately.
+- [ ] Click time label on block → popover with Start/End selects → change times → Save → block updates; overlap rejected with toast.
+- [ ] Booking chip appears at correct time slot with accent styling and is clickable → navigates to consultation page.
+- [ ] Availability visually splits around a booking (two segments shown for one block).
+- [ ] Cannot create/resize availability to overlap a booking → toast error shown.
+- [ ] Escape / click-away deselects a selected block.
 
 ---
 
