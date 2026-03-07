@@ -19,8 +19,8 @@ export default function DoctorPrescriptions() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-display text-3xl font-bold">Prescriptions (Mock)</h1>
-        <p className="text-muted-foreground mt-1">Phase 1: local issued prescription records (no PDFs)</p>
+        <h1 className="font-display text-3xl font-bold">Prescriptions</h1>
+        <p className="text-muted-foreground mt-1">Issued prescription records</p>
       </div>
 
       {sorted.length === 0 ? (
@@ -44,7 +44,7 @@ export default function DoctorPrescriptions() {
                     </CardTitle>
                     <CardDescription>Issued ID: {rx.id}</CardDescription>
                   </div>
-                  <Badge variant="outline">Mock</Badge>
+                  <Badge variant="outline">Local</Badge>
                 </div>
               </CardHeader>
               <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">

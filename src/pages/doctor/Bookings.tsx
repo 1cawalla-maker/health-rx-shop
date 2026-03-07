@@ -118,7 +118,7 @@ export default function DoctorBookings() {
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-3xl font-bold">Bookings</h1>
-        <p className="text-muted-foreground mt-1">Phase 1: mock/localStorage doctor queue · Times shown in {doctorTz}</p>
+        <p className="text-muted-foreground mt-1">Your consultation queue · Times shown in {doctorTz}</p>
       </div>
 
       <Tabs defaultValue="upcoming" className="w-full">
@@ -138,7 +138,7 @@ export default function DoctorBookings() {
             <Card>
               <CardHeader className="text-center">
                 <CardTitle className="text-lg">No upcoming bookings</CardTitle>
-                <CardDescription>Mock bookings will appear here once patients book.</CardDescription>
+                <CardDescription>Bookings will appear here once patients book.</CardDescription>
               </CardHeader>
             </Card>
           )}
