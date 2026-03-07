@@ -1,9 +1,9 @@
 
-# Phase 1 Doctor Portal — Account, Onboarding, Payslips & Signup Fixes (Rev 3)
+# Phase 1 Doctor Portal Fixes — Onboarding, Payslips, Availability & Cleanup (Rev 4)
 
 ## Summary
 
-Persist doctor/patient profiles, add doctor onboarding flow (signature + payout profile with ABN), generate payslips, add print-friendly payslip view, fix signup UX, remove approval gate (Phase 1), and clean all "Phase 1/2/stub/mock/dev" copy.
+Make doctor portal onboarding + payments + availability fast and obvious. Constraints: Phase 1 mock/localStorage only for business flows; Supabase Auth only; no new dependencies; UI never touches localStorage directly (services only). Migration readiness: new data behind services with TODO(phase2) notes for Supabase tables + RLS; cents ints; UTC ISO timestamps. Remove ALL user-visible "Phase 1/Phase 2/stub/mock/dev/[DEV]" copy from doctor pages touched.
 
 ---
 
@@ -12,279 +12,248 @@ Persist doctor/patient profiles, add doctor onboarding flow (signature + payout 
 - No new dependencies.
 - Business flows remain mock/localStorage for Phase 1 (Supabase Auth only).
 - **UI must never call localStorage directly** — all reads/writes go through services.
-- Remove ALL user-visible "Phase 1 / Phase 2 / stub / mock / dev" copy.
+- Remove ALL user-visible "Phase 1 / Phase 2 / stub / mock / dev / [DEV]" copy from doctor pages touched.
 - Money in cents; display via `formatAudFromCents()`.
+- Doctors are contractors paid per consultation. Xero is Phase 2 system of record.
+- ABN is required.
 
 ---
 
-## A) Service Boundary (Explicit)
+## A) Payout Profile — editable in BOTH Onboarding and Account
 
-**Rule**: No component may call `localStorage` directly. All payslip, earnings, and payout data is generated/read ONLY via:
-- `doctorEarningsService` — computes earned line items from bookings
-- `doctorPayoutService` — tracks paid/pending status per booking
-- `doctorPayslipService` (**NEW**) — generates and stores monthly payslip summaries
+### A1. Service (Phase 1 localStorage)
 
-The Earnings page and any new Payments/Payslips UI calls service methods only.
+**File**: `src/services/doctorPayoutProfileService.ts` (UPDATE existing)
+
+- Key: `doctor:{uid}:payout_profile`
+- Type `DoctorPayoutProfile`:
+  ```typescript
+  { abn, entityName, gstRegistered, remittanceEmail, bsb, accountNumber, accountName, createdAtUtc, updatedAtUtc }
+  ```
+- Validation:
+  - ABN: ATO checksum algorithm (see section F)
+  - BSB: 6 digits
+  - accountNumber: 6–10 digits
+  - required: entityName, accountName, remittanceEmail (valid email format)
+- API: `getProfile`, `upsertProfile`, `validateProfile`
+- TODO(phase2): replace backing with Supabase table `doctor_payout_profiles` (RLS: `user_id = auth.uid()`)
+
+### A2. Doctor Account page
+
+**File**: `src/pages/doctor/Account.tsx`
+
+- Add "Payout Details" section:
+  - Display current payout profile (masked account number except last 2–3 digits)
+  - "Edit" → inline form using `doctorPayoutProfileService`
+  - Save updates `updatedAtUtc`
+  - No phase language.
+
+### A3. Onboarding page
+
+**File**: `src/pages/doctor/Onboarding.tsx`
+
+- Step 1: Signature capture (reuse existing signature pad/service)
+- Step 2: Payout Details form (ABN + entity name + GST + remittance email + bank details)
+- Completion rule: doctor is "ready" only when BOTH signature saved and payout profile validates.
 
 ---
 
-## B) Doctor Onboarding Gate
+## B) Centralised Onboarding Gate
 
-### B1. New hook: `src/hooks/useDoctorReadiness.ts`
+### B1. Route allowlist constant
+
+**File**: `src/constants/routing.ts` (NEW)
+
+```typescript
+/**
+ * Route prefixes accessible before doctor onboarding is complete.
+ * Deny-by-default: any /doctor/* route not matching these prefixes
+ * redirects to /doctor/onboarding.
+ * Matching strategy: prefix match on pathname (startsWith).
+ */
+export const PRE_ONBOARDING_ALLOWED_ROUTE_PREFIXES = [
+  '/doctor/onboarding',
+  '/doctor/account',
+  '/doctor/availability',
+  '/doctor/earnings',
+  '/doctor/info',
+  '/doctor/payslips',
+] as const;
+```
+
+**Blocked by default** (not in allowlist): `/doctor/consultations*`, `/doctor/prescriptions*`, `/doctor/dashboard*`, and any future `/doctor/*` routes.
+
+### B2. Hook: `src/hooks/useDoctorReadiness.ts`
 
 ```typescript
 export function useDoctorReadiness(): { ready: boolean; loading: boolean }
 ```
 
-- Checks two conditions:
-  1. **Signature saved**: `doctorSignatureService.getSignature(user.id) !== null`
-  2. **Payout profile valid**: `doctorPayoutProfileService.getProfile(user.id)` returns a profile where `isComplete === true` (ABN valid, BSB 6 digits, account number 6-10 digits, account name present)
+- Checks:
+  1. Signature saved: `doctorSignatureService.getSignature(user.id) !== null`
+  2. Payout profile valid: `doctorPayoutProfileService.isComplete(user.id)`
 - Returns `{ ready: true }` only when BOTH conditions are met.
-- `loading` is true while auth is resolving.
 
-### B2. Gate placement
+### B3. Gate placement in DoctorLayout
 
-- In `DoctorLayout` (or a wrapper component rendered inside the doctor `ProtectedRoute`):
-  - Call `useDoctorReadiness()`
-  - If `!ready` and current path is NOT `/doctor/onboarding`, render `<Navigate to="/doctor/onboarding" replace />`
-  - `/doctor/onboarding` is always accessible regardless of readiness.
+**File**: `src/components/layout/DoctorLayout.tsx`
 
-### B3. New page: `src/pages/doctor/Onboarding.tsx`
+- Call `useDoctorReadiness()`
+- If `!ready`:
+  - Check if `location.pathname` matches any prefix in `PRE_ONBOARDING_ALLOWED_ROUTE_PREFIXES` (via `startsWith`)
+  - If NO match → `<Navigate to="/doctor/onboarding" replace />`
+  - If YES match → render `<Outlet />` but show **onboarding banner** (see B4)
+- If `ready` → render `<Outlet />` normally (no banner)
 
-Two-section page:
+### B4. Onboarding banner
 
-1. **Signature** — canvas pad (reuse Registration.tsx logic). Save button persists immediately via `doctorSignatureService.saveSignature()`. Saved state shown with green check.
+When `!ready` AND on an allowlisted route (excluding `/doctor/onboarding` itself):
 
-2. **Payout Profile** — form with:
-   - ABN (11 digits, validated with ATO checksum — see section F)
-   - BSB (6 digits)
-   - Account number (6-10 digits)
-   - Account name (free text, required)
-   - Explicit "Save" button — calls `doctorPayoutProfileService.saveProfile()`
+- Render a persistent info banner at the top of the main content area (inside `<main>`, above `<Outlet />`).
+- Copy: "Complete your onboarding to start receiving consultations." with a "Complete Setup →" link to `/doctor/onboarding`.
+- Styled as a non-dismissible info alert using the existing `Alert` component.
+- On `/doctor/onboarding` route: do NOT show the banner (redundant).
 
-3. **Complete Onboarding** button — enabled only when signature is saved AND payout profile validates. On click, marks onboarding complete and redirects to `/doctor/consultations`.
-
-### B4. Partial save behaviour
+### B5. Partial save behaviour
 
 - Signature can be saved independently (immediately) when captured on the canvas.
 - Payout profile is saved on explicit "Save" click.
 - Onboarding completion requires BOTH signature saved + payout profile validates.
-- If doctor leaves mid-flow (closes tab, navigates away), they will be redirected back to `/doctor/onboarding` on next visit until complete.
-
-### B5. New service: `src/services/doctorPayoutProfileService.ts`
-
-```typescript
-export interface DoctorPayoutProfile {
-  abn: string;         // 11 digits
-  bsb: string;         // 6 digits
-  accountNumber: string; // 6-10 digits
-  accountName: string;
-  updatedAt: string;
-}
-
-// Storage key: doctor:{uid}:payout_profile
-// Methods:
-//   getProfile(uid): DoctorPayoutProfile | null
-//   saveProfile(uid, profile): void
-//   isComplete(uid): boolean — checks all fields present + ABN valid
-```
+- If doctor leaves mid-flow, they will be redirected back (or see banner) on next visit until complete.
 
 ---
 
-## C) Payslip Revenue Rule (Business Rule)
+## C) Billable Consultation Statuses (Business Rule)
 
-**Rule**: `no_answer` consults are paid (same as `completed`). An attempted consultation is billable — the doctor's time was allocated and the call was attempted regardless of patient availability.
+**Rule**: `no_answer` consults are paid (same as `completed`). An attempted consultation is billable — the doctor's time was allocated and the call was attempted.
 
-This is already implemented in `doctorEarningsService.ts` line 19:
-```typescript
-const PAID_STATUSES: BookingStatus[] = ['completed', 'no_answer'];
-```
+**File**: `src/services/doctorEarningsService.ts`
 
-**Change**: Extract to a named constant with a JSDoc comment:
+Rename `PAID_STATUSES` → `BILLABLE_CONSULT_STATUSES` with JSDoc:
+
 ```typescript
 /**
- * Statuses that generate doctor earnings.
+ * Billable consultation statuses.
  * Business rule: attempted consults (no_answer) are billable because
- * the doctor's time was allocated and call was attempted.
- * To change this policy, remove 'no_answer' from this array.
+ * the doctor's time was allocated and the call was attempted.
+ * To change this policy, update this constant.
  */
-export const PAID_STATUSES: BookingStatus[] = ['completed', 'no_answer'];
+export const BILLABLE_CONSULT_STATUSES: BookingStatus[] = ['completed', 'no_answer'];
 ```
-
-Export it so `doctorPayslipService` can reuse it.
 
 ---
 
-## D) Payslip Service & Data
+## D) Weekly Payslips (auto-derived; no manual generation)
 
-### D1. New service: `src/services/doctorPayslipService.ts`
+### D1. Service
 
-```typescript
-export interface Payslip {
-  id: string;
-  doctorId: string;
-  periodLabel: string;    // e.g. "March 2026"
-  periodStart: string;    // ISO date
-  periodEnd: string;      // ISO date
-  consultCount: number;
-  totalCents: number;
-  generatedAt: string;
-  lines: PayslipLineItem[];
-}
+**File**: `src/services/doctorPayslipService.ts` (UPDATE existing)
 
-export interface PayslipLineItem {
-  bookingId: string;
-  patientId: string;
-  scheduledAtIso: string;
-  status: BookingStatus;  // 'completed' | 'no_answer'
-  feeCents: number;
-}
-```
+- Key: `doctor:{uid}:payslips`
+- Payslip model:
+  ```typescript
+  {
+    id: string,              // e.g. "2026-W10"
+    weekStartUtc: string,    // ISO Monday 00:00 UTC
+    weekEndUtc: string,      // ISO Sunday 23:59 UTC
+    consultCount: number,
+    grossCents: number,
+    status: 'draft' | 'paid',
+    paidAtUtc?: string | null,
+    xeroReference?: string | null,
+    createdAtUtc: string,
+    lines: PayslipLineItem[]
+  }
+  ```
+- Week boundary: Monday 00:00 → Sunday 23:59, stored as UTC ISO boundaries.
+- Generation:
+  - Expose `ensurePayslipsUpToDate(uid)`: creates missing weeks by deriving from `doctorEarningsService` booking history.
+  - UI triggers `ensurePayslipsUpToDate` on page load; there is **NO** "Generate payslip" button.
+- TODO(phase2): payslips come from Supabase ledger and link to Xero bill/payment via `xeroReference`.
 
-Storage key: `doctor:{uid}:payslips`
+### D2. UI
 
-Methods:
-- `generatePayslip(doctorId, year, month): Payslip` — filters earnings lines by month, creates payslip, stores it. Idempotent: if payslip for that month already exists, returns existing.
-- `getPayslips(doctorId): Payslip[]` — returns all stored payslips sorted by period descending.
-- `getPayslip(doctorId, payslipId): Payslip | null`
+**File**: `src/pages/doctor/Earnings.tsx`
 
-Uses `doctorEarningsService.getEarnings()` as the source of truth for line items. Filters by `scheduledAtIso` falling within the requested month.
+- Replace current content with:
+  - Summary cards (total/pending/paid) — keep existing
+  - Payout Ledger — keep existing
+  - **Payslips section**: Weekly payslips list (week range formatted)
+  - Each row: week range, consultCount, gross formatted AUD, status, "View" button
+  - View → `window.open('/doctor/payslips/{id}/print', '_blank')`
+  - Remove manual "Generate Payslip" button and month/year selectors
+  - On mount: call `doctorPayslipService.ensurePayslipsUpToDate(user.id)`
 
-### D2. Earnings page update
+### D3. Print view
 
-Add a "Payslips" section below the existing ledger:
-- "Generate Payslip" button with month/year selector (defaults to current month)
-- List of generated payslips with: period label, consult count, total, "View" link → `/doctor/payslips/:id/print` (opens new tab)
+**File**: `src/pages/doctor/PayslipPrint.tsx` (UPDATE existing)
+
+- Update to use `grossCents` instead of `totalCents`, `createdAtUtc` instead of `generatedAt`
+- Minimal layout (no sidebar/nav)
+- "Print" button calls `window.print()`
+- Print CSS for clean output
 
 ---
 
-## E) Print-Friendly Payslip View
+## E) Availability UX Overhaul — Visual Weekly Grid (5-minute snap)
 
-### E1. New route: `/doctor/payslips/:payslipId/print`
+### E1. Data shape (compatible with existing availability blocks)
 
-**File**: `src/pages/doctor/PayslipPrint.tsx`
+- Continue storing recurring weekly availability as blocks: `{ dayOfWeek, startTime, endTime, timezone }`
+- Enforce 5-minute increments on start/end times
+- Service remains the only localStorage boundary (`mockAvailabilityService`)
 
-- Dedicated route (added to `App.tsx` inside doctor routes)
-- Minimal layout — NO sidebar, NO header. Just the payslip content.
-- Content:
-  - Header: "Payslip" + period label + generated date
-  - Doctor info: name (from profile), ABN (from payout profile)
-  - Table: Date | Booking ID | Patient | Status | Fee
-  - Footer: Total consults, Total amount
-  - "Print" button that calls `window.print()` (hidden in print CSS)
-- Print CSS (`@media print`):
-  - Hide the Print button
-  - Remove shadows/borders for clean output
-  - Set page margins
+### E2. New component
 
-### E2. Route registration (`App.tsx`)
+**File**: `src/components/doctor/AvailabilityGrid.tsx` (NEW)
 
-```typescript
-<Route path="payslips/:payslipId/print" element={<PayslipPrint />} />
-```
+- UI:
+  - Columns: days Mon–Sun
+  - Rows/time axis: 24h with visible ticks every 30/60m; selection snaps to 5m
+  - Interactions:
+    - Click+drag to create availability block
+    - Drag handles to resize; drag block to move within day
+    - Click block to delete/confirm delete
+    - Keyboard accessible fallback: selected block shows start/end dropdowns (5m increments)
+  - Helper actions:
+    - "Copy Monday → Weekdays"
+    - "Clear Week"
+    - "Set 9–5 Weekdays" preset
+  - Inline validation:
+    - Prevent overlaps per day
+    - Ensure end > start
 
-This route is inside the doctor protected area but should NOT be wrapped in `DoctorLayout` (no sidebar). Use a separate route entry outside the layout outlet, or render without layout.
+### E3. Page integration
+
+**File**: `src/pages/doctor/Availability.tsx`
+
+- Replace current form UI with `AvailabilityGrid`
+- Persist via availability service methods only
+- Keep timezone warning copy but remove any phase/dev wording
 
 ---
 
 ## F) ABN Checksum Algorithm
 
-### F1. New util: `src/lib/abnValidation.ts`
+**File**: `src/lib/abnValidation.ts` (EXISTS — no changes needed)
 
-Implements the ATO ABN validation algorithm:
-
-1. Subtract 1 from the first digit of the ABN.
-2. Multiply each digit by its corresponding weighting factor: `[10, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19]`
-3. Sum all 11 products.
-4. ABN is valid if `sum % 89 === 0`.
-
-```typescript
-export function validateAbn(abn: string): { valid: boolean; error?: string } {
-  const digits = abn.replace(/\s/g, '');
-  if (digits.length !== 11) return { valid: false, error: 'ABN must be exactly 11 digits' };
-  if (!/^\d{11}$/.test(digits)) return { valid: false, error: 'ABN must contain only digits' };
-
-  const weights = [10, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19];
-  const nums = digits.split('').map(Number);
-  nums[0] -= 1; // subtract 1 from first digit
-
-  const sum = nums.reduce((acc, d, i) => acc + d * weights[i], 0);
-  if (sum % 89 !== 0) return { valid: false, error: 'Invalid ABN (checksum failed)' };
-
-  return { valid: true };
-}
-```
-
-Used by `doctorPayoutProfileService.isComplete()` and the onboarding form validation.
+ATO algorithm:
+1. Subtract 1 from the first digit
+2. Weights: `[10, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19]`
+3. Sum products
+4. Valid if `sum % 89 === 0`
 
 ---
 
-## G) Existing Plan Items (Carried Forward)
+## G) Copy Sweep (required)
 
-### G1. Patient Signup — Persist Profile via Service
+Remove all user-visible text containing Phase 1/Phase 2/stub/mock/dev/[DEV] in doctor portal pages, including:
 
-**File: `src/pages/Auth.tsx`**
-
-After successful patient signup, call `userProfileService.upsertProfile(uid, { fullName, dateOfBirth, phoneE164, timezone })`. Timezone comes from the required `AU_TIMEZONE_OPTIONS` select (default `'Australia/Brisbane'`), no auto-detect.
-
-### G2. Patient Account Page — Editable Profile
-
-**File: `src/pages/patient/Account.tsx`** (full rewrite)
-
-- Load from `userProfileService.getProfile(user.id)` on mount.
-- Editable fields: Full Name, Email (read-only), DOB (DD/MM/YYYY numeric inputs), Phone (+61 prefix), Timezone (AU_TIMEZONE_OPTIONS select).
-- Save button:
-  - Validates DOB and phone via shared utils (`src/lib/validation.ts`)
-  - Calls `userProfileService.upsertProfile()`
-  - Calls `userPreferencesService.setTimezone()`
-  - **Syncs `profiles.full_name`** to Supabase `profiles` table (also phone + date_of_birth)
-  - Shows success toast
-
-### G3. Doctor Signup — Fix Phone UX + Add Timezone
-
-**File: `src/pages/Auth.tsx`**
-
-- Doctor phone: fixed `+61` prefix + 9-digit input starting with '4' (matching patient UX)
-- Doctor timezone: required `AU_TIMEZONE_OPTIONS` select, default `'Australia/Brisbane'`, no auto-detect
-- Post-signup: persist via `userPreferencesService.setTimezone()`
-
-### G4. Remove Doctor Approval Gate (Phase 1)
-
-**File: `src/hooks/useAuth.tsx`**
-- Set `status: 'approved'` for all roles on signup
-- Set doctor `is_active: true` and `registration_complete: true`
-- Add `// TODO(phase2): restore approval gate — set doctor status to 'pending_approval' and is_active to false`
-
-**File: `src/components/ProtectedRoute.tsx`**
-- Remove `pending_approval` redirect
-- Add `// TODO(phase2): restore pending_approval redirect for doctors`
-
-**File: `src/pages/Auth.tsx`**
-- Remove "pending approval" toast/copy; redirect doctors to `/doctor/dashboard`
-- Remove "credentials will be verified" note
-
-**File: `src/pages/doctor/Pending.tsx`**
-- Keep as redirect component: `<Navigate to="/doctor/dashboard" replace />`
-
-### G5. Doctor Account Page — Clean Phase Copy
-
-**File: `src/pages/doctor/Account.tsx`**
-
-- Fields (AHPRA, Provider Number, Phone, Practice Location) populated from Supabase `doctors` table query, displayed **read-only**.
-- Add neutral note: "To update your registered details, please contact support."
-- Remove all "Phase 1/2" copy.
-
-### G6. Doctor Registration Page — Clean Phase Copy
-
-**File: `src/pages/doctor/Registration.tsx`**
-
-- Remove "Phase 1" heading and "Phase 1 Note" card.
-
-### G7. Shared Validation Utils
-
-**File: `src/lib/validation.ts`** (already created)
-
-Contains `validateDob`, `formatDobForStorage`, `parseDobFromStorage`, `validateAuPhone`, `stripAuPrefix`. Used by both Auth.tsx and Account.tsx.
+- `src/pages/doctor/Patients.tsx` — replace Phase1Stub with neutral "coming soon" or remove page
+- `src/pages/doctor/PatientDetail.tsx` — same
+- `src/pages/doctor/ConsultationView.tsx` — remove "Phase 2" text in Patient Summary and Patient History cards; replace with neutral placeholders
+- `src/pages/doctor/Earnings.tsx` — remove any remaining phase language
+- `src/components/doctor/Phase1Stub.tsx` — can be deleted if no longer referenced
 
 ---
 
@@ -292,40 +261,35 @@ Contains `validateDob`, `formatDobForStorage`, `parseDobFromStorage`, `validateA
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `src/lib/abnValidation.ts` | **NEW** | ATO ABN checksum validation |
-| `src/services/doctorPayoutProfileService.ts` | **NEW** | Payout profile (ABN, BSB, account) CRUD |
-| `src/services/doctorPayslipService.ts` | **NEW** | Monthly payslip generation & storage |
-| `src/hooks/useDoctorReadiness.ts` | **NEW** | Centralized onboarding gate hook |
-| `src/pages/doctor/Onboarding.tsx` | **NEW** | Signature + payout profile onboarding page |
-| `src/pages/doctor/PayslipPrint.tsx` | **NEW** | Print-friendly payslip view |
-| `src/services/doctorEarningsService.ts` | UPDATE | Export `PAID_STATUSES` with JSDoc justification |
-| `src/pages/doctor/Earnings.tsx` | UPDATE | Add payslip generation UI section |
-| `src/components/layout/DoctorLayout.tsx` | UPDATE | Add onboarding gate via `useDoctorReadiness()` |
-| `src/App.tsx` | UPDATE | Add routes: `/doctor/onboarding`, `/doctor/payslips/:payslipId/print` |
-| `src/pages/Auth.tsx` | UPDATE | Doctor phone/timezone UX, remove approval gate, persist profile |
-| `src/pages/patient/Account.tsx` | REWRITE | Editable profile with Supabase `profiles.full_name` sync |
-| `src/hooks/useAuth.tsx` | UPDATE | `approved` status + `is_active: true` + TODO(phase2) comments |
-| `src/components/ProtectedRoute.tsx` | UPDATE | Remove `pending_approval` + TODO(phase2) comment |
-| `src/pages/doctor/Account.tsx` | UPDATE | Read-only populated fields + "contact support" note |
-| `src/pages/doctor/Registration.tsx` | UPDATE | Remove phase copy |
-| `src/pages/doctor/Pending.tsx` | UPDATE | Keep as redirect component |
-| `src/lib/validation.ts` | EXISTS | Shared DOB/phone validation (already created) |
-| `src/services/userProfileService.ts` | EXISTS | localStorage profile service (already created) |
+| `src/constants/routing.ts` | **NEW** | `PRE_ONBOARDING_ALLOWED_ROUTE_PREFIXES` constant |
+| `src/components/doctor/AvailabilityGrid.tsx` | **NEW** | Visual weekly availability grid component |
+| `src/services/doctorPayoutProfileService.ts` | UPDATE | Add entityName, gstRegistered, remittanceEmail; upsertProfile/validateProfile API |
+| `src/services/doctorPayslipService.ts` | UPDATE | Weekly (Mon–Sun) auto-derived payslips; ensurePayslipsUpToDate |
+| `src/services/doctorEarningsService.ts` | UPDATE | Rename to BILLABLE_CONSULT_STATUSES |
+| `src/hooks/useDoctorReadiness.ts` | UPDATE | No change (already correct) |
+| `src/components/layout/DoctorLayout.tsx` | UPDATE | Prefix-match gate using PRE_ONBOARDING_ALLOWED_ROUTE_PREFIXES + onboarding banner |
+| `src/pages/doctor/Onboarding.tsx` | UPDATE | Add entityName, GST, remittance email fields |
+| `src/pages/doctor/Account.tsx` | UPDATE | Add editable Payout Details section with masked display |
+| `src/pages/doctor/Earnings.tsx` | UPDATE | Auto-derived weekly payslips; remove generate button |
+| `src/pages/doctor/PayslipPrint.tsx` | UPDATE | Use grossCents/createdAtUtc |
+| `src/pages/doctor/Availability.tsx` | REWRITE | Replace form with AvailabilityGrid |
+| `src/pages/doctor/Patients.tsx` | UPDATE | Remove phase copy |
+| `src/pages/doctor/PatientDetail.tsx` | UPDATE | Remove phase copy |
+| `src/pages/doctor/ConsultationView.tsx` | UPDATE | Remove phase copy from patient summary/history |
 
 ---
 
 ## Implementation Order
 
-1. New utils/services: `abnValidation.ts`, `doctorPayoutProfileService.ts`, `doctorPayslipService.ts`
-2. Update `doctorEarningsService.ts` (export PAID_STATUSES)
-3. New hook: `useDoctorReadiness.ts`
-4. Onboarding page: `Onboarding.tsx`
-5. Payslip print page: `PayslipPrint.tsx`
-6. Update `DoctorLayout.tsx` (onboarding gate)
-7. Update `App.tsx` (new routes)
-8. Auth/signup fixes: `Auth.tsx`, `useAuth.tsx`, `ProtectedRoute.tsx`
-9. Account pages: patient `Account.tsx`, doctor `Account.tsx`
-10. Cleanup: `Registration.tsx`, `Pending.tsx`, `Earnings.tsx` (payslip section)
+1. `src/constants/routing.ts` (new routing constant)
+2. Update services: `doctorPayoutProfileService.ts`, `doctorEarningsService.ts`, `doctorPayslipService.ts`
+3. Update `DoctorLayout.tsx` (prefix-match gate + banner)
+4. Update `Onboarding.tsx` (new payout fields)
+5. Update `Account.tsx` (payout details section)
+6. Update `Earnings.tsx` (auto-derived weekly payslips)
+7. Update `PayslipPrint.tsx` (fix field names)
+8. Build `AvailabilityGrid.tsx` + rewrite `Availability.tsx`
+9. Copy sweep: `Patients.tsx`, `PatientDetail.tsx`, `ConsultationView.tsx`
 
 ---
 
