@@ -1,11 +1,17 @@
 import { validateAbn } from '@/lib/abnValidation';
 
+// TODO(phase2): replace localStorage with Supabase table doctor_payout_profiles (RLS: user_id = auth.uid())
+
 export interface DoctorPayoutProfile {
-  abn: string;           // 11 digits
-  bsb: string;           // 6 digits
-  accountNumber: string; // 6-10 digits
+  abn: string;             // 11 digits
+  entityName: string;      // Business/trading name
+  gstRegistered: boolean;
+  remittanceEmail: string;
+  bsb: string;             // 6 digits
+  accountNumber: string;   // 6-10 digits
   accountName: string;
-  updatedAt: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
 }
 
 function profileKey(uid: string): string {
@@ -24,61 +30,50 @@ class DoctorPayoutProfileService {
     }
   }
 
-  saveProfile(uid: string, profile: Omit<DoctorPayoutProfile, 'updatedAt'>): void {
+  upsertProfile(uid: string, profile: Omit<DoctorPayoutProfile, 'createdAtUtc' | 'updatedAtUtc'>): void {
     if (!uid) return;
+    const existing = this.getProfile(uid);
+    const now = new Date().toISOString();
     const full: DoctorPayoutProfile = {
       ...profile,
-      updatedAt: new Date().toISOString(),
+      createdAtUtc: existing?.createdAtUtc || now,
+      updatedAtUtc: now,
     };
     localStorage.setItem(profileKey(uid), JSON.stringify(full));
   }
 
   isComplete(uid: string): boolean {
-    const profile = this.getProfile(uid);
-    if (!profile) return false;
-
-    // ABN valid
-    const abnResult = validateAbn(profile.abn);
-    if (!abnResult.valid) return false;
-
-    // BSB: exactly 6 digits
-    if (!/^\d{6}$/.test(profile.bsb)) return false;
-
-    // Account number: 6-10 digits
-    if (!/^\d{6,10}$/.test(profile.accountNumber)) return false;
-
-    // Account name present
-    if (!profile.accountName.trim()) return false;
-
-    return true;
+    const errors = this.validateProfile(this.getProfile(uid));
+    return Object.keys(errors).length === 0;
   }
 
-  /** Validate individual fields and return errors */
-  validate(profile: Partial<DoctorPayoutProfile>): Record<string, string> {
+  /** Validate full profile and return errors map (empty = valid) */
+  validateProfile(profile: Partial<DoctorPayoutProfile> | null): Record<string, string> {
     const errors: Record<string, string> = {};
+    if (!profile) return { _: 'No profile' };
 
-    if (profile.abn !== undefined) {
-      const abnResult = validateAbn(profile.abn);
-      if (!abnResult.valid) errors.abn = abnResult.error || 'Invalid ABN';
+    // ABN
+    const abnResult = validateAbn(profile.abn || '');
+    if (!abnResult.valid) errors.abn = abnResult.error || 'Invalid ABN';
+
+    // Entity name
+    if (!profile.entityName?.trim()) errors.entityName = 'Entity/business name is required';
+
+    // Remittance email
+    if (!profile.remittanceEmail?.trim()) {
+      errors.remittanceEmail = 'Remittance email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.remittanceEmail.trim())) {
+      errors.remittanceEmail = 'Invalid email address';
     }
 
-    if (profile.bsb !== undefined) {
-      if (!/^\d{6}$/.test(profile.bsb)) {
-        errors.bsb = 'BSB must be exactly 6 digits';
-      }
-    }
+    // BSB: exactly 6 digits
+    if (!/^\d{6}$/.test(profile.bsb || '')) errors.bsb = 'BSB must be exactly 6 digits';
 
-    if (profile.accountNumber !== undefined) {
-      if (!/^\d{6,10}$/.test(profile.accountNumber)) {
-        errors.accountNumber = 'Account number must be 6-10 digits';
-      }
-    }
+    // Account number: 6-10 digits
+    if (!/^\d{6,10}$/.test(profile.accountNumber || '')) errors.accountNumber = 'Account number must be 6-10 digits';
 
-    if (profile.accountName !== undefined) {
-      if (!profile.accountName.trim()) {
-        errors.accountName = 'Account name is required';
-      }
-    }
+    // Account name present
+    if (!profile.accountName?.trim()) errors.accountName = 'Account name is required';
 
     return errors;
   }

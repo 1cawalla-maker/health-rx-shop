@@ -6,7 +6,7 @@ import { doctorPayoutProfileService } from '@/services/doctorPayoutProfileServic
  * Centralized onboarding gate for doctors.
  * A doctor is "ready" only when:
  *   1. A digital signature has been saved.
- *   2. A valid payout profile (ABN, BSB, account) exists.
+ *   2. A valid payout profile (ABN, entity, bank, email) exists.
  *
  * Used by DoctorLayout to redirect incomplete profiles to /doctor/onboarding.
  */

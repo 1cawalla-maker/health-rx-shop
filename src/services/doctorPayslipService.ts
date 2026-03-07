@@ -1,5 +1,8 @@
 import { doctorEarningsService, type EarningsLineItem } from '@/services/doctorEarningsService';
+import { userPreferencesService } from '@/services/userPreferencesService';
 import type { BookingStatus } from '@/types/telehealth';
+
+// TODO(phase2): payslips derived from Supabase ledger and linked to Xero via xeroReference
 
 export interface PayslipLineItem {
   bookingId: string;
@@ -10,14 +13,17 @@ export interface PayslipLineItem {
 }
 
 export interface Payslip {
-  id: string;
+  id: string;               // e.g. "2026-W10"
   doctorId: string;
-  periodLabel: string;     // e.g. "March 2026"
-  periodStart: string;     // ISO date
-  periodEnd: string;       // ISO date
+  periodLabel: string;       // e.g. "3 Mar – 9 Mar 2026"
+  weekStartUtc: string;      // ISO Monday 00:00 UTC
+  weekEndUtc: string;        // ISO Sunday 23:59 UTC
   consultCount: number;
-  totalCents: number;
-  generatedAt: string;
+  grossCents: number;
+  status: 'draft' | 'paid';
+  paidAtUtc: string | null;
+  xeroReference: string | null;
+  createdAtUtc: string;
   lines: PayslipLineItem[];
 }
 
@@ -25,10 +31,39 @@ function storageKey(uid: string): string {
   return `doctor:${uid}:payslips`;
 }
 
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
+/** Get the Monday 00:00 UTC of the week containing `date` */
+function getWeekStart(date: Date): Date {
+  const d = new Date(date);
+  const day = d.getUTCDay(); // 0=Sun
+  const diff = day === 0 ? -6 : 1 - day; // shift to Monday
+  d.setUTCDate(d.getUTCDate() + diff);
+  d.setUTCHours(0, 0, 0, 0);
+  return d;
+}
+
+/** Get the Sunday 23:59:59.999 UTC of the week containing `date` */
+function getWeekEnd(weekStart: Date): Date {
+  const d = new Date(weekStart);
+  d.setUTCDate(d.getUTCDate() + 6);
+  d.setUTCHours(23, 59, 59, 999);
+  return d;
+}
+
+function formatWeekId(weekStart: Date): string {
+  const year = weekStart.getUTCFullYear();
+  // ISO week number
+  const jan1 = new Date(Date.UTC(year, 0, 1));
+  const daysSinceJan1 = Math.floor((weekStart.getTime() - jan1.getTime()) / 86400000);
+  const weekNum = Math.ceil((daysSinceJan1 + jan1.getUTCDay() + 1) / 7);
+  return `${year}-W${String(weekNum).padStart(2, '0')}`;
+}
+
+function formatPeriodLabel(weekStart: Date, weekEnd: Date): string {
+  const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' };
+  const startStr = weekStart.toLocaleDateString('en-AU', opts);
+  const endStr = weekEnd.toLocaleDateString('en-AU', { ...opts, year: 'numeric' });
+  return `${startStr} – ${endStr}`;
+}
 
 class DoctorPayslipService {
   private readAll(doctorId: string): Payslip[] {
@@ -45,50 +80,62 @@ class DoctorPayslipService {
   }
 
   /**
-   * Generate a payslip for a given month. Idempotent — returns existing
-   * payslip if one already exists for the same period.
+   * Auto-derive weekly payslips from earnings data.
+   * Creates any missing weeks. Called on page load — no manual "generate" button.
    */
-  generatePayslip(doctorId: string, year: number, month: number): Payslip {
-    const existing = this.readAll(doctorId);
-    const periodId = `${year}-${String(month).padStart(2, '0')}`;
-
-    const found = existing.find((p) => p.id === periodId);
-    if (found) return found;
-
-    // Build period range
-    const periodStart = new Date(year, month - 1, 1).toISOString();
-    const periodEnd = new Date(year, month, 0, 23, 59, 59).toISOString();
-
-    // Get all earnings and filter by month
+  ensurePayslipsUpToDate(doctorId: string): void {
     const earnings = doctorEarningsService.getEarnings(doctorId);
-    const monthLines: PayslipLineItem[] = earnings.lines.filter((l: EarningsLineItem) => {
-      const d = new Date(l.scheduledAtIso);
-      return d.getFullYear() === year && d.getMonth() === month - 1;
-    });
+    if (earnings.lines.length === 0) return;
 
-    const totalCents = monthLines.reduce((sum, l) => sum + l.feeCents, 0);
+    const existing = this.readAll(doctorId);
+    const existingIds = new Set(existing.map(p => p.id));
 
-    const payslip: Payslip = {
-      id: periodId,
-      doctorId,
-      periodLabel: `${MONTH_NAMES[month - 1]} ${year}`,
-      periodStart,
-      periodEnd,
-      consultCount: monthLines.length,
-      totalCents,
-      generatedAt: new Date().toISOString(),
-      lines: monthLines,
-    };
+    // Group lines by week
+    const weekMap = new Map<string, { weekStart: Date; weekEnd: Date; lines: PayslipLineItem[] }>();
 
-    existing.push(payslip);
-    this.writeAll(doctorId, existing);
+    for (const line of earnings.lines) {
+      const date = new Date(line.scheduledAtIso);
+      const weekStart = getWeekStart(date);
+      const weekEnd = getWeekEnd(weekStart);
+      const weekId = formatWeekId(weekStart);
 
-    return payslip;
+      if (!weekMap.has(weekId)) {
+        weekMap.set(weekId, { weekStart, weekEnd, lines: [] });
+      }
+      weekMap.get(weekId)!.lines.push(line);
+    }
+
+    let changed = false;
+    for (const [weekId, data] of weekMap) {
+      if (existingIds.has(weekId)) continue;
+
+      const grossCents = data.lines.reduce((sum, l) => sum + l.feeCents, 0);
+      const payslip: Payslip = {
+        id: weekId,
+        doctorId,
+        periodLabel: formatPeriodLabel(data.weekStart, data.weekEnd),
+        weekStartUtc: data.weekStart.toISOString(),
+        weekEndUtc: data.weekEnd.toISOString(),
+        consultCount: data.lines.length,
+        grossCents,
+        status: 'draft',
+        paidAtUtc: null,
+        xeroReference: null,
+        createdAtUtc: new Date().toISOString(),
+        lines: data.lines,
+      };
+      existing.push(payslip);
+      changed = true;
+    }
+
+    if (changed) {
+      this.writeAll(doctorId, existing);
+    }
   }
 
   getPayslips(doctorId: string): Payslip[] {
     return this.readAll(doctorId).sort(
-      (a, b) => b.periodStart.localeCompare(a.periodStart)
+      (a, b) => b.weekStartUtc.localeCompare(a.weekStartUtc)
     );
   }
 
