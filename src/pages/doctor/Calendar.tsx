@@ -1,11 +1,20 @@
-import { DoctorPhase1Stub } from '@/components/doctor/Phase1Stub';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Calendar } from 'lucide-react';
 
 export default function DoctorCalendar() {
   return (
-    <DoctorPhase1Stub
-      title="Calendar"
-      description="Phase 1: calendar sync/view is disabled"
-      notes={['Phase 2 will wire calendar view to doctor bookings with strict auth.']}
-    />
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Calendar className="h-5 w-5 text-primary" />
+          Calendar
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground">
+          Calendar sync and view will be available here soon.
+        </p>
+      </CardContent>
+    </Card>
   );
 }
