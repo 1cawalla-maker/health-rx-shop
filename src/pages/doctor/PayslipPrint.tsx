@@ -48,7 +48,6 @@ export default function PayslipPrint() {
       `}</style>
 
       <div className="min-h-screen bg-muted/30 p-4 md:p-8">
-        {/* Actions bar — hidden in print */}
         <div className="print-hide max-w-3xl mx-auto mb-4 flex items-center justify-between">
           <Button variant="outline" className="gap-2" onClick={() => navigate('/doctor/earnings')}>
             <ArrowLeft className="h-4 w-4" />Back
@@ -59,24 +58,21 @@ export default function PayslipPrint() {
         </div>
 
         <div className="print-page max-w-3xl mx-auto bg-background rounded-xl border border-border shadow-sm p-8 space-y-6">
-          {/* Header */}
           <div className="flex items-start justify-between border-b border-border pb-4">
             <div>
               <h1 className="text-2xl font-bold font-display">Payslip</h1>
               <p className="text-lg text-muted-foreground">{payslip.periodLabel}</p>
             </div>
             <div className="text-right text-sm text-muted-foreground">
-              <p>Generated: {new Date(payslip.generatedAt).toLocaleDateString('en-AU')}</p>
+              <p>Generated: {new Date(payslip.createdAtUtc).toLocaleDateString('en-AU')}</p>
             </div>
           </div>
 
-          {/* Doctor info */}
           <div className="text-sm space-y-1">
             <p><span className="font-medium">Doctor:</span> {doctorName}</p>
             {abn && <p><span className="font-medium">ABN:</span> {abn}</p>}
           </div>
 
-          {/* Line items table */}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -102,13 +98,12 @@ export default function PayslipPrint() {
             </table>
           </div>
 
-          {/* Footer totals */}
           <div className="border-t border-border pt-4 flex items-center justify-between">
             <div className="text-sm text-muted-foreground">
               Total consultations: <span className="font-medium text-foreground">{payslip.consultCount}</span>
             </div>
             <div className="text-lg font-bold">
-              Total: {formatAudFromCents(payslip.totalCents)}
+              Total: {formatAudFromCents(payslip.grossCents)}
             </div>
           </div>
         </div>
