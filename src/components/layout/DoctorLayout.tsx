@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate, Navigate, Outlet } from 'react-router-dom';
 import { useDoctorReadiness } from '@/hooks/useDoctorReadiness';
 import { useAuth } from '@/hooks/useAuth';
+import { PRE_ONBOARDING_ALLOWED_ROUTE_PREFIXES } from '@/constants/routing';
 import {
   Stethoscope,
   Phone,
@@ -13,8 +14,11 @@ import {
   X,
   LogOut,
   User,
+  AlertCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 
 const navItems = [
   { href: '/doctor/consultations', label: 'Consultations', icon: Phone },
@@ -25,6 +29,12 @@ const navItems = [
   { href: '/doctor/account', label: 'Account', icon: User },
 ];
 
+function isRouteAllowedPreOnboarding(pathname: string): boolean {
+  return PRE_ONBOARDING_ALLOWED_ROUTE_PREFIXES.some((prefix) =>
+    pathname.startsWith(prefix)
+  );
+}
+
 export function DoctorLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
@@ -32,15 +42,22 @@ export function DoctorLayout() {
   const { signOut } = useAuth();
   const { ready, loading: readinessLoading } = useDoctorReadiness();
 
-  // Onboarding gate: redirect incomplete doctors to onboarding
-  if (!readinessLoading && !ready && location.pathname !== '/doctor/onboarding') {
-    return <Navigate to="/doctor/onboarding" replace />;
+  // Onboarding gate: deny-by-default for non-allowlisted routes
+  if (!readinessLoading && !ready) {
+    if (!isRouteAllowedPreOnboarding(location.pathname)) {
+      return <Navigate to="/doctor/onboarding" replace />;
+    }
   }
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
   };
+
+  const showOnboardingBanner =
+    !readinessLoading &&
+    !ready &&
+    !location.pathname.startsWith('/doctor/onboarding');
 
   return (
     <div className="min-h-screen bg-muted/30 flex">
@@ -126,6 +143,22 @@ export function DoctorLayout() {
       {/* Main Content */}
       <main className="flex-1 min-h-screen pt-16 lg:pt-0">
         <div className="p-6 lg:p-8">
+          {showOnboardingBanner && (
+            <Alert className="mb-6 border-primary/50 bg-primary/5">
+              <AlertCircle className="h-4 w-4 text-primary" />
+              <AlertDescription className="flex items-center justify-between gap-4">
+                <span>Complete your onboarding to start receiving consultations.</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() => navigate('/doctor/onboarding')}
+                >
+                  Complete Setup →
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
           <Outlet />
         </div>
       </main>
