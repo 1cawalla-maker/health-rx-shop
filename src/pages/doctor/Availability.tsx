@@ -2,12 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { mockAvailabilityService } from '@/services/availabilityService';
 import { userPreferencesService } from '@/services/userPreferencesService';
-import { AvailabilityGrid } from '@/components/doctor/AvailabilityGrid';
+import { doctorPortalService } from '@/services/doctorPortalService';
+import { AvailabilityGrid, type GridBooking } from '@/components/doctor/AvailabilityGrid';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import type { MockAvailabilityBlock } from '@/types/telehealth';
-import { dayOfWeekLabels } from '@/types/telehealth';
 
 function formatTime12h(time: string): string {
   const [hh, mm] = time.split(':');
@@ -47,6 +47,28 @@ export default function DoctorAvailability() {
     return map;
   }, [blocks]);
 
+  /* ─── E6/E7: derive bookings for grid overlay ─── */
+  const gridBookings: GridBooking[] = useMemo(() => {
+    if (!user?.id) return [];
+    const doctorBookings = doctorPortalService.getDoctorBookings(user.id);
+    return doctorBookings
+      .filter((b) => b.status === 'booked' || b.status === 'in_progress')
+      .map((b) => {
+        const date = new Date(b.scheduledDate);
+        // JS getDay: 0=Sun,1=Mon..6=Sat — matches our grid keys
+        const dayOfWeek = date.getDay();
+        const [hh, mm] = b.timeWindowStart.split(':').map(Number);
+        const startMin = hh * 60 + (mm || 0);
+        return {
+          id: b.id,
+          dayOfWeek,
+          startMin,
+          endMin: startMin + 5, // 5-min consult
+          patientName: undefined, // Phase 1: no patient name in mock bookings
+        };
+      });
+  }, [user?.id, blocks]); // re-derive when blocks change (proxy for refresh)
+
   const handleAddBlock = (dayOfWeek: number, startTime: string, endTime: string) => {
     if (!user?.id) return;
     const existing = byDay[dayOfWeek] || [];
@@ -72,7 +94,20 @@ export default function DoctorAvailability() {
   const handleRemoveBlock = (blockId: string) => {
     if (!user?.id) return;
     mockAvailabilityService.removeDoctorBlock(user.id, blockId);
-    toast.success('Block removed');
+    refresh();
+  };
+
+  const handleEditBlock = (blockId: string, dayOfWeek: number, startTime: string, endTime: string) => {
+    if (!user?.id) return;
+    mockAvailabilityService.removeDoctorBlock(user.id, blockId);
+    mockAvailabilityService.addDoctorBlock(user.id, {
+      dayOfWeek,
+      specificDate: null,
+      startTime,
+      endTime,
+      timezone: doctorTz,
+      isRecurring: true,
+    });
     refresh();
   };
 
@@ -122,13 +157,11 @@ export default function DoctorAvailability() {
 
   const handleSetWeekdayPreset = () => {
     if (!user?.id) return;
-    // Clear existing weekday blocks first
     for (const b of blocks) {
       if (b.dayOfWeek !== null && b.dayOfWeek >= 1 && b.dayOfWeek <= 5) {
         mockAvailabilityService.removeDoctorBlock(user.id, b.id);
       }
     }
-    // Add 9–5 for Mon–Fri
     for (const day of [1, 2, 3, 4, 5]) {
       mockAvailabilityService.addDoctorBlock(user.id, {
         dayOfWeek: day,
@@ -162,8 +195,10 @@ export default function DoctorAvailability() {
       <AvailabilityGrid
         blocks={blocks}
         timezone={doctorTz}
+        bookings={gridBookings}
         onAddBlock={handleAddBlock}
         onRemoveBlock={handleRemoveBlock}
+        onEditBlock={handleEditBlock}
         onCopyMondayToWeekdays={handleCopyMondayToWeekdays}
         onClearWeek={handleClearWeek}
         onSetWeekdayPreset={handleSetWeekdayPreset}
