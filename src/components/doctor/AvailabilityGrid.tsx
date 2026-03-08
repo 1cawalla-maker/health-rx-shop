@@ -481,7 +481,7 @@ export function AvailabilityGrid({
                           key={`${b.id}-${segIdx}`}
                           data-block
                           className={cn(
-                            "absolute left-1 right-1 rounded-md border cursor-pointer transition-all overflow-hidden",
+                            "absolute left-1 right-1 rounded-md border cursor-pointer transition-all overflow-hidden z-10",
                             isSelected
                               ? "bg-primary/20 border-primary ring-2 ring-primary ring-offset-1"
                               : "bg-primary/15 border-primary/30 hover:bg-primary/25"
