@@ -148,6 +148,23 @@ class DoctorPortalService {
     localStorage.setItem('nicopatch_mock_bookings', JSON.stringify(all));
     return all[idx];
   }
+
+  // --- Consult notes (keyed by bookingId) ---
+  private notesKey(bookingId: string): string {
+    return `nicopatch_consult_notes:${bookingId}`;
+  }
+
+  getConsultNotes(bookingId: string): string {
+    try {
+      return localStorage.getItem(this.notesKey(bookingId)) || '';
+    } catch {
+      return '';
+    }
+  }
+
+  setConsultNotes(bookingId: string, notes: string): void {
+    localStorage.setItem(this.notesKey(bookingId), notes);
+  }
 }
 
 export const doctorPortalService = new DoctorPortalService();

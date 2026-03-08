@@ -7,7 +7,6 @@ import { userPreferencesService } from '@/services/userPreferencesService';
 import { getTimezoneAbbr } from '@/lib/datetime';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { EligibilityQuizCard } from '@/components/doctor/EligibilityQuizCard';
-import { PaymentsCard } from '@/components/doctor/PaymentsCard';
 import { MedicationGuideCard } from '@/components/doctor/MedicationGuideCard';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -61,13 +60,6 @@ export default function DoctorBookingDetail() {
   const [declineReason, setDeclineReason] = useState('');
   const [maxStrength, setMaxStrength] = useState<3 | 6 | 9>(6);
 
-  const setStatus = (status: BookingStatus) => {
-    if (!id) return;
-    const updated = doctorPortalService.setBookingStatus(id, status);
-    if (!updated) toast.error('Could not update booking');
-    else toast.success(`Status updated: ${status}`);
-  };
-
   const addAttempt = () => {
     if (!id) return;
     const updated = doctorPortalService.addCallAttempt(id, { notes: callNote.trim() || undefined });
@@ -77,10 +69,11 @@ export default function DoctorBookingDetail() {
   };
 
   const issuePrescription = () => {
-    if (!booking) return;
+    if (!booking || !id) return;
     doctorPortalService.issuePrescription({ doctorId: booking.doctorId, patientId: booking.patientId, maxStrengthMg: maxStrength });
     toast.success(`Prescription issued (max strength ${maxStrength}mg)`);
-    if (id) doctorPortalService.setBookingStatus(id, 'completed');
+    doctorPortalService.setBookingStatus(id, 'completed');
+    navigate('/doctor/consultations');
   };
 
   const declinePrescription = () => {
@@ -91,6 +84,7 @@ export default function DoctorBookingDetail() {
     }
     doctorPortalService.declinePrescription(id, declineReason);
     toast.success('Consultation completed without prescription');
+    navigate('/doctor/consultations');
   };
 
   const activeRx = useMemo(() => {
@@ -105,7 +99,7 @@ export default function DoctorBookingDetail() {
           <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
           <h2 className="font-display text-xl font-bold mb-2">Booking Not Found</h2>
           <p className="text-muted-foreground mb-4">We couldn't find this booking or you don't have access to it.</p>
-          <Button onClick={() => navigate('/doctor/bookings')}>Back to Bookings</Button>
+          <Button onClick={() => navigate('/doctor/consultations')}>Back to Consultations</Button>
         </CardContent>
       </Card>
     );
@@ -118,7 +112,7 @@ export default function DoctorBookingDetail() {
           <h1 className="font-display text-3xl font-bold">Consultation Workspace</h1>
           <p className="text-muted-foreground mt-1">Manage this consultation</p>
         </div>
-        <Button variant="outline" onClick={() => navigate('/doctor/bookings')}>Back</Button>
+        <Button variant="outline" onClick={() => navigate('/doctor/consultations')}>Back</Button>
       </div>
 
       <Card>
@@ -149,13 +143,6 @@ export default function DoctorBookingDetail() {
           <div className="text-sm">
             <p className="text-muted-foreground">Patient ID</p>
             <p className="font-medium">{booking.patientId}</p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={() => setStatus('in_progress')}>Start Consult</Button>
-            <Button size="sm" variant="outline" onClick={() => setStatus('no_answer')}>No Answer</Button>
-            <Button size="sm" variant="outline" onClick={() => setStatus('cancelled')}>Cancel</Button>
-            <Button size="sm" onClick={() => setStatus('completed')}>Mark Completed</Button>
           </div>
         </CardContent>
       </Card>
@@ -252,7 +239,6 @@ export default function DoctorBookingDetail() {
 
         <div className="space-y-6">
           <EligibilityQuizCard patientId={booking.patientId} />
-          <PaymentsCard doctorId={booking.doctorId} bookingId={booking.id} />
           <MedicationGuideCard />
         </div>
       </div>

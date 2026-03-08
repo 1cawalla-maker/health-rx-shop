@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { doctorPortalService } from '@/services/doctorPortalService';
 import { shopPrescriptionService } from '@/services/shopPrescriptionService';
 import { userPreferencesService } from '@/services/userPreferencesService';
+import { userProfileService } from '@/services/userProfileService';
 import { getTimezoneAbbr } from '@/lib/datetime';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { EligibilityQuizCard } from '@/components/doctor/EligibilityQuizCard';
-import { PaymentsCard } from '@/components/doctor/PaymentsCard';
 import { MedicationGuideCard } from '@/components/doctor/MedicationGuideCard';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -15,10 +15,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Calendar, Clock, Phone, Plus, CheckCircle, XCircle, AlertCircle, FileText, ChevronDown, PhoneOff } from 'lucide-react';
+import { Calendar, Clock, Phone, Plus, CheckCircle, XCircle, AlertCircle, FileText, PhoneOff, Copy, User } from 'lucide-react';
 import { format } from 'date-fns';
 import type { BookingStatus, MockBooking } from '@/types/telehealth';
 
@@ -38,6 +37,22 @@ const statusBadge = (status: string) => {
   return <Badge className={`${s.bg} ${s.text}`}>{s.label}</Badge>;
 };
 
+function formatPhoneDisplay(phoneE164: string): string {
+  // Expect +614XXXXXXXX or 04XXXXXXXX or raw digits
+  const digits = phoneE164.replace(/\D/g, '');
+  if (digits.startsWith('61') && digits.length >= 11) {
+    const local = digits.slice(2);
+    return `+61 ${local.slice(0, 3)} ${local.slice(3, 6)} ${local.slice(6)}`;
+  }
+  if (digits.startsWith('0') && digits.length === 10) {
+    return `+61 ${digits.slice(1, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
+  }
+  if (digits.length === 9 && digits.startsWith('4')) {
+    return `+61 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
+  }
+  return phoneE164;
+}
+
 export default function DoctorConsultationView() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -47,9 +62,9 @@ export default function DoctorConsultationView() {
   const [callNote, setCallNote] = useState('');
   const [declineReason, setDeclineReason] = useState('');
   const [maxStrength, setMaxStrength] = useState<3 | 6 | 9>(6);
-  const [rxOpen, setRxOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const [consultNotes, setConsultNotes] = useState('');
 
   const doctorTz = useMemo(() => user?.id ? userPreferencesService.getTimezone(user.id) : 'Australia/Brisbane', [user?.id]);
 
@@ -60,8 +75,19 @@ export default function DoctorConsultationView() {
 
   useEffect(() => { reload(); }, [id]);
 
+  // Load consult notes on mount
+  useEffect(() => {
+    if (id) setConsultNotes(doctorPortalService.getConsultNotes(id));
+  }, [id]);
+
   const hasAccess = !!(user?.id && booking?.doctorId === user.id);
   const isTerminal = booking ? TERMINAL.includes(booking.status) : false;
+
+  // Patient profile
+  const patientProfile = useMemo(() => {
+    if (!booking) return null;
+    return userProfileService.getProfile(booking.patientId);
+  }, [booking]);
 
   const scheduledAt = useMemo(() => {
     if (!booking) return null;
@@ -99,18 +125,22 @@ export default function DoctorConsultationView() {
   };
 
   const doIssue = () => {
-    if (!booking) return;
+    if (!booking || !id) return;
+    // Save notes before issuing
+    doctorPortalService.setConsultNotes(id, consultNotes);
     doctorPortalService.issuePrescription({ doctorId: booking.doctorId, patientId: booking.patientId, maxStrengthMg: maxStrength });
     toast.success(`Prescription issued (max ${maxStrength}mg)`);
-    if (id) doctorPortalService.setBookingStatus(id, 'completed');
-    reload();
+    doctorPortalService.setBookingStatus(id, 'completed');
+    navigate('/doctor/consultations');
   };
 
   const doDecline = () => {
     if (!id || !declineReason.trim()) { toast.error('Please provide a reason'); return; }
+    // Save notes before declining
+    doctorPortalService.setConsultNotes(id, consultNotes);
     doctorPortalService.declinePrescription(id, declineReason);
     toast.success('Completed without prescription');
-    reload();
+    navigate('/doctor/consultations');
   };
 
   const doCancel = () => {
@@ -119,6 +149,18 @@ export default function DoctorConsultationView() {
     if (result) { toast.success('Consultation cancelled'); setCancelOpen(false); reload(); }
     else toast.error('Could not cancel');
   };
+
+  const handleSaveNotes = useCallback(() => {
+    if (!id) return;
+    doctorPortalService.setConsultNotes(id, consultNotes);
+    toast.success('Notes saved');
+  }, [id, consultNotes]);
+
+  const handleCopyPhone = useCallback(() => {
+    const phone = patientProfile?.phoneE164;
+    if (!phone) return;
+    navigator.clipboard.writeText(phone).then(() => toast.success('Phone number copied'));
+  }, [patientProfile]);
 
   if (!booking || !hasAccess) {
     return (
@@ -148,38 +190,73 @@ export default function DoctorConsultationView() {
             )}
             {statusBadge(booking.status)}
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">Patient: {booking.patientId}</p>
         </div>
         <Button variant="outline" onClick={() => navigate('/doctor/consultations')}>Back</Button>
       </div>
 
+      {/* Patient Details */}
+      <Card className="border-primary/20">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <User className="h-5 w-5 text-primary" />
+            Patient Details
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Full Name</p>
+              <p className="font-medium">{patientProfile?.fullName || 'Not provided'}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Date of Birth</p>
+              <p className="font-medium">{patientProfile?.dateOfBirth || 'Not provided'}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Phone Number</p>
+              <div className="flex items-center gap-2">
+                <p className="text-xl font-bold tracking-wide text-primary">
+                  {patientProfile?.phoneE164 ? formatPhoneDisplay(patientProfile.phoneE164) : 'Not provided'}
+                </p>
+                {patientProfile?.phoneE164 && (
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopyPhone}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground mt-3">ID: {booking.patientId}</p>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 lg:grid-cols-3">
         {/* LEFT COLUMN */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Status Controls */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Phone className="h-5 w-5 text-primary" />Status Controls</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant="outline" onClick={() => doStatus('in_progress')} disabled={isTerminal}>Start Consult</Button>
-                <Button size="sm" variant="outline" onClick={() => setCancelOpen(true)} disabled={isTerminal}>Cancel</Button>
-                <Button size="sm" onClick={() => doStatus('completed')} disabled={isTerminal}>Mark Completed</Button>
-                <Button size="sm" variant="outline" onClick={() => doStatus('no_answer')} disabled={isTerminal || !canMarkNoShow}
-                  title={canMarkNoShow ? 'Mark as no-show' : `Need ${3 - unansweredCount} more unanswered attempt(s)`}
-                >
-                  <PhoneOff className="h-4 w-4 mr-2" />
-                  Mark No-Show
-                </Button>
-              </div>
-              {!isTerminal && !canMarkNoShow && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  No-show requires 3 unanswered call attempts ({unansweredCount}/3 logged).
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          {/* Status Controls (simplified) */}
+          {!isTerminal && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Phone className="h-5 w-5 text-primary" />Actions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setCancelOpen(true)}>Cancel Consultation</Button>
+                  <Button size="sm" variant="outline" onClick={() => doStatus('no_answer')} disabled={!canMarkNoShow}
+                    title={canMarkNoShow ? 'Mark as no-show' : `Need ${3 - unansweredCount} more unanswered attempt(s)`}
+                  >
+                    <PhoneOff className="h-4 w-4 mr-2" />
+                    Mark No-Show
+                  </Button>
+                </div>
+                {!canMarkNoShow && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    No-show requires 3 unanswered call attempts ({unansweredCount}/3 logged).
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Call Attempts */}
           <Card>
@@ -229,74 +306,72 @@ export default function DoctorConsultationView() {
             </CardContent>
           </Card>
 
-          {/* Prescription Decision */}
-          <Collapsible open={rxOpen} onOpenChange={setRxOpen}>
-            <Card>
-              <CollapsibleTrigger asChild>
-                <CardHeader className="cursor-pointer">
-                  <CardTitle className="flex items-center justify-between">
-                    <span className="flex items-center gap-2"><FileText className="h-5 w-5" />Prescription Decision</span>
-                    <ChevronDown className={`h-5 w-5 transition-transform ${rxOpen ? 'rotate-180' : ''}`} />
-                  </CardTitle>
-                  <CardDescription>Issue or decline a prescription for this patient</CardDescription>
-                </CardHeader>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <CardContent className="space-y-4">
-                  {activeRx ? (
-                    <div className="border rounded-lg p-4 bg-muted/30">
-                      <p className="text-sm text-muted-foreground">Existing active prescription</p>
-                      <p className="font-medium">Max strength: {activeRx.maxStrengthMg}mg</p>
-                      <p className="text-sm text-muted-foreground">Allowance: {activeRx.totalCansAllowed} cans</p>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No active prescription for this patient.</p>
-                  )}
+          {/* Prescription Decision (always expanded) */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" />Prescription Decision</CardTitle>
+              <CardDescription>Issue or decline a prescription for this patient</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Consultation Notes */}
+              <div className="space-y-2">
+                <Label htmlFor="consultNotes">Consultation Notes</Label>
+                <Textarea
+                  id="consultNotes"
+                  value={consultNotes}
+                  onChange={(e) => setConsultNotes(e.target.value)}
+                  onBlur={() => id && doctorPortalService.setConsultNotes(id, consultNotes)}
+                  placeholder="Record consultation notes here…"
+                  className="min-h-[100px]"
+                />
+                <Button variant="outline" size="sm" onClick={handleSaveNotes}>Save Notes</Button>
+              </div>
 
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>Max strength (mg)</Label>
-                      <Select value={String(maxStrength)} onValueChange={(v) => setMaxStrength(Number(v) as 3 | 6 | 9)}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="3">3mg (Light)</SelectItem>
-                          <SelectItem value="6">6mg (Moderate)</SelectItem>
-                          <SelectItem value="9">9mg (Heavy)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">Patient may step down but not exceed this strength.</p>
-                    </div>
-                    <div className="flex items-end">
-                      <Button onClick={doIssue} className="w-full" disabled={isTerminal}>
-                        <CheckCircle className="h-4 w-4 mr-2" />Issue Prescription
-                      </Button>
-                    </div>
-                  </div>
+              <div className="border-t pt-4" />
 
-                  <div className="border-t pt-4 space-y-2">
-                    <Label>Decline reason</Label>
-                    <Textarea value={declineReason} onChange={(e) => setDeclineReason(e.target.value)} placeholder="Reason for not issuing" />
-                    <Button variant="outline" onClick={doDecline} disabled={isTerminal}>
-                      <XCircle className="h-4 w-4 mr-2" />Complete Without Prescription
-                    </Button>
-                  </div>
-                </CardContent>
-              </CollapsibleContent>
-            </Card>
-          </Collapsible>
+              {activeRx ? (
+                <div className="border rounded-lg p-4 bg-muted/30">
+                  <p className="text-sm text-muted-foreground">Existing active prescription</p>
+                  <p className="font-medium">Max strength: {activeRx.maxStrengthMg}mg</p>
+                  <p className="text-sm text-muted-foreground">Allowance: {activeRx.totalCansAllowed} cans</p>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No active prescription for this patient.</p>
+              )}
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Max strength (mg)</Label>
+                  <Select value={String(maxStrength)} onValueChange={(v) => setMaxStrength(Number(v) as 3 | 6 | 9)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="3">3mg (Light)</SelectItem>
+                      <SelectItem value="6">6mg (Moderate)</SelectItem>
+                      <SelectItem value="9">9mg (Heavy)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Patient may step down but not exceed this strength.</p>
+                </div>
+                <div className="flex items-end">
+                  <Button onClick={doIssue} className="w-full" disabled={isTerminal}>
+                    <CheckCircle className="h-4 w-4 mr-2" />Issue Prescription
+                  </Button>
+                </div>
+              </div>
+
+              <div className="border-t pt-4 space-y-2">
+                <Label>Decline reason</Label>
+                <Textarea value={declineReason} onChange={(e) => setDeclineReason(e.target.value)} placeholder="Reason for not issuing" />
+                <Button variant="outline" onClick={doDecline} disabled={isTerminal}>
+                  <XCircle className="h-4 w-4 mr-2" />Complete Without Prescription
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* RIGHT COLUMN */}
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Patient Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm space-y-2">
-              <div><span className="text-muted-foreground">Patient ID:</span> <span className="font-medium">{booking.patientId}</span></div>
-            </CardContent>
-          </Card>
-
           <EligibilityQuizCard patientId={booking.patientId} />
 
           <Card>
@@ -307,8 +382,6 @@ export default function DoctorConsultationView() {
               <p className="text-sm text-muted-foreground">Past consultations and prescriptions for this patient will appear here.</p>
             </CardContent>
           </Card>
-
-          {booking.doctorId && <PaymentsCard doctorId={booking.doctorId} bookingId={booking.id} />}
 
           <MedicationGuideCard />
         </div>

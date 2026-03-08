@@ -21,7 +21,7 @@ export function EligibilityQuizCard(props: { patientId: string }) {
           <ClipboardList className="h-5 w-5 text-primary" />
           Eligibility Quiz
         </CardTitle>
-        <CardDescription>Phase 1: derived from local quiz responses (if completed)</CardDescription>
+        <CardDescription>Derived from patient quiz responses</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         <div className="flex items-center justify-between">
