@@ -1,10 +1,15 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { Copy, Trash2, Clock } from 'lucide-react';
+import { Copy, Trash2, Clock, CalendarCheck, Pencil } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { MockAvailabilityBlock } from '@/types/telehealth';
 
+/* ─── constants ─── */
 const DAYS = [
   { key: 1, label: 'Mon' },
   { key: 2, label: 'Tue' },
@@ -20,7 +25,10 @@ const HOUR_END = 23;
 const TOTAL_HOURS = HOUR_END - HOUR_START;
 const PX_PER_HOUR = 60;
 const SNAP_MINUTES = 5;
+const AUTO_SCROLL_EDGE = 40; // px from edge to trigger
+const AUTO_SCROLL_SPEED = 4; // px per frame
 
+/* ─── helpers ─── */
 function minutesToPx(minutes: number): number {
   return ((minutes - HOUR_START * 60) / 60) * PX_PER_HOUR;
 }
@@ -49,40 +57,110 @@ function minutesToTime(minutes: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-function blocksOverlap(
-  aStart: number, aEnd: number,
-  bStart: number, bEnd: number
-): boolean {
+function rangesOverlap(aStart: number, aEnd: number, bStart: number, bEnd: number): boolean {
   return aStart < bEnd && aEnd > bStart;
 }
 
+/** Generate 5-minute time options for selects */
+function timeOptions(): { value: string; label: string }[] {
+  const opts: { value: string; label: string }[] = [];
+  for (let m = HOUR_START * 60; m <= HOUR_END * 60; m += SNAP_MINUTES) {
+    opts.push({ value: minutesToTime(m), label: formatTime(m) });
+  }
+  return opts;
+}
+
+const TIME_OPTIONS = timeOptions();
+
+/* ─── booking overlay type ─── */
+export interface GridBooking {
+  id: string;
+  dayOfWeek: number;
+  startMin: number;
+  endMin: number;
+  patientName?: string;
+}
+
+/* ─── props ─── */
 interface AvailabilityGridProps {
   blocks: MockAvailabilityBlock[];
   timezone: string;
+  bookings?: GridBooking[];
   onAddBlock: (dayOfWeek: number, startTime: string, endTime: string) => void;
   onRemoveBlock: (blockId: string) => void;
+  onEditBlock?: (blockId: string, dayOfWeek: number, startTime: string, endTime: string) => void;
   onCopyMondayToWeekdays: () => void;
   onClearWeek: () => void;
   onSetWeekdayPreset: () => void;
 }
 
+/* ─── visual split helper ─── */
+interface VisualSegment {
+  blockId: string;
+  startMin: number;
+  endMin: number;
+}
+
+function splitBlockAroundBookings(
+  blockStartMin: number,
+  blockEndMin: number,
+  blockId: string,
+  dayBookings: GridBooking[]
+): VisualSegment[] {
+  // Sort bookings by start time
+  const sorted = [...dayBookings].sort((a, b) => a.startMin - b.startMin);
+  const segments: VisualSegment[] = [];
+  let cursor = blockStartMin;
+
+  for (const bk of sorted) {
+    // Only if booking overlaps with remaining segment
+    if (bk.endMin <= cursor || bk.startMin >= blockEndMin) continue;
+    const overlapStart = Math.max(bk.startMin, cursor);
+    if (overlapStart > cursor) {
+      segments.push({ blockId, startMin: cursor, endMin: overlapStart });
+    }
+    cursor = Math.max(cursor, bk.endMin);
+  }
+  if (cursor < blockEndMin) {
+    segments.push({ blockId, startMin: cursor, endMin: blockEndMin });
+  }
+  return segments;
+}
+
 export function AvailabilityGrid({
   blocks,
   timezone,
+  bookings = [],
   onAddBlock,
   onRemoveBlock,
+  onEditBlock,
   onCopyMondayToWeekdays,
   onClearWeek,
   onSetWeekdayPreset,
 }: AvailabilityGridProps) {
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
+
+  /* ─── state ─── */
   const [dragState, setDragState] = useState<{
     day: number;
     startMin: number;
     currentMin: number;
   } | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
+  const [editStart, setEditStart] = useState('');
+  const [editEnd, setEditEnd] = useState('');
+  const [mobilePopoverBlockId, setMobilePopoverBlockId] = useState<string | null>(null);
 
+  /* ─── refs ─── */
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number | null>(null);
+  const isDraggingRef = useRef(false);
+  const pointerYRef = useRef(0);
+
+  /* ─── derived ─── */
   const blocksByDay = useMemo(() => {
     const map: Record<number, MockAvailabilityBlock[]> = {};
     for (const b of blocks) {
@@ -93,61 +171,206 @@ export function AvailabilityGrid({
     return map;
   }, [blocks]);
 
-  const getMinutesFromEvent = useCallback((e: React.MouseEvent, colEl: HTMLElement): number => {
+  const bookingsByDay = useMemo(() => {
+    const map: Record<number, GridBooking[]> = {};
+    for (const b of bookings) {
+      if (!map[b.dayOfWeek]) map[b.dayOfWeek] = [];
+      map[b.dayOfWeek].push(b);
+    }
+    return map;
+  }, [bookings]);
+
+  const totalHeight = TOTAL_HOURS * PX_PER_HOUR;
+
+  /* ─── E3: auto-scroll during drag ─── */
+  const autoScrollLoop = useCallback(() => {
+    if (!isDraggingRef.current || !scrollRef.current) {
+      rafRef.current = null;
+      return;
+    }
+    const container = scrollRef.current;
+    const rect = container.getBoundingClientRect();
+    const y = pointerYRef.current;
+
+    if (y < rect.top + AUTO_SCROLL_EDGE) {
+      container.scrollTop -= AUTO_SCROLL_SPEED;
+    } else if (y > rect.bottom - AUTO_SCROLL_EDGE) {
+      container.scrollTop += AUTO_SCROLL_SPEED;
+    }
+    rafRef.current = requestAnimationFrame(autoScrollLoop);
+  }, []);
+
+  const startAutoScroll = useCallback(() => {
+    isDraggingRef.current = true;
+    if (!rafRef.current) {
+      rafRef.current = requestAnimationFrame(autoScrollLoop);
+    }
+  }, [autoScrollLoop]);
+
+  const stopAutoScroll = useCallback(() => {
+    isDraggingRef.current = false;
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+  }, []);
+
+  /* ─── drag helpers ─── */
+  const getMinutesFromPointer = useCallback((clientY: number, colEl: HTMLElement): number => {
     const rect = colEl.getBoundingClientRect();
-    const y = e.clientY - rect.top;
+    const y = clientY - rect.top;
     const minutes = pxToMinutes(y);
     return Math.max(HOUR_START * 60, Math.min(HOUR_END * 60, minutes));
   }, []);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent, day: number) => {
-    // Only start drag on the column background, not on blocks
-    if ((e.target as HTMLElement).closest('[data-block]')) return;
-    const colEl = (e.currentTarget as HTMLElement);
-    const minutes = getMinutesFromEvent(e, colEl);
+  const handlePointerDown = useCallback((e: React.PointerEvent, day: number) => {
+    if ((e.target as HTMLElement).closest('[data-block]') || (e.target as HTMLElement).closest('[data-booking]')) return;
+    const colEl = e.currentTarget as HTMLElement;
+    const minutes = getMinutesFromPointer(e.clientY, colEl);
     setDragState({ day, startMin: minutes, currentMin: minutes });
-  }, [getMinutesFromEvent]);
+    colEl.setPointerCapture(e.pointerId);
+    pointerYRef.current = e.clientY;
+    startAutoScroll();
+  }, [getMinutesFromPointer, startAutoScroll]);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent, day: number) => {
+  const handlePointerMove = useCallback((e: React.PointerEvent, day: number) => {
     if (!dragState || dragState.day !== day) return;
-    const colEl = (e.currentTarget as HTMLElement);
-    const minutes = getMinutesFromEvent(e, colEl);
+    const colEl = e.currentTarget as HTMLElement;
+    const minutes = getMinutesFromPointer(e.clientY, colEl);
+    pointerYRef.current = e.clientY;
     setDragState((prev) => prev ? { ...prev, currentMin: minutes } : null);
-  }, [dragState, getMinutesFromEvent]);
+  }, [dragState, getMinutesFromPointer]);
 
-  const handleMouseUp = useCallback(() => {
+  const handlePointerUp = useCallback(() => {
+    stopAutoScroll();
     if (!dragState) return;
     const startMin = Math.min(dragState.startMin, dragState.currentMin);
     const endMin = Math.max(dragState.startMin, dragState.currentMin);
 
     if (endMin - startMin >= SNAP_MINUTES) {
-      // Check overlaps
       const dayBlocks = blocksByDay[dragState.day] || [];
-      const hasOverlap = dayBlocks.some((b) => {
+      const dayBookingsList = bookingsByDay[dragState.day] || [];
+
+      const hasBlockOverlap = dayBlocks.some((b) => {
         const bStart = timeToMinutes(b.startTime);
         const bEnd = timeToMinutes(b.endTime);
-        return blocksOverlap(startMin, endMin, bStart, bEnd);
+        return rangesOverlap(startMin, endMin, bStart, bEnd);
       });
+      const hasBookingOverlap = dayBookingsList.some((bk) =>
+        rangesOverlap(startMin, endMin, bk.startMin, bk.endMin)
+      );
 
-      if (hasOverlap) {
+      if (hasBookingOverlap) {
+        toast.error('Cannot overlap with a scheduled booking');
+      } else if (hasBlockOverlap) {
         toast.error('Block overlaps with existing availability');
       } else {
         onAddBlock(dragState.day, minutesToTime(startMin), minutesToTime(endMin));
       }
     }
     setDragState(null);
-  }, [dragState, blocksByDay, onAddBlock]);
+  }, [dragState, blocksByDay, bookingsByDay, onAddBlock, stopAutoScroll]);
 
-  const handleDeleteClick = (blockId: string) => {
-    if (confirmDelete === blockId) {
-      onRemoveBlock(blockId);
-      setConfirmDelete(null);
+  /* ─── E4: keyboard delete ─── */
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!selectedBlockId) return;
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        e.preventDefault();
+        onRemoveBlock(selectedBlockId);
+        setSelectedBlockId(null);
+        toast.success('Availability block deleted');
+      }
+      if (e.key === 'Escape') {
+        setSelectedBlockId(null);
+        setEditingBlockId(null);
+        setMobilePopoverBlockId(null);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [selectedBlockId, onRemoveBlock]);
+
+  // Deselect on click-away
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest('[data-block]') && !(e.target as HTMLElement).closest('[data-popover-content]')) {
+        setSelectedBlockId(null);
+        setMobilePopoverBlockId(null);
+      }
+    };
+    window.addEventListener('mousedown', handler);
+    return () => window.removeEventListener('mousedown', handler);
+  }, []);
+
+  /* ─── E5: inline edit handlers ─── */
+  const openEditor = (block: MockAvailabilityBlock) => {
+    setEditingBlockId(block.id);
+    setEditStart(block.startTime);
+    setEditEnd(block.endTime);
+  };
+
+  const handleSaveEdit = (block: MockAvailabilityBlock) => {
+    const newStartMin = timeToMinutes(editStart);
+    const newEndMin = timeToMinutes(editEnd);
+
+    if (newEndMin <= newStartMin) {
+      toast.error('End time must be after start time');
+      return;
+    }
+
+    const day = block.dayOfWeek ?? 0;
+    const dayBlocks = blocksByDay[day] || [];
+    const dayBookingsList = bookingsByDay[day] || [];
+
+    // Check overlap with other blocks (excluding current)
+    const hasBlockOverlap = dayBlocks
+      .filter((b) => b.id !== block.id)
+      .some((b) => rangesOverlap(newStartMin, newEndMin, timeToMinutes(b.startTime), timeToMinutes(b.endTime)));
+
+    const hasBookingOverlap = dayBookingsList.some((bk) =>
+      rangesOverlap(newStartMin, newEndMin, bk.startMin, bk.endMin)
+    );
+
+    if (hasBookingOverlap) {
+      toast.error('Cannot overlap with a scheduled booking');
+      return;
+    }
+    if (hasBlockOverlap) {
+      toast.error('Overlaps with existing availability');
+      return;
+    }
+
+    if (onEditBlock) {
+      onEditBlock(block.id, day, editStart, editEnd);
     } else {
-      setConfirmDelete(blockId);
+      // Fallback: remove + add
+      onRemoveBlock(block.id);
+      onAddBlock(day, editStart, editEnd);
+    }
+    setEditingBlockId(null);
+    setMobilePopoverBlockId(null);
+    toast.success('Block updated');
+  };
+
+  /* ─── block click handler ─── */
+  const handleBlockClick = (e: React.MouseEvent, block: MockAvailabilityBlock) => {
+    e.stopPropagation();
+    if (isMobile) {
+      setMobilePopoverBlockId(mobilePopoverBlockId === block.id ? null : block.id);
+    } else {
+      setSelectedBlockId(selectedBlockId === block.id ? null : block.id);
     }
   };
 
-  // Hour markers
+  const handleTimeClick = (e: React.MouseEvent, block: MockAvailabilityBlock) => {
+    e.stopPropagation();
+    if (!isMobile) {
+      openEditor(block);
+    }
+  };
+
+  /* ─── hour markers ─── */
   const hourMarkers = useMemo(() => {
     const markers = [];
     for (let h = HOUR_START; h <= HOUR_END; h++) {
@@ -156,8 +379,7 @@ export function AvailabilityGrid({
     return markers;
   }, []);
 
-  const totalHeight = TOTAL_HOURS * PX_PER_HOUR;
-
+  /* ─── render ─── */
   return (
     <div className="space-y-4">
       {/* Action buttons */}
@@ -174,15 +396,19 @@ export function AvailabilityGrid({
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Click and drag on the grid to create availability blocks. Click a block to delete it. All times in <strong>{timezone}</strong>.
+        Click and drag to create blocks. {isMobile ? 'Tap' : 'Click'} a block to {isMobile ? 'edit or delete' : 'select'}. {!isMobile && 'Press Backspace to delete.'} All times in <strong>{timezone}</strong>.
       </p>
 
-      {/* Grid */}
-      <div className="overflow-x-auto border rounded-lg bg-background" ref={gridRef}>
-        <div className="flex min-w-[700px]">
+      {/* Grid with scroll container */}
+      <div
+        ref={scrollRef}
+        className="overflow-auto border rounded-lg bg-background"
+        style={{ maxHeight: '70vh' }}
+      >
+        <div ref={gridRef} className="flex min-w-[700px]">
           {/* Time axis */}
-          <div className="w-16 shrink-0 border-r border-border">
-            <div className="h-8 border-b border-border" /> {/* header spacer */}
+          <div className="w-16 shrink-0 border-r border-border sticky left-0 bg-background z-10">
+            <div className="h-8 border-b border-border sticky top-0 bg-background z-20" />
             <div className="relative" style={{ height: totalHeight }}>
               {hourMarkers.map((h) => (
                 <div
@@ -199,11 +425,12 @@ export function AvailabilityGrid({
           {/* Day columns */}
           {DAYS.map(({ key: day, label }) => {
             const dayBlocks = blocksByDay[day] || [];
+            const dayBookings = bookingsByDay[day] || [];
 
             return (
               <div key={day} className="flex-1 min-w-[85px] border-r border-border last:border-r-0">
                 {/* Day header */}
-                <div className="h-8 flex items-center justify-center border-b border-border">
+                <div className="h-8 flex items-center justify-center border-b border-border sticky top-0 bg-background z-20">
                   <span className="text-xs font-medium text-muted-foreground">{label}</span>
                   {dayBlocks.length > 0 && (
                     <span className="ml-1 text-[10px] text-primary font-medium">({dayBlocks.length})</span>
@@ -212,14 +439,11 @@ export function AvailabilityGrid({
 
                 {/* Time column */}
                 <div
-                  className="relative cursor-crosshair select-none"
+                  className="relative cursor-crosshair select-none touch-none"
                   style={{ height: totalHeight }}
-                  onMouseDown={(e) => handleMouseDown(e, day)}
-                  onMouseMove={(e) => handleMouseMove(e, day)}
-                  onMouseUp={handleMouseUp}
-                  onMouseLeave={() => {
-                    if (dragState?.day === day) handleMouseUp();
-                  }}
+                  onPointerDown={(e) => handlePointerDown(e, day)}
+                  onPointerMove={(e) => handlePointerMove(e, day)}
+                  onPointerUp={handlePointerUp}
                 >
                   {/* Hour lines */}
                   {hourMarkers.map((h) => (
@@ -238,36 +462,183 @@ export function AvailabilityGrid({
                     />
                   ))}
 
-                  {/* Existing blocks */}
+                  {/* Availability blocks (visual split around bookings) */}
                   {dayBlocks.map((b) => {
-                    const startMin = timeToMinutes(b.startTime);
-                    const endMin = timeToMinutes(b.endTime);
-                    const top = minutesToPx(startMin);
-                    const height = minutesToPx(endMin) - top;
-                    const isConfirming = confirmDelete === b.id;
+                    const bStartMin = timeToMinutes(b.startTime);
+                    const bEndMin = timeToMinutes(b.endTime);
+                    const segments = splitBlockAroundBookings(bStartMin, bEndMin, b.id, dayBookings);
+                    const isSelected = selectedBlockId === b.id;
+                    const isMobileActive = mobilePopoverBlockId === b.id;
+                    const isEditing = editingBlockId === b.id;
 
+                    return segments.map((seg, segIdx) => {
+                      const top = minutesToPx(seg.startMin);
+                      const height = minutesToPx(seg.endMin) - top;
+                      const isFirstSeg = segIdx === 0;
+
+                      const blockEl = (
+                        <div
+                          key={`${b.id}-${segIdx}`}
+                          data-block
+                          className={cn(
+                            "absolute left-1 right-1 rounded-md border cursor-pointer transition-all overflow-hidden",
+                            isSelected
+                              ? "bg-primary/20 border-primary ring-2 ring-primary ring-offset-1"
+                              : "bg-primary/15 border-primary/30 hover:bg-primary/25"
+                          )}
+                          style={{ top, height: Math.max(height, 14) }}
+                          onClick={(e) => handleBlockClick(e, b)}
+                          title={`${formatTime(bStartMin)} – ${formatTime(bEndMin)}${!isMobile ? '\nClick time to edit • Select + Delete to remove' : ''}`}
+                        >
+                          {isFirstSeg && height >= 24 && (
+                            <div
+                              className="px-1 py-0.5 text-[10px] leading-tight text-primary font-medium truncate cursor-pointer hover:underline"
+                              onClick={(e) => handleTimeClick(e, b)}
+                            >
+                              {formatTime(bStartMin)}
+                            </div>
+                          )}
+                          {isFirstSeg && height >= 40 && (
+                            <div className="px-1 text-[10px] leading-tight text-primary/70 truncate">
+                              {formatTime(bEndMin)}
+                            </div>
+                          )}
+                        </div>
+                      );
+
+                      // Wrap first segment with popover for editing (desktop) or actions (mobile)
+                      if (isFirstSeg && (isEditing || isMobileActive)) {
+                        return (
+                          <Popover
+                            key={`${b.id}-${segIdx}`}
+                            open={isEditing || isMobileActive}
+                            onOpenChange={(open) => {
+                              if (!open) {
+                                setEditingBlockId(null);
+                                setMobilePopoverBlockId(null);
+                              }
+                            }}
+                          >
+                            <PopoverTrigger asChild>
+                              {blockEl}
+                            </PopoverTrigger>
+                            <PopoverContent
+                              data-popover-content
+                              className="w-56 p-3 space-y-3"
+                              side="right"
+                              align="start"
+                            >
+                              {isMobileActive && !isEditing ? (
+                                /* Mobile action sheet */
+                                <div className="space-y-2">
+                                  <p className="text-xs text-muted-foreground font-medium">
+                                    {formatTime(bStartMin)} – {formatTime(bEndMin)}
+                                  </p>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full justify-start gap-2"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openEditor(b);
+                                    }}
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />Edit times
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full justify-start gap-2 text-destructive hover:text-destructive"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onRemoveBlock(b.id);
+                                      setMobilePopoverBlockId(null);
+                                      toast.success('Availability block deleted');
+                                    }}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />Delete
+                                  </Button>
+                                </div>
+                              ) : (
+                                /* Inline time editor */
+                                <div className="space-y-3">
+                                  <p className="text-xs text-muted-foreground font-medium">Edit times</p>
+                                  <div className="space-y-2">
+                                    <div>
+                                      <label className="text-xs text-muted-foreground">Start</label>
+                                      <Select value={editStart} onValueChange={setEditStart}>
+                                        <SelectTrigger className="h-8 text-xs">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="max-h-48">
+                                          {TIME_OPTIONS.map((opt) => (
+                                            <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                                              {opt.label}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div>
+                                      <label className="text-xs text-muted-foreground">End</label>
+                                      <Select value={editEnd} onValueChange={setEditEnd}>
+                                        <SelectTrigger className="h-8 text-xs">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="max-h-48">
+                                          {TIME_OPTIONS.map((opt) => (
+                                            <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                                              {opt.label}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <Button size="sm" className="flex-1 h-7 text-xs" onClick={() => handleSaveEdit(b)}>
+                                      Save
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="flex-1 h-7 text-xs"
+                                      onClick={() => {
+                                        setEditingBlockId(null);
+                                        setMobilePopoverBlockId(null);
+                                      }}
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </PopoverContent>
+                          </Popover>
+                        );
+                      }
+
+                      return blockEl;
+                    });
+                  })}
+
+                  {/* Booking chips (E6) */}
+                  {dayBookings.map((bk) => {
+                    const top = minutesToPx(bk.startMin);
+                    const height = Math.max(minutesToPx(bk.endMin) - top, 14);
                     return (
                       <div
-                        key={b.id}
-                        data-block
-                        className={cn(
-                          "absolute left-1 right-1 rounded-md border cursor-pointer transition-colors overflow-hidden",
-                          isConfirming
-                            ? "bg-destructive/20 border-destructive/50"
-                            : "bg-primary/15 border-primary/30 hover:bg-primary/25"
-                        )}
-                        style={{ top, height: Math.max(height, 14) }}
-                        onClick={() => handleDeleteClick(b.id)}
-                        title={isConfirming ? 'Click again to delete' : `${formatTime(startMin)} – ${formatTime(endMin)}\nClick to delete`}
+                        key={`bk-${bk.id}`}
+                        data-booking
+                        className="absolute left-1 right-1 rounded-md border border-accent bg-accent/30 cursor-pointer hover:bg-accent/50 transition-colors overflow-hidden z-[5]"
+                        style={{ top, height }}
+                        onClick={() => navigate(`/doctor/consultations/${bk.id}`)}
+                        title={`Booking: ${bk.patientName || 'Patient'}\n${formatTime(bk.startMin)} – ${formatTime(bk.endMin)}\nClick to view`}
                       >
-                        {height >= 24 && (
-                          <div className="px-1 py-0.5 text-[10px] leading-tight text-primary font-medium truncate">
-                            {formatTime(startMin)}
-                          </div>
-                        )}
-                        {height >= 40 && (
-                          <div className="px-1 text-[10px] leading-tight text-primary/70 truncate">
-                            {formatTime(endMin)}
+                        {height >= 14 && (
+                          <div className="px-1 py-0.5 text-[9px] leading-tight text-accent-foreground font-medium truncate flex items-center gap-0.5">
+                            <CalendarCheck className="h-2.5 w-2.5 shrink-0" />
+                            {bk.patientName || 'Booked'}
                           </div>
                         )}
                       </div>
@@ -275,25 +646,23 @@ export function AvailabilityGrid({
                   })}
 
                   {/* Drag preview */}
-                  {dragState && dragState.day === day && (
-                    (() => {
-                      const s = Math.min(dragState.startMin, dragState.currentMin);
-                      const e = Math.max(dragState.startMin, dragState.currentMin);
-                      if (e - s < SNAP_MINUTES) return null;
-                      const top = minutesToPx(s);
-                      const height = minutesToPx(e) - top;
-                      return (
-                        <div
-                          className="absolute left-1 right-1 rounded-md border-2 border-dashed border-primary/60 bg-primary/10 pointer-events-none"
-                          style={{ top, height }}
-                        >
-                          <div className="px-1 py-0.5 text-[10px] text-primary font-medium">
-                            {formatTime(s)} – {formatTime(e)}
-                          </div>
+                  {dragState && dragState.day === day && (() => {
+                    const s = Math.min(dragState.startMin, dragState.currentMin);
+                    const e = Math.max(dragState.startMin, dragState.currentMin);
+                    if (e - s < SNAP_MINUTES) return null;
+                    const top = minutesToPx(s);
+                    const height = minutesToPx(e) - top;
+                    return (
+                      <div
+                        className="absolute left-1 right-1 rounded-md border-2 border-dashed border-primary/60 bg-primary/10 pointer-events-none z-10"
+                        style={{ top, height }}
+                      >
+                        <div className="px-1 py-0.5 text-[10px] text-primary font-medium">
+                          {formatTime(s)} – {formatTime(e)}
                         </div>
-                      );
-                    })()
-                  )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             );
@@ -303,4 +672,3 @@ export function AvailabilityGrid({
     </div>
   );
 }
-
