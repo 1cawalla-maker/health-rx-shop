@@ -630,9 +630,9 @@ export function AvailabilityGrid({
                       <div
                         key={`bk-${bk.id}`}
                         data-booking
-                        className="absolute left-1 right-1 rounded-md border border-accent bg-accent/30 cursor-pointer hover:bg-accent/50 transition-colors overflow-hidden z-[5]"
-                        style={{ top, height }}
-                        onClick={() => navigate(`/doctor/consultations/${bk.id}`)}
+                        className="absolute left-1 right-1 rounded-md border border-accent bg-accent/30 cursor-pointer hover:bg-accent/50 transition-colors overflow-hidden z-20 pointer-events-auto"
+                        style={{ top, height: Math.max(height, 18), marginTop: 1, marginBottom: 1 }}
+                        onClick={() => navigate(`/doctor/consultation/${bk.id}`)}
                         title={`Booking: ${bk.patientName || 'Patient'}\n${formatTime(bk.startMin)} – ${formatTime(bk.endMin)}\nClick to view`}
                       >
                         {height >= 14 && (
