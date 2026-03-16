@@ -20,37 +20,38 @@ export default function DoctorRegistration() {
     setSignature(sig?.signatureDataUrl || null);
   }, [user?.id]);
 
-  const ctx = useMemo(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return null;
-    return canvas.getContext('2d');
-  }, [canvasRef.current]);
-
   const start = (e: React.PointerEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
     setDrawing(true);
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     ctx.strokeStyle = '#111827';
     ctx.beginPath();
-    const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
+    const rect = canvas.getBoundingClientRect();
     ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
   };
 
   const move = (e: React.PointerEvent) => {
-    if (!drawing || !ctx) return;
-    const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
+    if (!drawing) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const rect = canvas.getBoundingClientRect();
     ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
     ctx.stroke();
   };
 
-  const end = () => {
-    setDrawing(false);
-  };
+  const end = () => setDrawing(false);
 
   const clear = () => {
     const canvas = canvasRef.current;
-    if (!canvas || !ctx) return;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   };
 

@@ -64,7 +64,7 @@ export default function DoctorAvailability() {
           dayOfWeek,
           startMin,
           endMin: startMin + 5, // 5-min consult
-          patientName: undefined, // Phase 1: no patient name in mock bookings
+          patientName: undefined,
         };
       });
   }, [user?.id, blocks]); // re-derive when blocks change (proxy for refresh)
