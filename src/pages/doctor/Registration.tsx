@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 
 export default function DoctorRegistration() {
   const { user } = useAuth();
