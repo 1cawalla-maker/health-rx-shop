@@ -25,8 +25,7 @@ export function PaymentPlaceholder({
     <div className="space-y-6">
       <Alert className="bg-amber-500/10 border-amber-500/30">
         <AlertDescription className="text-amber-700">
-          <strong>Development Mode:</strong> Payment processing will be integrated in a future update. 
-          Click "Place Order" to simulate a successful order.
+          <strong>Note:</strong> Payment processing is coming soon. Click "Place Order" to continue.
         </AlertDescription>
       </Alert>
 
