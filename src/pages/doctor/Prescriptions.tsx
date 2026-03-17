@@ -44,7 +44,6 @@ export default function DoctorPrescriptions() {
                     </CardTitle>
                     <CardDescription>Issued ID: {rx.id}</CardDescription>
                   </div>
-                  <Badge variant="outline">Local</Badge>
                 </div>
               </CardHeader>
               <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
