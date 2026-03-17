@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText } from 'lucide-react';
-import { FileText } from 'lucide-react';
 import { issuedPrescriptionService, type IssuedPrescriptionRecord } from '@/services/issuedPrescriptionService';
 
 export default function DoctorPrescriptions() {
