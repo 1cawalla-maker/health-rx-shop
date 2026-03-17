@@ -66,19 +66,17 @@ export function PrescriptionForm({
       return;
     }
 
-    // Phase 1: doctor-side prescription issuance is disabled (no Supabase writes).
     setIsIssuing(true);
 
     try {
       if (!ENABLE_PRESCRIPTION_PDF) {
-        toast.error('Prescription issuing will be enabled in Phase 2');
+        toast.error('Prescription issuing is not available yet');
         return;
       }
 
-      // If someone flips ENABLE_PRESCRIPTION_PDF without wiring Phase 2, fail loudly.
       await prescriptionFileService.uploadPrescriptionFile(new File([], 'placeholder.pdf'), doctorId);
     } catch (err: any) {
-      toast.error(err.message || 'Prescription issuing will be enabled in Phase 2');
+      toast.error(err.message || 'Prescription issuing is not available yet');
     } finally {
       setIsIssuing(false);
     }
