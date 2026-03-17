@@ -1,9 +1,6 @@
 /**
- * Per-week remittance metadata service.
- *
- * Phase 1: localStorage-backed. Each entry stores a URL pointing to
- * an external remittance document (e.g. Google Drive link).
- * Phase 2: will be replaced by Supabase table with signed-URL storage paths.
+ * Per-week remittance metadata service (localStorage-backed).
+ * Each entry stores a URL pointing to an external remittance document.
  */
 
 const STORAGE_KEY = 'healthrx_doctor_remittances';

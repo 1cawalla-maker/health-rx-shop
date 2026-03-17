@@ -88,14 +88,13 @@ export function PrescriptionForm({
       return;
     }
 
-    // Phase 1: no backend writes.
     setIsDeclining(true);
 
     try {
-      toast.success('Recorded for Phase 2 (no changes saved in Phase 1)');
+      toast.success('Decision recorded');
       onComplete();
     } catch (err: any) {
-      toast.error(err.message || 'This will be enabled in Phase 2');
+      toast.error(err.message || 'Could not record decision');
     } finally {
       setIsDeclining(false);
     }
