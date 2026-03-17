@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { FileText } from 'lucide-react';
 import { issuedPrescriptionService, type IssuedPrescriptionRecord } from '@/services/issuedPrescriptionService';
 
@@ -44,7 +43,6 @@ export default function DoctorPrescriptions() {
                     </CardTitle>
                     <CardDescription>Issued ID: {rx.id}</CardDescription>
                   </div>
-                  <Badge variant="outline">Local</Badge>
                 </div>
               </CardHeader>
               <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
