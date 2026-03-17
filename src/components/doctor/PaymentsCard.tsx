@@ -16,7 +16,7 @@ export function PaymentsCard(props: { doctorId: string; bookingId: string }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <DollarSign className="h-5 w-5 text-primary" />
-          Payment (Mock)
+          Payment
         </CardTitle>
         <CardDescription>Phase 1: tracked locally; Phase 2 will use Stripe payouts</CardDescription>
       </CardHeader>
