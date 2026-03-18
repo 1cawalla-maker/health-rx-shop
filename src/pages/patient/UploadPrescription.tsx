@@ -15,12 +15,12 @@ export default function UploadPrescription() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
-            Prescription Upload Coming Soon
+            Upload a Prescription
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-sm text-muted-foreground">
           <p>
-            Prescription upload is coming soon. In the meantime, book a consultation to have a doctor issue your prescription directly.
+            Prescription uploads aren't available in the app yet. To get started, book a consultation and your doctor can issue your prescription during the call.
           </p>
           <Button asChild>
             <Link to="/patient/book">
