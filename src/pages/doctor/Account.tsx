@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { doctorSignatureService } from '@/services/doctorSignatureService';
 import { doctorPayoutProfileService, type DoctorPayoutProfile } from '@/services/doctorPayoutProfileService';
+import { doctorProfileService } from '@/services/doctorProfileService';
 import { userPreferencesService } from '@/services/userPreferencesService';
 import { AU_TIMEZONE_OPTIONS } from '@/lib/timezones';
 import { formatAbn } from '@/lib/abnValidation';
@@ -13,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2, User, Landmark, Pencil, X } from 'lucide-react';
+import { Trash2, User, Landmark, Pencil, X, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
 function maskAccount(acc: string): string {
@@ -28,11 +29,13 @@ export default function DoctorAccount() {
   const [signature, setSignature] = useState<string | null>(null);
   const [timezone, setTimezone] = useState('Australia/Brisbane');
 
-  // Doctor profile fields (read-only, fetched from DB)
+  // Doctor identity fields (editable)
+  const [fullName, setFullName] = useState('');
   const [ahpra, setAhpra] = useState('');
   const [providerNum, setProviderNum] = useState('');
   const [phone, setPhone] = useState('');
   const [practiceLocation, setPracticeLocation] = useState('');
+  const [profileSaving, setProfileSaving] = useState(false);
 
   // Payout profile
   const [payoutProfile, setPayoutProfile] = useState<DoctorPayoutProfile | null>(null);
@@ -70,20 +73,52 @@ export default function DoctorAccount() {
 
     loadPayout(user.id);
 
-    supabase
-      .from('doctors')
-      .select('ahpra_number, provider_number, phone, practice_location')
-      .eq('user_id', user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data) {
-          setAhpra(data.ahpra_number || '');
-          setProviderNum(data.provider_number || '');
-          setPhone(data.phone || '');
-          setPracticeLocation(data.practice_location || '');
-        }
-      });
+    // Load identity from local service first
+    const localProfile = doctorProfileService.getProfile(user.id);
+    if (localProfile) {
+      setFullName(localProfile.fullName);
+      setAhpra(localProfile.ahpraNumber);
+      setProviderNum(localProfile.providerNumber);
+      setPhone(localProfile.phone);
+      setPracticeLocation(localProfile.practiceLocation);
+    } else {
+      // One-time hydration from Supabase
+      supabase
+        .from('doctors')
+        .select('ahpra_number, provider_number, phone, practice_location')
+        .eq('user_id', user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          const hydrated = {
+            fullName: user.user_metadata?.full_name || '',
+            ahpraNumber: data?.ahpra_number || '',
+            providerNumber: data?.provider_number || '',
+            phone: data?.phone || '',
+            practiceLocation: data?.practice_location || '',
+          };
+          doctorProfileService.hydrateFromRemote(user.id, hydrated);
+          setFullName(hydrated.fullName);
+          setAhpra(hydrated.ahpraNumber);
+          setProviderNum(hydrated.providerNumber);
+          setPhone(hydrated.phone);
+          setPracticeLocation(hydrated.practiceLocation);
+        });
+    }
   }, [user?.id]);
+
+  const saveProfile = () => {
+    if (!user?.id) return;
+    setProfileSaving(true);
+    doctorProfileService.upsertProfile(user.id, {
+      fullName,
+      ahpraNumber: ahpra,
+      providerNumber: providerNum,
+      phone,
+      practiceLocation,
+    });
+    setProfileSaving(false);
+    toast.success('Profile details saved');
+  };
 
   const start = (e: React.PointerEvent) => {
     const canvas = canvasRef.current;
@@ -112,14 +147,14 @@ export default function DoctorAccount() {
     if (ctx) ctx.clearRect(0, 0, c.width, c.height);
   };
 
-  const save = () => {
+  const saveSig = () => {
     if (!user?.id) { toast.error('Please sign in'); return; }
     const canvas = canvasRef.current; if (!canvas) return;
     const dataUrl = canvas.toDataURL('image/png');
     doctorSignatureService.saveSignature(user.id, dataUrl);
     setSignature(dataUrl); toast.success('Signature saved');
   };
-  const remove = () => {
+  const removeSig = () => {
     if (!user?.id) return;
     doctorSignatureService.clearSignature(user.id); setSignature(null); clear(); toast.success('Signature removed');
   };
@@ -172,22 +207,46 @@ export default function DoctorAccount() {
         <p className="text-muted-foreground mt-1">Doctor profile and settings</p>
       </div>
 
-      {/* Profile Info */}
+      {/* Profile Info — Editable */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><User className="h-5 w-5 text-primary" />Profile</CardTitle>
           <CardDescription>Your registered details</CardDescription>
-          <p className="text-xs text-muted-foreground mt-1">To update your registered details, please contact support.</p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1"><Label>Legal Name</Label><Input value={user?.user_metadata?.full_name || '—'} readOnly className="bg-muted/30" /></div>
-            <div className="space-y-1"><Label>Email</Label><Input value={user?.email || '—'} readOnly className="bg-muted/30" /></div>
-            <div className="space-y-1"><Label>AHPRA Number</Label><Input value={ahpra || '—'} readOnly className="bg-muted/30" /></div>
-            <div className="space-y-1"><Label>Provider Number</Label><Input value={providerNum || '—'} readOnly className="bg-muted/30" /></div>
-            <div className="space-y-1"><Label>Phone</Label><Input value={phone || '—'} readOnly className="bg-muted/30" /></div>
-            <div className="space-y-1"><Label>Practice Location</Label><Input value={practiceLocation || '—'} readOnly className="bg-muted/30" /></div>
+            <div className="space-y-1">
+              <Label>Legal Name</Label>
+              <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Full legal name" />
+            </div>
+            <div className="space-y-1">
+              <Label>Email</Label>
+              <div className="flex items-center gap-2">
+                <Input value={user?.email || '—'} readOnly className="bg-muted/30" />
+                <Badge variant="outline">Read-only</Badge>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>AHPRA Number</Label>
+              <Input value={ahpra} onChange={(e) => setAhpra(e.target.value)} placeholder="MED0001234567" />
+            </div>
+            <div className="space-y-1">
+              <Label>Provider Number</Label>
+              <Input value={providerNum} onChange={(e) => setProviderNum(e.target.value)} placeholder="1234567A" />
+            </div>
+            <div className="space-y-1">
+              <Label>Phone</Label>
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+61 4xx xxx xxx" />
+            </div>
+            <div className="space-y-1">
+              <Label>Practice Location</Label>
+              <Input value={practiceLocation} onChange={(e) => setPracticeLocation(e.target.value)} placeholder="City, State" />
+            </div>
           </div>
+          <Button onClick={saveProfile} disabled={profileSaving} className="gap-2">
+            <Save className="h-4 w-4" />
+            {profileSaving ? 'Saving...' : 'Save Profile'}
+          </Button>
         </CardContent>
       </Card>
 
@@ -298,8 +357,8 @@ export default function DoctorAccount() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={clear}>Clear</Button>
-            <Button onClick={save}>Save Signature</Button>
-            <Button variant="outline" onClick={remove} className="gap-2"><Trash2 className="h-4 w-4" />Remove</Button>
+            <Button onClick={saveSig}>Save Signature</Button>
+            <Button variant="outline" onClick={removeSig} className="gap-2"><Trash2 className="h-4 w-4" />Remove</Button>
           </div>
           {signature && (
             <div className="border rounded-lg p-4">

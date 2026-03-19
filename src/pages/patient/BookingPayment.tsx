@@ -194,7 +194,7 @@ export default function BookingPayment() {
             <CardDescription>Your payment is secure and encrypted</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Mock payment form - disabled inputs */}
+            {/* Payment form */}
             <div className="space-y-2">
               <Label>Card Number</Label>
               <Input 
