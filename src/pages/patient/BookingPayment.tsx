@@ -90,7 +90,7 @@ export default function BookingPayment() {
 
     setProcessing(true);
 
-    // Simulate payment processing delay
+    
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     const confirmed = mockBookingService.confirmPayment(bookingId);
