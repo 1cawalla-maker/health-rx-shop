@@ -1,387 +1,162 @@
 
-# Phase 1 Doctor Portal Fixes — Onboarding, Payslips, Availability & Cleanup (Rev 5)
 
-## Summary
+## Phase 1 MVP Polish — Portals (Revised Plan)
 
-Make doctor portal onboarding + payments + availability fast and obvious. Constraints: Phase 1 mock/localStorage only for business flows; Supabase Auth only; no new dependencies; UI never touches localStorage directly (services only). Migration readiness: new data behind services with TODO(phase2) notes for Supabase tables + RLS; cents ints; UTC ISO timestamps. Remove ALL user-visible "Phase 1/Phase 2/stub/mock/dev/[DEV]" copy from doctor pages touched.
+### A) Copy/Label Cleanup
 
----
-
-## Hard Constraints
-
-- No new dependencies.
-- Business flows remain mock/localStorage for Phase 1 (Supabase Auth only).
-- **UI must never call localStorage directly** — all reads/writes go through services.
-- Remove ALL user-visible "Phase 1 / Phase 2 / stub / mock / dev / [DEV]" copy from doctor pages touched.
-- Money in cents; display via `formatAudFromCents()`.
-- Doctors are contractors paid per consultation. Xero is Phase 2 system of record.
-- ABN is required.
-
----
-
-## A) Payout Profile — editable in BOTH Onboarding and Account
-
-### A1. Service (Phase 1 localStorage)
-
-**File**: `src/services/doctorPayoutProfileService.ts` (UPDATE existing)
-
-- Key: `doctor:{uid}:payout_profile`
-- Type `DoctorPayoutProfile`:
-  ```typescript
-  { abn, entityName, gstRegistered, remittanceEmail, bsb, accountNumber, accountName, createdAtUtc, updatedAtUtc }
-  ```
-- Validation:
-  - ABN: ATO checksum algorithm (see section F)
-  - BSB: 6 digits
-  - accountNumber: 6–10 digits
-  - required: entityName, accountName, remittanceEmail (valid email format)
-- API: `getProfile`, `upsertProfile`, `validateProfile`
-- TODO(phase2): replace backing with Supabase table `doctor_payout_profiles` (RLS: `user_id = auth.uid()`)
-
-### A2. Doctor Account page
-
-**File**: `src/pages/doctor/Account.tsx`
-
-- Add "Payout Details" section:
-  - Display current payout profile (masked account number except last 2–3 digits)
-  - "Edit" → inline form using `doctorPayoutProfileService`
-  - Save updates `updatedAtUtc`
-  - No phase language.
-
-### A3. Onboarding page
-
-**File**: `src/pages/doctor/Onboarding.tsx`
-
-- Step 1: Signature capture (reuse existing signature pad/service)
-- Step 2: Payout Details form (ABN + entity name + GST + remittance email + bank details)
-- Completion rule: doctor is "ready" only when BOTH signature saved and payout profile validates.
+| # | File | Before | After |
+|---|------|--------|-------|
+| A1 | `PaymentPlaceholder.tsx` L26–30 | Amber alert: "Note: Payment processing is coming soon…" | **Remove entire `<Alert>` block** |
+| A2 | `PaymentPlaceholder.tsx` L38–40 | `Secure payment powered by Stripe (coming soon)` | `Secure payment processing` |
+| A3 | `PaymentPlaceholder.tsx` L43 | `{/* Mock Payment Form */}` | `{/* Payment Form */}` |
+| A4 | `Shop.tsx` L51 | `// Combine context and hook - prefer mock/hook for Phase 1 testing` | `// Combine context and hook` |
+| A5 | `Shop.tsx` L55 | `// Use prescription strength or default to 9 for mock` | `// Use prescription strength or default` |
+| A6 | `BookingPayment.tsx` L93 | `// Simulate payment processing delay` | Remove comment |
+| A7 | `BookingPayment.tsx` L197 | `{/* Mock payment form - disabled inputs */}` | `{/* Payment form */}` |
+| A8 | `Account.tsx` (patient) L33 | `// Load from local profile service` | Remove comment |
+| A9 | `Account.tsx` (patient) L99 | `// Save to local profile service` | Remove comment |
+| A10 | `CartDrawer.tsx` L69 | `{/* Product Image Placeholder */}` | `{/* Product Image */}` |
 
 ---
 
-## B) Centralised Onboarding Gate
+### B) Patient Upload Prescription — Working Flow
 
-### B1. Route allowlist constant
+**New file: `src/services/prescriptionBlobService.ts`**
 
-**File**: `src/constants/routing.ts` (NEW)
-
-```typescript
-/**
- * Route prefixes accessible before doctor onboarding is complete.
- * Deny-by-default: any /doctor/* route not matching these prefixes
- * redirects to /doctor/onboarding.
- * Matching strategy: prefix match on pathname (startsWith).
- */
-export const PRE_ONBOARDING_ALLOWED_ROUTE_PREFIXES = [
-  '/doctor/onboarding',
-  '/doctor/account',
-  '/doctor/availability',
-  '/doctor/earnings',
-  '/doctor/info',
-  '/doctor/payslips',
-] as const;
-```
-
-**Blocked by default** (not in allowlist): `/doctor/consultations*`, `/doctor/prescriptions*`, `/doctor/dashboard*`, and any future `/doctor/*` routes.
-
-### B2. Hook: `src/hooks/useDoctorReadiness.ts`
-
-```typescript
-export function useDoctorReadiness(): { ready: boolean; loading: boolean }
-```
-
-- Checks:
-  1. Signature saved: `doctorSignatureService.getSignature(user.id) !== null`
-  2. Payout profile valid: `doctorPayoutProfileService.isComplete(user.id)`
-- Returns `{ ready: true }` only when BOTH conditions are met.
-
-### B3. Gate placement in DoctorLayout
-
-**File**: `src/components/layout/DoctorLayout.tsx`
-
-- Call `useDoctorReadiness()`
-- If `!ready`:
-  - Check if `location.pathname` matches any prefix in `PRE_ONBOARDING_ALLOWED_ROUTE_PREFIXES` (via `startsWith`)
-  - If NO match → `<Navigate to="/doctor/onboarding" replace />`
-  - If YES match → render `<Outlet />` but show **onboarding banner** (see B4)
-- If `ready` → render `<Outlet />` normally (no banner)
-
-### B4. Onboarding banner
-
-When `!ready` AND on an allowlisted route (excluding `/doctor/onboarding` itself):
-
-- Render a persistent info banner at the top of the main content area (inside `<main>`, above `<Outlet />`).
-- Copy: "Complete your onboarding to start receiving consultations." with a "Complete Setup →" link to `/doctor/onboarding`.
-- Styled as a non-dismissible info alert using the existing `Alert` component.
-- On `/doctor/onboarding` route: do NOT show the banner (redundant).
-
-### B5. Partial save behaviour
-
-- Signature can be saved independently (immediately) when captured on the canvas.
-- Payout profile is saved on explicit "Save" click.
-- Onboarding completion requires BOTH signature saved + payout profile validates.
-- If doctor leaves mid-flow, they will be redirected back (or see banner) on next visit until complete.
-
----
-
-## C) Billable Consultation Statuses (Business Rule)
-
-**Rule**: `no_answer` consults are paid (same as `completed`). An attempted consultation is billable — the doctor's time was allocated and the call was attempted.
-
-**File**: `src/services/doctorEarningsService.ts`
-
-Rename `PAID_STATUSES` → `BILLABLE_CONSULT_STATUSES` with JSDoc:
-
-```typescript
-/**
- * Billable consultation statuses.
- * Business rule: attempted consults (no_answer) are billable because
- * the doctor's time was allocated and the call was attempted.
- * To change this policy, update this constant.
- */
-export const BILLABLE_CONSULT_STATUSES: BookingStatus[] = ['completed', 'no_answer'];
-```
-
----
-
-## D) Weekly Payslips (auto-derived; no manual generation)
-
-### D1. Service
-
-**File**: `src/services/doctorPayslipService.ts` (UPDATE existing)
-
-- Key: `doctor:{uid}:payslips`
-- Payslip model:
-  ```typescript
-  {
-    id: string,              // e.g. "2026-W10"
-    weekStartUtc: string,    // ISO Monday 00:00 UTC
-    weekEndUtc: string,      // ISO Sunday 23:59 UTC
-    consultCount: number,
-    grossCents: number,
-    status: 'draft' | 'paid',
-    paidAtUtc?: string | null,
-    xeroReference?: string | null,
-    createdAtUtc: string,
-    lines: PayslipLineItem[]
-  }
-  ```
-- Week boundary: Monday 00:00 → Sunday 23:59, stored as UTC ISO boundaries.
-- Generation:
-  - Expose `ensurePayslipsUpToDate(uid)`: creates missing weeks by deriving from `doctorEarningsService` booking history.
-  - UI triggers `ensurePayslipsUpToDate` on page load; there is **NO** "Generate payslip" button.
-- TODO(phase2): payslips come from Supabase ledger and link to Xero bill/payment via `xeroReference`.
-
-### D2. UI
-
-**File**: `src/pages/doctor/Earnings.tsx`
-
-- Replace current content with:
-  - Summary cards (total/pending/paid) — keep existing
-  - Payout Ledger — keep existing
-  - **Payslips section**: Weekly payslips list (week range formatted)
-  - Each row: week range, consultCount, gross formatted AUD, status, "View" button
-  - View → `window.open('/doctor/payslips/{id}/print', '_blank')`
-  - Remove manual "Generate Payslip" button and month/year selectors
-  - On mount: call `doctorPayslipService.ensurePayslipsUpToDate(user.id)`
-
-### D3. Print view
-
-**File**: `src/pages/doctor/PayslipPrint.tsx` (UPDATE existing)
-
-- Update to use `grossCents` instead of `totalCents`, `createdAtUtc` instead of `generatedAt`
-- Minimal layout (no sidebar/nav)
-- "Print" button calls `window.print()`
-- Print CSS for clean output
-
----
-
-## E) Availability UX — Visual Weekly Grid (5-minute snap)
-
-### E1. Data shape (compatible with existing availability blocks)
-
-- Continue storing recurring weekly availability as blocks: `{ dayOfWeek, startTime, endTime, timezone }`
-- Enforce 5-minute increments on start/end times
-- Service remains the only localStorage boundary (`mockAvailabilityService`)
-
-### E2. Component
-
-**File**: `src/components/doctor/AvailabilityGrid.tsx` (UPDATE existing)
-
-- UI:
-  - Columns: days Mon–Sun
-  - Rows/time axis: 6 AM–11 PM with visible ticks every 30/60m; selection snaps to 5m
-  - Interactions — see E3–E6 below
-  - Helper actions:
-    - "Copy Monday → Weekdays"
-    - "Clear Week"
-    - "Set 9–5 Weekdays" preset
-  - Inline validation:
-    - Prevent overlaps per day (including booking-occupied intervals)
-    - Ensure end > start
-
-### E3. Auto-scroll while dragging to create/resize blocks
-
-**File**: `src/components/doctor/AvailabilityGrid.tsx`
-
-- The time grid uses a single scroll container (the outer `overflow-x-auto` div, or a new wrapper with `overflow-y-auto` if needed). Avoid nested scroll conflicts.
-- When drag is active and pointer is within ~40 px of the top/bottom edge of the scroll container:
-  - Continuously adjust `scrollTop` using `requestAnimationFrame`.
-  - Maintain 5-minute snapping while scrolling.
-  - Speed: ~4 px/frame (~240 px/s at 60 fps).
-- Use pointer capture (`setPointerCapture`) so drag continues smoothly even if the cursor briefly leaves the column.
-- Stop auto-scroll when drag ends (mouseup / pointerup).
-
-### E4. Block selection + immediate delete
-
-**Desktop**:
-- Click a block to **select** it (visible ring/outline using `ring-2 ring-primary`).
-- Press `Backspace` or `Delete` key to remove the selected block immediately (no confirmation dialog).
-- Show a toast: `"Availability block deleted"`. No undo needed (existing toast infra doesn't support action callbacks cleanly).
-- Clicking elsewhere or pressing `Escape` deselects.
-
-**Mobile**:
-- Tap a block to open a `Popover` (from `@/components/ui/popover`) anchored to the block with two actions:
-  - **Edit times** — opens the inline time editor (see E5).
-  - **Delete** — removes immediately with toast.
-
-### E5. Edit times by clicking the time label
-
-- Clicking the **time label** (top-left of a block, the start-time text) opens an **inline editor**:
-  - Two `<Select>` dropdowns (from `@/components/ui/select`): Start time and End time, both populated with 5-minute increments within the grid range (06:00–23:00).
-  - "Save" button applies the change immediately; "Cancel" closes without saving.
-- The editor is rendered as a `Popover` anchored to the block.
-- Validation:
-  - `end > start`
-  - No overlap with other blocks on the same day (excluding the block being edited).
-  - Toast error on violation; editor stays open.
-- On save: call `onRemoveBlock(oldId)` then `onAddBlock(day, newStart, newEnd)` (atomic from UI perspective; parent page handles service calls).
-
-### E6. Booking overlay + split availability around bookings
-
-**Props change**: Add optional prop to `AvailabilityGrid`:
-```typescript
-bookings?: Array<{
+```ts
+interface PrescriptionBlob {
   id: string;
-  dayOfWeek: number;
-  startMin: number;  // minutes from midnight
-  endMin: number;
-  patientName?: string;
-}>;
+  patientId: string;
+  fileName: string;
+  fileType: string;
+  sizeBytes: number;
+  uploadedAt: string;
+  // blob stored in IDB value
+}
+
+interface PrescriptionBlobService {
+  saveBlob(patientId: string, file: File): Promise<{ id: string }>;
+  listBlobs(patientId: string): Promise<PrescriptionBlob[]>;
+  getBlob(id: string): Promise<Blob | null>;
+  removeBlob(id: string): Promise<void>;
+}
 ```
 
-**1) Derive bookings for display**
+- DB name: `healthrx_prescriptions`, store: `uploads`, indexed by `patientId`.
+- **`onupgradeneeded`**: guard with `if (!db.objectStoreNames.contains('uploads'))` before creating store.
+- Phase 2: swap internals to Supabase Storage — interface unchanged.
 
-**File**: `src/pages/doctor/Availability.tsx`
+**Updated: `src/services/prescriptionUploadService.ts`**
+- `createUpload()` calls `prescriptionBlobService.saveBlob()` instead of `fileStorageService`.
+- `getFileDownloadUrl()` calls `prescriptionBlobService.getBlob()` then `URL.createObjectURL()`.
+- `getPatientUploads()` merges blob metadata with localStorage records.
 
-- Import `doctorPortalService.getDoctorBookings(user.id)` (existing).
-- Map upcoming bookings (status `booked` or `in_progress`) to the `bookings` prop shape:
-  - Convert `scheduledDate` + `timeWindowStart` to `dayOfWeek` and `startMin`.
-  - Assume 5-min consult duration: `endMin = startMin + 5`.
-- Pass the mapped array to `<AvailabilityGrid bookings={...} />`.
-
-**2) Split availability visually**
-
-- When rendering availability blocks, subtract booked intervals from the **visual representation**:
-  - e.g. availability 09:00–12:00 with booking at 10:00–10:05 renders as two visual segments: 09:00–10:00 and 10:05–12:00.
-  - Both segments share the same block ID for editing/deletion purposes.
-- The **underlying stored availability block is unchanged** — the split is render-time only.
-- Editing rules:
-  - Cannot create/move/resize an availability block to overlap a booking.
-  - Show inline toast error if attempted: `"Cannot overlap with a scheduled booking"`.
-
-**3) Booking chip rendering**
-
-- Each booking renders as a non-draggable chip at its scheduled time range.
-- Styling: distinct from availability blocks — use `bg-accent` background, `border-accent` border, and a small calendar/user icon.
-- Display patient name (truncated) if available.
-- Non-interactive on the grid (cannot drag/resize/delete).
-
-**4) Booking click action**
-
-- Clicking a booking chip navigates to that booking's consultation page: `/doctor/consultations/${booking.id}`.
-- Use `useNavigate()` from react-router-dom.
-
-### E7. Page integration
-
-**File**: `src/pages/doctor/Availability.tsx`
-
-- Pass `bookings` prop to `<AvailabilityGrid>`.
-- Keep timezone warning copy but remove any phase/dev wording.
+**Rewritten: `src/pages/patient/UploadPrescription.tsx`**
+- **Pre-write validation**: Before calling `saveBlob`/`createUpload`, validate:
+  - File type: `.pdf, .jpg, .jpeg, .png` only.
+  - File size: max 10 MB. Show toast error if exceeded.
+- File input + upload button.
+- List of uploads: fileName, date, status badge, view/download, remove.
+- Empty state: guidance text + "Book a Consultation" CTA.
+- **Object URL lifecycle**:
+  - Store created object URLs in component state (e.g. `Map<string, string>`).
+  - `useEffect` cleanup calls `URL.revokeObjectURL()` for all active URLs.
+  - On item remove: revoke that item's URL before deleting.
 
 ---
 
-## F) ABN Checksum Algorithm
+### C) Account Pages — Fully Editable via Local Services (3A)
 
-**File**: `src/lib/abnValidation.ts` (EXISTS — no changes needed)
+**Current state violates Phase 1 constraint**: Patient Account currently writes to Supabase `profiles` table on save (lines 111–118). Doctor Account has identity fields (name, AHPRA, provider number, phone, practice location) as read-only from Supabase (lines 73–85, 184–189).
 
-ATO algorithm:
-1. Subtract 1 from the first digit
-2. Weights: `[10, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19]`
-3. Sum products
-4. Valid if `sum % 89 === 0`
+#### C1: New file — `src/services/doctorProfileService.ts`
 
----
+localStorage-backed service for doctor identity fields. Key: `doctor:{uid}:profile`.
 
-## G) Copy Sweep (required)
+```ts
+export interface DoctorProfile {
+  fullName: string;
+  email: string;
+  ahpraNumber: string;
+  providerNumber: string;
+  phone: string;
+  practiceLocation: string;
+  updatedAt: string;
+}
 
-Remove all user-visible text containing Phase 1/Phase 2/stub/mock/dev/[DEV] in doctor portal pages, including:
+export const doctorProfileService = {
+  getProfile(uid: string): DoctorProfile | null;
+  upsertProfile(uid: string, patch: Partial<DoctorProfile>): void;
+};
+```
 
-- `src/pages/doctor/Patients.tsx` — replace Phase1Stub with neutral "coming soon" or remove page
-- `src/pages/doctor/PatientDetail.tsx` — same
-- `src/pages/doctor/ConsultationView.tsx` — remove "Phase 2" text in Patient Summary and Patient History cards; replace with neutral placeholders
-- `src/pages/doctor/Earnings.tsx` — remove any remaining phase language
-- `src/components/doctor/Phase1Stub.tsx` — can be deleted if no longer referenced
+- On first load, seed from Supabase `doctors` table + `user_metadata` (one-time hydration into localStorage).
+- All subsequent reads/writes are local only.
+- Phase 2: swap internals to Supabase update — interface unchanged.
 
----
+#### C2: Update `src/pages/doctor/Account.tsx`
 
-## Files Changed Summary
+- Import `doctorProfileService`.
+- Load identity fields from `doctorProfileService.getProfile()` (falls back to Supabase hydration on first visit).
+- **Remove read-only constraint** on Legal Name, AHPRA, Provider Number, Phone, Practice Location — all editable.
+- Remove "To update your registered details, please contact support." text.
+- Save calls `doctorProfileService.upsertProfile()` (local only).
+- Email remains read-only (from `user.email`).
 
-| File | Action | Purpose |
-|------|--------|---------|
-| `src/constants/routing.ts` | NEW | `PRE_ONBOARDING_ALLOWED_ROUTE_PREFIXES` constant |
-| `src/components/doctor/AvailabilityGrid.tsx` | UPDATE | Auto-scroll drag, selection+delete, inline time edit, booking overlay |
-| `src/pages/doctor/Availability.tsx` | UPDATE | Pass bookings prop to grid |
-| `src/services/doctorPayoutProfileService.ts` | UPDATE | Add entityName, gstRegistered, remittanceEmail; upsertProfile/validateProfile API |
-| `src/services/doctorPayslipService.ts` | UPDATE | Weekly (Mon–Sun) auto-derived payslips; ensurePayslipsUpToDate |
-| `src/services/doctorEarningsService.ts` | UPDATE | Rename to BILLABLE_CONSULT_STATUSES |
-| `src/hooks/useDoctorReadiness.ts` | UPDATE | No change (already correct) |
-| `src/components/layout/DoctorLayout.tsx` | UPDATE | Prefix-match gate using PRE_ONBOARDING_ALLOWED_ROUTE_PREFIXES + onboarding banner |
-| `src/pages/doctor/Onboarding.tsx` | UPDATE | Add entityName, GST, remittance email fields |
-| `src/pages/doctor/Account.tsx` | UPDATE | Add editable Payout Details section with masked display |
-| `src/pages/doctor/Earnings.tsx` | UPDATE | Auto-derived weekly payslips; remove generate button |
-| `src/pages/doctor/PayslipPrint.tsx` | UPDATE | Use grossCents/createdAtUtc |
-| `src/pages/doctor/Patients.tsx` | UPDATE | Remove phase copy |
-| `src/pages/doctor/PatientDetail.tsx` | UPDATE | Remove phase copy |
-| `src/pages/doctor/ConsultationView.tsx` | UPDATE | Remove phase copy from patient summary/history |
+#### C3: Update `src/pages/patient/Account.tsx`
 
----
-
-## Implementation Order
-
-1. `src/constants/routing.ts` (new routing constant)
-2. Update services: `doctorPayoutProfileService.ts`, `doctorEarningsService.ts`, `doctorPayslipService.ts`
-3. Update `DoctorLayout.tsx` (prefix-match gate + banner)
-4. Update `Onboarding.tsx` (new payout fields)
-5. Update `Account.tsx` (payout details section)
-6. Update `Earnings.tsx` (auto-derived weekly payslips)
-7. Update `PayslipPrint.tsx` (fix field names)
-8. **Update `AvailabilityGrid.tsx`** (E3: auto-scroll, E4: selection+delete, E5: inline time edit, E6: booking overlay)
-9. **Update `Availability.tsx`** (E7: pass bookings prop)
-10. Copy sweep: `Patients.tsx`, `PatientDetail.tsx`, `ConsultationView.tsx`
+- **Remove Supabase `profiles` write** (lines 111–118). Save calls `userProfileService.upsertProfile()` only.
+- **Remove Supabase `profiles` read fallback** (lines 44–59). Load from `userProfileService` only.
+- On first visit with no local data, seed from `user_metadata` (name) — no Supabase query.
+- Phase 2: swap `userProfileService` internals to Supabase — UI unchanged.
 
 ---
 
-## QA Checklist (Section E)
+### D) Remove DevPrescriptionToggle
 
-- [ ] Drag-create a block, keep dragging beyond bottom edge → grid auto-scrolls; blocks can be created past 7 PM.
-- [ ] Desktop: click block to select (ring visible) → press Backspace/Delete → block removed immediately with toast.
-- [ ] Mobile: tap block → popover with "Edit times" and "Delete" → Delete removes immediately.
-- [ ] Click time label on block → popover with Start/End selects → change times → Save → block updates; overlap rejected with toast.
-- [ ] Booking chip appears at correct time slot with accent styling and is clickable → navigates to consultation page.
-- [ ] Availability visually splits around a booking (two segments shown for one block).
-- [ ] Cannot create/resize availability to overlap a booking → toast error shown.
-- [ ] Escape / click-away deselects a selected block.
+#### D1: Consumer audit
+
+`mockEnabled` and `setMockPrescription` are consumed in exactly **2 files**:
+1. `src/hooks/usePrescriptionStatus.ts` — defines them
+2. `src/pages/patient/Shop.tsx` — destructures and uses them
+
+No other consumers.
+
+#### D2: Changes
+
+| File | Change |
+|------|--------|
+| `src/hooks/usePrescriptionStatus.ts` | Remove `setMockPrescription` callback, `mockEnabled` variable, and both from the return object. Remove hook comment "Phase 1: Mock/localStorage only". |
+| `src/pages/patient/Shop.tsx` | Remove `mockEnabled`, `setMockPrescription` from destructure. Replace `mockEnabled \|\| rxHasActive` with `rxHasActive`. Replace `!mockEnabled && !rxHasActive` with `!rxHasActive`. Replace `allowedStrengthMg \|\| (mockEnabled ? 9 : 0)` with `allowedStrengthMg \|\| 0`. Remove `handleCreatePrescription`, `handleClearPrescription`. Remove `<DevPrescriptionToggle>` JSX + import. |
+| `src/components/shop/DevPrescriptionToggle.tsx` | **Delete file.** |
 
 ---
 
-Awaiting approval.
+### File Summary
+
+| File | Action |
+|------|--------|
+| `src/components/checkout/PaymentPlaceholder.tsx` | Copy cleanup (A1–A3) |
+| `src/pages/patient/Shop.tsx` | Copy cleanup (A4–A5) + remove dev toggle (D2) |
+| `src/pages/patient/BookingPayment.tsx` | Copy cleanup (A6–A7) |
+| `src/pages/patient/Account.tsx` | Copy cleanup (A8–A9) + remove Supabase reads/writes (C3) |
+| `src/components/shop/CartDrawer.tsx` | Copy cleanup (A10) |
+| `src/services/prescriptionBlobService.ts` | **New** — IndexedDB service with upgrade guard (B) |
+| `src/services/prescriptionUploadService.ts` | Update to use blob service (B) |
+| `src/pages/patient/UploadPrescription.tsx` | Full rewrite — working upload UI with validation + URL lifecycle (B) |
+| `src/services/doctorProfileService.ts` | **New** — localStorage-backed doctor identity service (C1) |
+| `src/pages/doctor/Account.tsx` | Make all identity fields editable via doctorProfileService (C2) |
+| `src/components/shop/DevPrescriptionToggle.tsx` | **Delete** (D2) |
+| `src/hooks/usePrescriptionStatus.ts` | Remove mock toggle exports (D1–D2) |
+
+### QA Checklist
+
+1. `npm run build` succeeds with no TS errors.
+2. Patient Shop loads, shows products, no dev toggle visible.
+3. Patient Upload Prescription: select file, see validation error for >10 MB or wrong type; upload valid file, see list, view/download, remove. Persists after refresh. Object URLs revoked on unmount (no memory leak).
+4. Patient Checkout: no "coming soon" or amber alert — just payment form and Place Order.
+5. Booking Payment: no "mock" or "simulate" language.
+6. **Patient Account: edit name, DOB, phone, timezone. Save. Refresh page. All edits persisted. No Supabase calls.**
+7. **Doctor Account: edit Legal Name, AHPRA, Provider Number, Phone, Practice Location. Save. Refresh. All edits persisted locally. Payout edit still works.**
+8. No rendered UI text contains: Phase 1, Phase 2, mock, stub, dev, local, coming soon, not available.
+
