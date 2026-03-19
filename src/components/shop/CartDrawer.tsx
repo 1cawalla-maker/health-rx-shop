@@ -66,7 +66,7 @@ export function CartDrawer({ remainingCans, maxContainers }: CartDrawerProps) {
             <div className="flex-1 overflow-y-auto py-4 space-y-4">
               {cart.items.map((item) => (
                 <div key={item.id} className="flex gap-4">
-                  {/* Product Image Placeholder */}
+                  {/* Product Image */}
                   <div className="h-20 w-20 rounded-md bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center shrink-0">
                     <span className="text-xs text-muted-foreground text-center px-1">
                       {item.strengthMg}mg

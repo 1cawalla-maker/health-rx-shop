@@ -15,7 +15,6 @@ import { CartDrawer } from '@/components/shop/CartDrawer';
 import { ShopLockedOverlay } from '@/components/shop/ShopLockedOverlay';
 import { ShopPendingOverlay } from '@/components/shop/ShopPendingOverlay';
 import { ShopExpiredOverlay } from '@/components/shop/ShopExpiredOverlay';
-import { DevPrescriptionToggle } from '@/components/shop/DevPrescriptionToggle';
 import type { Product, ProductVariant } from '@/types/shop';
 import { PRESCRIPTION_TOTAL_CANS } from '@/types/shop';
 import { useOutletContext } from 'react-router-dom';
@@ -40,20 +39,18 @@ export default function PatientShop() {
     hasActivePrescription: rxHasActive,
     allowedStrengthMg,
     referenceId,
-    mockEnabled,
-    setMockPrescription,
     refreshStatus,
     isLoading: isLoadingRx,
     isExpired,
     expiredAt,
   } = usePrescriptionStatus();
 
-  // Combine context and hook - prefer mock/hook for Phase 1 testing
-  const hasActivePrescription = mockEnabled || rxHasActive || outletContext.hasActivePrescription;
-  const hasPendingPrescription = !mockEnabled && !rxHasActive && outletContext.hasPendingPrescription;
+  // Combine context and hook
+  const hasActivePrescription = rxHasActive || outletContext.hasActivePrescription;
+  const hasPendingPrescription = !rxHasActive && outletContext.hasPendingPrescription;
 
-  // Use prescription strength or default to 9 for mock
-  const maxStrengthMg = allowedStrengthMg || (mockEnabled ? 9 : 0);
+  // Use prescription strength or default
+  const maxStrengthMg = allowedStrengthMg || 0;
 
   // Calculate remaining allowance using centralized utils
   const remainingCans = allowanceUtils.remainingForAddToCart(cansOrdered, cart.totalCans);
@@ -112,15 +109,6 @@ export default function PatientShop() {
   };
 
   const canAddMore = remainingCans > 0;
-
-  // Dev toggle handlers with strength support
-  const handleCreatePrescription = (strength: 3 | 6 | 9) => {
-    setMockPrescription(true, strength);
-  };
-
-  const handleClearPrescription = () => {
-    setMockPrescription(false);
-  };
 
   return (
     <div className="space-y-8">
@@ -187,7 +175,6 @@ export default function PatientShop() {
         {/* Product Grid by Flavour */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {isLoadingProducts ? (
-            // Loading skeletons
             Array.from({ length: 3 }).map((_, i) => (
               <Card key={i} className="overflow-hidden animate-pulse">
                 <div className="aspect-square bg-muted" />
@@ -274,13 +261,6 @@ export default function PatientShop() {
 
       {/* Cart Drawer */}
       <CartDrawer remainingCans={remainingCans} />
-
-      {/* Dev Toggle - with new props */}
-      <DevPrescriptionToggle
-        onCreatePrescription={handleCreatePrescription}
-        onClearPrescription={handleClearPrescription}
-        activePrescription={hasActivePrescription ? { maxStrengthMg } : null}
-      />
     </div>
   );
 }

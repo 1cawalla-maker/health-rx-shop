@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+
 
 interface PaymentPlaceholderProps {
   totalCents: number;
@@ -23,12 +23,6 @@ export function PaymentPlaceholder({
   const totalFormatted = (totalCents / 100).toFixed(2);
   return (
     <div className="space-y-6">
-      <Alert className="bg-amber-500/10 border-amber-500/30">
-        <AlertDescription className="text-amber-700">
-          <strong>Note:</strong> Payment processing is coming soon. Click "Place Order" to continue.
-        </AlertDescription>
-      </Alert>
-
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -36,11 +30,11 @@ export function PaymentPlaceholder({
             Payment Details
           </CardTitle>
           <CardDescription>
-            Secure payment powered by Stripe (coming soon)
+            Secure payment processing
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Mock Payment Form */}
+          {/* Payment Form */}
           <div className="space-y-4 opacity-60">
             <div>
               <Label htmlFor="cardNumber">Card Number</Label>

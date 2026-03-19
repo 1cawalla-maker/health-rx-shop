@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 import { userPreferencesService } from '@/services/userPreferencesService';
 import { userProfileService } from '@/services/userProfileService';
 import { AU_TIMEZONE_OPTIONS } from '@/lib/timezones';
@@ -30,7 +29,6 @@ export default function PatientAccount() {
   useEffect(() => {
     if (!user?.id) return;
 
-    // Load from local profile service
     const profile = userProfileService.getProfile(user.id);
     if (profile) {
       setFullName(profile.fullName || '');
@@ -41,22 +39,8 @@ export default function PatientAccount() {
       setPhone(stripAuPrefix(profile.phoneE164));
       setTimezone(profile.timezone || 'Australia/Brisbane');
     } else {
-      // Fallback: load from user metadata + Supabase profile
+      // Seed from user metadata on first visit
       setFullName(user.user_metadata?.full_name || '');
-      supabase
-        .from('profiles')
-        .select('phone, date_of_birth')
-        .eq('user_id', user.id)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (data) {
-            setPhone(stripAuPrefix(data.phone));
-            const dob = parseDobFromStorage(data.date_of_birth);
-            setDobDay(dob.day);
-            setDobMonth(dob.month);
-            setDobYear(dob.year);
-          }
-        });
     }
 
     const { timezone: tz, wasReset } = userPreferencesService.getTimezoneWithMeta(user.id);
@@ -73,7 +57,6 @@ export default function PatientAccount() {
   const handleSave = async () => {
     if (!user?.id) return;
 
-    // Validate phone
     const pErr = validateAuPhone(phone);
     if (pErr) {
       setPhoneError(pErr);
@@ -81,7 +64,6 @@ export default function PatientAccount() {
     }
     setPhoneError('');
 
-    // Validate DOB
     if (dobDay || dobMonth || dobYear) {
       const dobResult = validateDob(dobDay, dobMonth, dobYear);
       if (!dobResult.valid) {
@@ -96,7 +78,6 @@ export default function PatientAccount() {
     const phoneE164 = `+61${phone}`;
     const dateOfBirth = (dobDay && dobMonth && dobYear) ? formatDobForStorage(dobDay, dobMonth, dobYear) : null;
 
-    // Save to local profile service
     userProfileService.upsertProfile(user.id, {
       fullName,
       dateOfBirth,
@@ -104,18 +85,7 @@ export default function PatientAccount() {
       timezone,
     });
 
-    // Save timezone
     userPreferencesService.setTimezone(user.id, timezone);
-
-    // Update Supabase profiles table
-    await supabase
-      .from('profiles')
-      .update({
-        full_name: fullName,
-        phone: phoneE164,
-        date_of_birth: dateOfBirth,
-      })
-      .eq('user_id', user.id);
 
     setSaving(false);
     toast.success('Account settings saved');

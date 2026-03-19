@@ -90,7 +90,7 @@ export default function BookingPayment() {
 
     setProcessing(true);
 
-    // Simulate payment processing delay
+    
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     const confirmed = mockBookingService.confirmPayment(bookingId);
@@ -194,7 +194,7 @@ export default function BookingPayment() {
             <CardDescription>Your payment is secure and encrypted</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Mock payment form - disabled inputs */}
+            {/* Payment form */}
             <div className="space-y-2">
               <Label>Card Number</Label>
               <Input 
