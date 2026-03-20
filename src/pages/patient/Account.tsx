@@ -111,25 +111,35 @@ export default function PatientAccount() {
           <CardDescription>Update your account information</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Email */}
+          {/* Login Email (read-only) */}
           <div className="space-y-1">
-            <Label className="flex items-center gap-2" htmlFor="account-email">
+            <Label className="flex items-center gap-2">
               <Mail className="h-4 w-4" />
-              Email
+              Login Email
             </Label>
+            <div className="flex items-center gap-2">
+              <Input value={user?.email || ''} readOnly className="bg-muted/30 flex-1" />
+              <Badge variant="outline">Read-only</Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              This is the email you use to sign in.
+            </p>
+          </div>
+
+          {/* Contact Email (editable) */}
+          <div className="space-y-1">
+            <Label htmlFor="account-contact-email">Contact Email</Label>
             <Input
-              id="account-email"
+              id="account-contact-email"
               value={contactEmail}
               onChange={(e) => setContactEmail(e.target.value)}
               placeholder="you@example.com"
               inputMode="email"
               autoComplete="email"
             />
-            {user?.email && user.email !== contactEmail && (
-              <p className="text-xs text-muted-foreground">
-                Login email: <span className="font-medium">{user.email}</span>
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground">
+              Used for reminders and receipts. Changing this does not change your login email.
+            </p>
           </div>
 
           {/* Full Name */}
