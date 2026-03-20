@@ -70,13 +70,13 @@ export function PrescriptionForm({
 
     try {
       if (!ENABLE_PRESCRIPTION_PDF) {
-        toast.error('Prescription issuing is not available yet');
+        toast.error('Prescription PDF generation is currently disabled');
         return;
       }
 
       await prescriptionFileService.uploadPrescriptionFile(new File([], 'placeholder.pdf'), doctorId);
     } catch (err: any) {
-      toast.error(err.message || 'Prescription issuing is not available yet');
+      toast.error(err.message || 'Could not generate prescription PDF');
     } finally {
       setIsIssuing(false);
     }
