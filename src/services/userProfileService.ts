@@ -1,5 +1,10 @@
 export interface UserProfile {
   fullName: string;
+  /**
+   * Patient-managed contact email (Phase 1: local-only). In Phase 2, service internals can persist this to Supabase.
+   * This is intentionally separate from the Supabase Auth login email.
+   */
+  contactEmail: string;
   dateOfBirth: string | null;
   phoneE164: string;
   timezone: string;
@@ -37,6 +42,7 @@ export const userProfileService = {
     if (!uid) return;
     const existing = readProfile(uid) || {
       fullName: '',
+      contactEmail: '',
       dateOfBirth: null,
       phoneE164: '',
       timezone: 'Australia/Brisbane',

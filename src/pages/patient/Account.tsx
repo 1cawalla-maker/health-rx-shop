@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 export default function PatientAccount() {
   const { user } = useAuth();
 
+  const [contactEmail, setContactEmail] = useState('');
   const [fullName, setFullName] = useState('');
   const [dobDay, setDobDay] = useState('');
   const [dobMonth, setDobMonth] = useState('');
@@ -31,6 +32,7 @@ export default function PatientAccount() {
 
     const profile = userProfileService.getProfile(user.id);
     if (profile) {
+      setContactEmail(profile.contactEmail || user.email || '');
       setFullName(profile.fullName || '');
       const dob = parseDobFromStorage(profile.dateOfBirth);
       setDobDay(dob.day);
@@ -39,7 +41,8 @@ export default function PatientAccount() {
       setPhone(stripAuPrefix(profile.phoneE164));
       setTimezone(profile.timezone || 'Australia/Brisbane');
     } else {
-      // Seed from user metadata on first visit
+      // Seed from auth + metadata on first visit
+      setContactEmail(user.email || '');
       setFullName(user.user_metadata?.full_name || '');
     }
 
@@ -79,6 +82,7 @@ export default function PatientAccount() {
     const dateOfBirth = (dobDay && dobMonth && dobYear) ? formatDobForStorage(dobDay, dobMonth, dobYear) : null;
 
     userProfileService.upsertProfile(user.id, {
+      contactEmail,
       fullName,
       dateOfBirth,
       phoneE164,
@@ -107,16 +111,25 @@ export default function PatientAccount() {
           <CardDescription>Update your account information</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Email (read-only) */}
+          {/* Email */}
           <div className="space-y-1">
-            <Label className="flex items-center gap-2">
+            <Label className="flex items-center gap-2" htmlFor="account-email">
               <Mail className="h-4 w-4" />
               Email
             </Label>
-            <div className="flex items-center gap-2">
-              <Input value={user?.email || ''} readOnly className="bg-muted/30 flex-1" />
-              <Badge variant="outline">Read-only</Badge>
-            </div>
+            <Input
+              id="account-email"
+              value={contactEmail}
+              onChange={(e) => setContactEmail(e.target.value)}
+              placeholder="you@example.com"
+              inputMode="email"
+              autoComplete="email"
+            />
+            {user?.email && user.email !== contactEmail && (
+              <p className="text-xs text-muted-foreground">
+                Login email: <span className="font-medium">{user.email}</span>
+              </p>
+            )}
           </div>
 
           {/* Full Name */}
