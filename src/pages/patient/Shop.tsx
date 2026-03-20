@@ -145,9 +145,7 @@ export default function PatientShop() {
             <div className="text-xs text-muted-foreground mt-1">
               Max strength: {maxStrengthMg}mg
             </div>
-            {referenceId && (
-              <p className="text-xs text-muted-foreground mt-2">Prescription: {referenceId}</p>
-            )}
+            {/* Intentionally hide internal prescription reference ids from the patient UI. */}
           </CardContent>
         </Card>
       )}
