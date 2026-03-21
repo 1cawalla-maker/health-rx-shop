@@ -57,13 +57,13 @@ export default function PatientDashboard() {
 
   useEffect(() => {
     if (user) {
-      // Load mock bookings from localStorage
+      // Load bookings from localStorage
       refreshBookings();
       fetchPrescriptionData();
     }
   }, [user]);
 
-  // Combine mock bookings into unified format
+  // Combine bookings into unified format
   const allBookings: CombinedBooking[] = useMemo(() => {
     return mockBookings.map(b => ({
       id: b.id,
@@ -77,7 +77,7 @@ export default function PatientDashboard() {
 
   // Derive next upcoming booking
   const nextBooking: CombinedBooking | null = useMemo(() => {
-    // 'booked' represents confirmed bookings in our mock data
+    // 'booked' represents confirmed bookings
     const upcomingStatuses: BookingStatus[] = ['booked'];
     const now = new Date();
     
@@ -89,7 +89,7 @@ export default function PatientDashboard() {
   const fetchPrescriptionData = async () => {
     if (!user) return;
 
-    // Phase 1: localStorage-only prescription entitlement. No Supabase, no network.
+    // Local-only prescription entitlement (no network).
     const latest = shopPrescriptionService.getLatestPrescription(user.id);
     setPrescriptionStatus(latest.prescription);
     setLoading(false);
