@@ -20,21 +20,31 @@ export default function DoctorRegistration() {
     setSignature(sig?.signatureDataUrl || null);
   }, [user?.id]);
 
-  const start = (e: React.PointerEvent) => {
+  const start = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    // Ensure we keep receiving pointer events even if the pointer leaves the canvas.
+    try {
+      canvas.setPointerCapture(e.pointerId);
+    } catch {
+      // no-op (older browsers / edge cases)
+    }
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
     setDrawing(true);
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     ctx.strokeStyle = '#111827';
     ctx.beginPath();
+
     const rect = canvas.getBoundingClientRect();
     ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
   };
 
-  const move = (e: React.PointerEvent) => {
+  const move = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!drawing) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -45,7 +55,17 @@ export default function DoctorRegistration() {
     ctx.stroke();
   };
 
-  const end = () => setDrawing(false);
+  const end = (e?: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (canvas && e) {
+      try {
+        canvas.releasePointerCapture(e.pointerId);
+      } catch {
+        // no-op
+      }
+    }
+    setDrawing(false);
+  };
 
   const clear = () => {
     const canvas = canvasRef.current;
@@ -53,6 +73,7 @@ export default function DoctorRegistration() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setDrawing(false);
   };
 
   const save = () => {
@@ -99,6 +120,7 @@ export default function DoctorRegistration() {
                 onPointerDown={start}
                 onPointerMove={move}
                 onPointerUp={end}
+                onPointerCancel={end}
                 onPointerLeave={end}
                 className="w-full h-[220px] touch-none"
               />
