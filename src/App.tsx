@@ -58,7 +58,7 @@ import DoctorEarnings from "./pages/doctor/Earnings";
 import DoctorInfo from "./pages/doctor/Info";
 import DoctorAccount from "./pages/doctor/Account";
 import DoctorOnboarding from "./pages/doctor/Onboarding";
-import PayslipPrint from "./pages/doctor/PayslipPrint";
+// Payslip print removed (contractor remittances model)
 
 // Admin pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -115,10 +115,7 @@ const App = () => (
               {/* Doctor routes */}
               <Route path="/doctor/pending" element={<DoctorPending />} />
               <Route path="/doctor/registration" element={<DoctorRegistration />} />
-              {/* Payslip print — outside DoctorLayout (no sidebar) */}
-              <Route path="/doctor/payslips/:payslipId/print" element={
-                <ProtectedRoute allowedRoles={['doctor']}><PayslipPrint /></ProtectedRoute>
-              } />
+              {/* Payslip print removed (contractor remittances model). */}
               <Route path="/doctor" element={<ProtectedRoute allowedRoles={['doctor']}><DoctorLayout /></ProtectedRoute>}>
                 <Route path="dashboard" element={<DoctorDashboard />} />
                 <Route path="onboarding" element={<DoctorOnboarding />} />

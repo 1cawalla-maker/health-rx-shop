@@ -10,5 +10,5 @@ export const PRE_ONBOARDING_ALLOWED_ROUTE_PREFIXES = [
   '/doctor/availability',
   '/doctor/earnings',
   '/doctor/info',
-  '/doctor/payslips',
+  // '/doctor/payslips', // removed (no payslip surfaces in Phase 1)
 ] as const;
