@@ -220,11 +220,9 @@ export default function DoctorAccount() {
               <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Full legal name" />
             </div>
             <div className="space-y-1">
-              <Label>Email</Label>
-              <div className="flex items-center gap-2">
-                <Input value={user?.email || '—'} readOnly className="bg-muted/30" />
-                <Badge variant="outline">Read-only</Badge>
-              </div>
+              <Label>Login Email</Label>
+              <Input value={user?.email || '—'} readOnly className="bg-muted/30" />
+              <p className="text-xs text-muted-foreground">This is the email you use to sign in.</p>
             </div>
             <div className="space-y-1">
               <Label>AHPRA Number</Label>
