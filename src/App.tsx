@@ -100,6 +100,8 @@ const App = () => (
                 <Route path="booking/payment/:bookingId" element={<BookingPayment />} />
                 <Route path="booking/confirmation/:bookingId" element={<BookingConfirmation />} />
                 <Route path="consultations" element={<PatientConsultations />} />
+                {/* If someone lands on /patient/intake without a bookingId, send them to consultations. */}
+                <Route path="intake" element={<PatientConsultations />} />
                 <Route path="intake/:bookingId" element={<PatientIntake />} />
                 <Route path="upload-prescription" element={<UploadPrescription />} />
                 <Route path="prescriptions" element={<PatientPrescriptions />} />
