@@ -271,7 +271,7 @@ export default function PatientCheckout() {
           <Card className="sticky top-6">
             <CardHeader>
               <CardTitle className="text-lg">Order Summary</CardTitle>
-              <CardDescription>{cart.totalCans} cans</CardDescription>
+              <CardDescription>{cart.totalCans} {cart.totalCans === 1 ? 'can' : 'cans'}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {cart.items.map((item) => (

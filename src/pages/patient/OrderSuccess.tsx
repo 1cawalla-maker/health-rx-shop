@@ -83,7 +83,7 @@ export default function PatientOrderSuccess() {
       <Card>
         <CardHeader>
           <CardTitle>Order Details</CardTitle>
-          <CardDescription>Summary of your purchase ({order.totalCans} cans)</CardDescription>
+          <CardDescription>Summary of your purchase ({order.totalCans} {order.totalCans === 1 ? 'can' : 'cans'})</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Items */}
@@ -93,7 +93,7 @@ export default function PatientOrderSuccess() {
                 <div>
                   <p className="font-medium">{item.flavor}</p>
                   <p className="text-sm text-muted-foreground">
-                    {item.strengthMg}mg • Qty: {item.qtyCans} cans
+                    {item.strengthMg}mg • Qty: {item.qtyCans} {item.qtyCans === 1 ? 'can' : 'cans'}
                   </p>
                 </div>
                 <p className="font-medium">${((item.unitPriceCents * item.qtyCans) / 100).toFixed(2)}</p>
