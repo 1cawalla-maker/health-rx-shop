@@ -42,16 +42,23 @@ export function CartDrawer({ remainingCans, maxContainers }: CartDrawerProps) {
             {/* Allowance indicator */}
             {allowanceRemaining !== undefined && (
               <div className="mt-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Allowance used</span>
-                  <span className={isOverLimit ? 'text-destructive' : ''}>
-                    {cart.totalCans} / {cart.totalCans + (allowanceRemaining > 0 ? allowanceRemaining : 0)} cans
-                  </span>
-                </div>
-                <Progress 
-                  value={Math.min(100, (cart.totalCans / (cart.totalCans + Math.max(0, allowanceRemaining))) * 100)} 
-                  className="h-2"
-                />
+                {(() => {
+                  // allowanceRemaining is the remaining cans after taking the current cart into account.
+                  // So total used (ordered + in cart) = total - remaining.
+                  const usedTotal = PRESCRIPTION_TOTAL_CANS - allowanceRemaining;
+                  const pct = Math.min(100, (usedTotal / PRESCRIPTION_TOTAL_CANS) * 100);
+                  return (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Allowance used</span>
+                        <span className={isOverLimit ? 'text-destructive' : ''}>
+                          {usedTotal} / {PRESCRIPTION_TOTAL_CANS} cans
+                        </span>
+                      </div>
+                      <Progress value={pct} className="h-2" />
+                    </>
+                  );
+                })()}
               </div>
             )}
 

@@ -117,11 +117,9 @@ export function OrderReview({
       <Alert>
         <AlertDescription>
           <div className="space-y-2">
-            {prescriptionRef && (
-              <p><strong>Prescription Reference:</strong> {prescriptionRef}</p>
-            )}
-            {maxContainers && (
-              <p><strong>Allowed:</strong> Up to {maxContainers} containers as per your prescription</p>
+            {/* Do not show internal prescription reference IDs in patient UI */}
+            {maxContainers !== undefined && maxContainers !== null && (
+              <p><strong>Remaining allowance:</strong> Up to {maxContainers} cans</p>
             )}
             <p className="text-sm text-muted-foreground">
               This order is based on your active prescription. All orders must comply with prescription limits.

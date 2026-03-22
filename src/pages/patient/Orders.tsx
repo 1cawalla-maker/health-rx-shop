@@ -124,7 +124,7 @@ export default function PatientOrders() {
                   <div>
                     <CardTitle className="text-lg">Order #{order.orderNumber}</CardTitle>
                     <CardDescription>
-                      Placed on {format(new Date(order.createdAt), 'MMMM d, yyyy')} • {order.totalCans} cans
+                      Placed on {format(new Date(order.createdAt), 'MMMM d, yyyy')} • {order.totalCans} {order.totalCans === 1 ? 'can' : 'cans'}
                     </CardDescription>
                   </div>
                   {getStatusBadge(order.status)}
@@ -138,7 +138,9 @@ export default function PatientOrders() {
                         <span>
                           {item.flavor} ({item.strengthMg}mg)
                         </span>
-                        <span className="text-muted-foreground">x{item.qtyCans} cans</span>
+                        <span className="text-muted-foreground">
+                          x{item.qtyCans} {item.qtyCans === 1 ? 'can' : 'cans'}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -164,8 +166,7 @@ export default function PatientOrders() {
                   {/* Shipping Address */}
                   <div className="pt-4 border-t">
                     <p className="text-sm text-muted-foreground">
-                      <strong>Shipping to:</strong> {order.shippingAddress.fullName}, 
-                      {order.shippingAddress.suburb}, {order.shippingAddress.state} {order.shippingAddress.postcode}
+                      <strong>Shipping to:</strong> {order.shippingAddress.fullName}, {order.shippingAddress.suburb}, {order.shippingAddress.state} {order.shippingAddress.postcode}
                     </p>
                   </div>
                 </div>

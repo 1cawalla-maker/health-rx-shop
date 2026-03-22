@@ -102,61 +102,70 @@ export default function PatientConsultations() {
     }
   };
 
-  const BookingCard = ({ booking }: { booking: CombinedBooking }) => (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <Phone className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h3 className="font-medium">Phone Consultation</h3>
-              <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  {format(booking.scheduledAt, 'MMM d, yyyy')}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Clock className="h-4 w-4" />
-                  {format(booking.scheduledAt, 'h:mm a')} {getTimezoneAbbr(booking.scheduledAt, patientTz)}
-                </span>
-                <CountdownChip targetMs={booking.scheduledAt.getTime()} />
+  const BookingCard = ({ booking }: { booking: CombinedBooking }) => {
+    const isPastBooking = isPast(booking.scheduledAt);
+
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                <Phone className="h-5 w-5 text-primary" />
               </div>
-              {['booked', 'confirmed'].includes(booking.status) && (
-                <p className="text-sm text-primary mt-1">You'll receive a call from the doctor at this time.</p>
-              )}
-              {booking.doctorName && (
-                <div className="flex items-center gap-1 mt-2 text-sm">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span>{formatDoctorName(booking.doctorName)}</span>
+              <div>
+                <h3 className="font-medium">Phone Consultation</h3>
+                <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    {format(booking.scheduledAt, 'MMM d, yyyy')}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-4 w-4" />
+                    {format(booking.scheduledAt, 'h:mm a')} {getTimezoneAbbr(booking.scheduledAt, patientTz)}
+                  </span>
+                  <CountdownChip targetMs={booking.scheduledAt.getTime()} />
                 </div>
+
+                {!isPastBooking && ['booked', 'confirmed'].includes(booking.status) && (
+                  <p className="text-sm text-primary mt-1">You'll receive a call from the doctor at this time.</p>
+                )}
+
+                {booking.doctorName && (
+                  <div className="flex items-center gap-1 mt-2 text-sm">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span>{formatDoctorName(booking.doctorName)}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {getStatusBadge(booking.status)}
+
+              {!isPastBooking && ['booked', 'confirmed'].includes(booking.status) && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    setSelectedBookingForManage(booking);
+                    setManageDialogOpen(true);
+                  }}
+                  title="Manage booking"
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
               )}
+
+              <Button variant="ghost" size="icon" onClick={() => openDetails(booking)}>
+                <Eye className="h-4 w-4" />
+              </Button>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {getStatusBadge(booking.status)}
-            {['booked', 'confirmed'].includes(booking.status) && (
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => {
-                  setSelectedBookingForManage(booking);
-                  setManageDialogOpen(true);
-                }}
-                title="Manage booking"
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
-            )}
-            <Button variant="ghost" size="icon" onClick={() => openDetails(booking)}>
-              <Eye className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+        </CardContent>
+      </Card>
+    );
+  };
 
   if (loading) {
     return (
