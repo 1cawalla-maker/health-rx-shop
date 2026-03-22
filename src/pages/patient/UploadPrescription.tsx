@@ -23,7 +23,9 @@ export default function UploadPrescription() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploads, setUploads] = useState<PrescriptionBlob[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [objectUrls, setObjectUrls] = useState<Map<string, string>>(new Map());
+
+  // Track object URLs so we can revoke them (avoid memory leaks on mobile).
+  const objectUrlsRef = useRef<Map<string, string>>(new Map());
 
   const loadUploads = useCallback(async () => {
     if (!user?.id) return;
@@ -38,20 +40,20 @@ export default function UploadPrescription() {
   // Revoke all object URLs on unmount
   useEffect(() => {
     return () => {
-      objectUrls.forEach((url) => URL.revokeObjectURL(url));
+      objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      objectUrlsRef.current.clear();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getObjectUrl = async (id: string): Promise<string | null> => {
-    const existing = objectUrls.get(id);
+    const existing = objectUrlsRef.current.get(id);
     if (existing) return existing;
 
     const blob = await prescriptionBlobService.getBlob(id);
     if (!blob) return null;
 
     const url = URL.createObjectURL(blob);
-    setObjectUrls((prev) => new Map(prev).set(id, url));
+    objectUrlsRef.current.set(id, url);
     return url;
   };
 
@@ -112,14 +114,10 @@ export default function UploadPrescription() {
 
   const handleRemove = async (upload: PrescriptionBlob) => {
     // Revoke the object URL if it exists
-    const url = objectUrls.get(upload.id);
+    const url = objectUrlsRef.current.get(upload.id);
     if (url) {
       URL.revokeObjectURL(url);
-      setObjectUrls((prev) => {
-        const next = new Map(prev);
-        next.delete(upload.id);
-        return next;
-      });
+      objectUrlsRef.current.delete(upload.id);
     }
 
     await prescriptionBlobService.removeBlob(upload.id);
