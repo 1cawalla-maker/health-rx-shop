@@ -140,8 +140,8 @@ export default function PatientOrderSuccess() {
         <AlertDescription>
           <strong>What's next?</strong>
           <ul className="mt-2 space-y-1 text-sm">
-            <li>• Your order has been recorded</li>
-            <li>• You can track your order status in Order History</li>
+            <li>• You'll receive an email confirmation shortly</li>
+            <li>• We'll send shipping updates as your order progresses</li>
             <li>• Estimated delivery: 3–5 business days</li>
           </ul>
         </AlertDescription>
