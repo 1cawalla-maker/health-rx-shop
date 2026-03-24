@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { Stethoscope, User, Mail, Lock, ArrowRight, Loader2, Phone, MapPin, FileText } from 'lucide-react';
-import { persistQuizToProfile } from '@/services/eligibilityService';
+import { getQuizFromSession, persistQuizToProfile } from '@/services/eligibilityService';
 import { AU_TIMEZONE_OPTIONS } from '@/lib/timezones';
 import { userPreferencesService } from '@/services/userPreferencesService';
 import { userProfileService } from '@/services/userProfileService';
@@ -59,6 +59,7 @@ export default function Auth() {
   const [selectedRole, setSelectedRole] = useState<AppRole>('patient');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [patientQuizCompleted, setPatientQuizCompleted] = useState(false);
 
   // Patient-specific fields
   const [patientPhone, setPatientPhone] = useState('');
@@ -104,6 +105,15 @@ export default function Auth() {
     }
   }, [user, userRole, loading, navigate]);
 
+  useEffect(() => {
+    // For patients, the pre-consultation questionnaire must be completed before signup.
+    // We treat the quiz result as "complete" when it exists in session storage.
+    const refresh = () => setPatientQuizCompleted(!!getQuizFromSession());
+    refresh();
+    window.addEventListener('focus', refresh);
+    return () => window.removeEventListener('focus', refresh);
+  }, []);
+
   const handlePatientPhoneChange = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 9);
     setPatientPhone(digits);
@@ -144,12 +154,18 @@ export default function Auth() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    if (selectedRole === 'patient' && !getQuizFromSession()) {
+      toast.error('Please complete the questionnaire before creating your account.');
+      navigate('/eligibility');
+      return;
+    }
+
     try {
       nameSchema.parse(fullName);
       emailSchema.parse(email);
       passwordSchema.parse(password);
-      
+
       if (selectedRole === 'patient') {
         const patientPhoneErr = validateAuPhone(patientPhone);
         if (patientPhoneErr) {
@@ -157,7 +173,7 @@ export default function Auth() {
           return;
         }
         setPhoneError('');
-        
+
         const dobResult = validateDob(dobDay, dobMonth, dobYear);
         if (!dobResult.valid) {
           setDobError(dobResult.error || 'Invalid date of birth');
@@ -165,7 +181,7 @@ export default function Auth() {
         }
         setDobError('');
       }
-      
+
       if (selectedRole === 'doctor') {
         const doctorPhoneErr = validateAuPhone(doctorPhone);
         if (doctorPhoneErr) {
@@ -292,9 +308,10 @@ export default function Auth() {
         toast.success('Account created! Now upload your prescription.');
         sessionStorage.setItem('postSignupRedirect', '/patient/upload-prescription');
       } else {
-        // Default Phase 1 signup flow: take the patient to the questionnaire first.
         toast.success('Account created successfully!');
-        sessionStorage.setItem('postSignupRedirect', '/eligibility');
+        // Patient signup is allowed only after completing the questionnaire,
+        // so the next step is booking.
+        sessionStorage.setItem('postSignupRedirect', '/patient/book');
       }
     }
   };
@@ -496,7 +513,26 @@ export default function Auth() {
                           </RadioGroup>
                         </div>
 
-                        {/* Common fields */}
+                        {selectedRole === 'patient' && !patientQuizCompleted && (
+                          <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                            <p className="text-sm font-medium text-foreground">Complete the questionnaire first</p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Before creating your patient account, please complete the pre-consultation questionnaire.
+                            </p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="w-full mt-3"
+                              onClick={() => navigate('/eligibility')}
+                            >
+                              Start Questionnaire
+                            </Button>
+                          </div>
+                        )}
+
+                        {(selectedRole !== 'patient' || patientQuizCompleted) && (
+                          <>
+                            {/* Common fields */}
                         <div className="space-y-2">
                           <Label htmlFor="signup-name">Full Name</Label>
                           <div className="relative">
@@ -754,11 +790,14 @@ export default function Auth() {
                           </>
                         )}
 
+                        </>
+                        )}
+
                         <Button 
                           type="submit" 
                           variant="hero" 
                           className="w-full" 
-                          disabled={isSubmitting}
+                          disabled={isSubmitting || (selectedRole === 'patient' && !patientQuizCompleted)}
                         >
                           {isSubmitting ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
