@@ -79,20 +79,28 @@ export default function Auth() {
   const [doctorTimezone, setDoctorTimezone] = useState('Australia/Brisbane');
 
   useEffect(() => {
-    if (!loading && user && userRole) {
-      if (userRole.status === 'approved') {
-        switch (userRole.role) {
-          case 'patient':
-            navigate('/patient/dashboard');
-            break;
-          case 'doctor':
-            navigate('/doctor/dashboard');
-            break;
-          case 'admin':
-            navigate('/admin/dashboard');
-            break;
-        }
-      }
+    if (loading || !user || !userRole) return;
+    if (userRole.status !== 'approved') return;
+
+    // If the user just completed signup, allow a one-time post-signup redirect.
+    // This keeps Phase 1 UI flows deterministic (Phase 2 wires real meaning behind the same UI).
+    const postSignupRedirect = sessionStorage.getItem('postSignupRedirect');
+    if (postSignupRedirect) {
+      sessionStorage.removeItem('postSignupRedirect');
+      navigate(postSignupRedirect);
+      return;
+    }
+
+    switch (userRole.role) {
+      case 'patient':
+        navigate('/patient/dashboard');
+        break;
+      case 'doctor':
+        navigate('/doctor/dashboard');
+        break;
+      case 'admin':
+        navigate('/admin/dashboard');
+        break;
     }
   }, [user, userRole, loading, navigate]);
 
@@ -282,9 +290,11 @@ export default function Auth() {
       const actionParam = searchParams.get('action');
       if (actionParam === 'upload') {
         toast.success('Account created! Now upload your prescription.');
-        navigate('/patient/upload-prescription');
+        sessionStorage.setItem('postSignupRedirect', '/patient/upload-prescription');
       } else {
+        // Default Phase 1 signup flow: take the patient to the questionnaire first.
         toast.success('Account created successfully!');
+        sessionStorage.setItem('postSignupRedirect', '/eligibility');
       }
     }
   };
