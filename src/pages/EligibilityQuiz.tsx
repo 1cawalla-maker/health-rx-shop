@@ -230,9 +230,9 @@ export default function EligibilityQuiz() {
                       variant="default"
                     >
                       <UserPlus className="h-5 w-5" />
-                      <span className="font-medium">Create Account & Book</span>
+                      <span className="font-medium">Create Account</span>
                       <span className="text-xs opacity-80 font-normal">
-                        Book a consultation with a doctor
+                        Next: book your consultation
                       </span>
                     </Button>
                     
@@ -242,9 +242,9 @@ export default function EligibilityQuiz() {
                       variant="outline"
                     >
                       <FileUp className="h-5 w-5" />
-                      <span className="font-medium">Upload Prescription</span>
+                      <span className="font-medium">Create Account & Upload</span>
                       <span className="text-xs opacity-80 font-normal">
-                        I already have a valid prescription
+                        Next: upload your prescription
                       </span>
                     </Button>
                   </div>
