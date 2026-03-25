@@ -17,7 +17,17 @@ export default function GuidePersonalImportationSchemeNicotinePouches() {
     {
       question: 'Does the Personal Importation Scheme apply to nicotine pouches?',
       answer:
-        'It may apply depending on product specifics and current regulations. A doctor-supervised pathway helps ensure you follow the compliant steps for your situation.',
+        'It may apply depending on product specifics and current regulations. A doctor‑supervised pathway helps ensure you follow the compliant steps for your situation.',
+    },
+    {
+      question: 'Do I need a prescription?',
+      answer:
+        'In many cases, nicotine products require medical oversight. A consultation allows a doctor to assess suitability and explain the appropriate pathway for you.',
+    },
+    {
+      question: 'How much does it cost?',
+      answer:
+        'Costs typically include a consultation fee (shown at booking), product pricing (shown in the shop), and shipping at checkout. Pricing can change over time.',
     },
     {
       question: 'What is the safest next step?',
@@ -71,9 +81,26 @@ export default function GuidePersonalImportationSchemeNicotinePouches() {
             <CardContent className="text-sm text-muted-foreground space-y-2">
               <p>
                 The Personal Importation Scheme is often discussed in relation to nicotine products. Because rules
-                can be nuanced and may change, the safest step is a doctor-supervised pathway where a clinician can
+                can be nuanced and may change, the safest step is a doctor‑supervised pathway where a clinician can
                 explain what’s appropriate for you.
               </p>
+              <p>
+                If you’re reading about importing nicotine pouches yourself, don’t guess—start with the
+                questionnaire and a consultation so you understand what applies to your situation.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>What people usually want to know</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <ul className="list-disc pl-5 space-y-2">
+                <li>Whether a prescription is required and how to get one.</li>
+                <li>What limits apply (strength and quantity).</li>
+                <li>How ordering and delivery work once access is approved.</li>
+              </ul>
             </CardContent>
           </Card>
 
