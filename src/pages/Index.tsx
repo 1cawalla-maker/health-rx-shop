@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Button } from "@/components/ui/button";
+import Seo from "@/components/seo/Seo";
 import { 
   Calendar, 
   ClipboardCheck, 
@@ -56,6 +57,11 @@ const benefits = [
 export default function Index() {
   return (
     <PublicLayout>
+      <Seo
+        title="Nicotine Pouches in Australia (Zyn): Consult with Australian Doctors"
+        description="Doctor-supervised telehealth consultations for nicotine pouches in Australia. If clinically appropriate, receive a prescription and access nicotine pouches legally."
+        canonicalPath="/"
+      />
       {/* Hero Section */}
       <section className="relative overflow-hidden gradient-section">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent" />
@@ -92,6 +98,15 @@ export default function Index() {
             <p className="text-sm text-muted-foreground animate-fade-in-up animation-delay-300">
               Consultations from $49 AUD • No commitment required
             </p>
+
+            <div className="pt-2">
+              <Link
+                to="/guides/zyn-australia"
+                className="text-sm text-primary underline underline-offset-4 hover:text-primary/80"
+              >
+                Looking for Zyns in Australia? Read our guide
+              </Link>
+            </div>
           </div>
         </div>
       </section>

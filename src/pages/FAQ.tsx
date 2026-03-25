@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 import { PublicLayout } from "@/components/layout/PublicLayout";
+import Seo, { SITE_ORIGIN } from "@/components/seo/Seo";
+import { faqPageSchema } from "@/components/seo/schema";
 import { Button } from "@/components/ui/button";
 import {
   Accordion,
@@ -15,7 +17,15 @@ const faqCategories = [
     faqs: [
       {
         question: "What is NicoPatch?",
-        answer: "NicoPatch is an Australian telehealth platform that connects you with AHPRA-registered doctors for consultations regarding nicotine pouches. If clinically appropriate, doctors can issue prescriptions that allow you to legally access nicotine pouches under Australia's Personal Importation Scheme.",
+        answer: "NicoPatch is an Australian telehealth platform that connects you with AHPRA-registered doctors for consultations regarding nicotine pouches. If clinically appropriate, doctors can issue prescriptions that allow you to access nicotine pouches through a compliant pathway.",
+      },
+      {
+        question: "Are Zyns legal in Australia?",
+        answer: "Rules around nicotine products can be complex and may change. The safest next step is a doctor-supervised consultation pathway where a clinician can assess your situation and explain the compliant options available to you.",
+      },
+      {
+        question: "How do I get Zyns in Australia?",
+        answer: "Start with the questionnaire, then book a consultation. If clinically appropriate, a doctor will guide you through the next steps to access nicotine pouches in Australia.",
       },
       {
         question: "Are your doctors registered in Australia?",
@@ -102,8 +112,18 @@ const faqCategories = [
 ];
 
 export default function FAQ() {
+  const allFaqs = faqCategories.flatMap((c) => c.faqs);
   return (
     <PublicLayout>
+      <Seo
+        title="FAQ: Zyn Australia, Nicotine Pouches, Prescriptions & Delivery"
+        description="Answers to common questions about nicotine pouches in Australia, including Zyn, legality, prescriptions, consultations, and delivery."
+        canonicalPath="/faq"
+        jsonLd={faqPageSchema({
+          url: `${SITE_ORIGIN}/faq`,
+          questions: allFaqs.map((f) => ({ question: f.question, answer: f.answer })),
+        })}
+      />
       {/* Hero Section */}
       <section className="gradient-section py-16 md:py-24">
         <div className="container">
@@ -112,9 +132,18 @@ export default function FAQ() {
               Frequently Asked Questions
             </h1>
             <p className="text-lg text-muted-foreground">
-              Find answers to common questions about our telehealth service, consultations, 
-              prescriptions, and ordering process.
+              Find answers to common questions about nicotine pouches in Australia (including Zyn), our telehealth
+              consultations, prescriptions, and ordering.
             </p>
+
+            <div className="pt-2">
+              <Link
+                to="/guides/zyn-australia"
+                className="text-sm text-primary underline underline-offset-4 hover:text-primary/80"
+              >
+                Read: Zyn in Australia — legality and how to get it
+              </Link>
+            </div>
           </div>
         </div>
       </section>
