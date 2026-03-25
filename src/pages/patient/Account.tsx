@@ -117,9 +117,13 @@ export default function PatientAccount() {
               <Mail className="h-4 w-4" />
               Login Email
             </Label>
-            <div className="flex items-center gap-2">
-              <Input value={user?.email || ''} readOnly className="bg-muted/30 flex-1" />
-              <Badge variant="outline">Read-only</Badge>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Input
+                value={user?.email || ''}
+                readOnly
+                className="bg-muted/30 w-full sm:flex-1 min-w-0"
+              />
+              <Badge variant="outline" className="w-fit self-start sm:self-auto">Read-only</Badge>
             </div>
             <p className="text-xs text-muted-foreground">
               This is the email you use to sign in.
