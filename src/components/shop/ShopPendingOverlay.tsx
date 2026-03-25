@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 
 export function ShopPendingOverlay() {
   return (
-    <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-lg">
+    <div className="absolute inset-0 bg-background/45 backdrop-blur-[2px] flex items-center justify-center z-10 rounded-lg">
       <Card className="max-w-md mx-4 shadow-lg border-2 border-amber-500/30">
         <CardHeader className="text-center pb-4">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/10 mx-auto mb-4">

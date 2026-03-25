@@ -10,7 +10,7 @@
  
  export function ShopExpiredOverlay({ expiredAt }: ShopExpiredOverlayProps) {
    return (
-     <div className="absolute inset-0 z-10 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+     <div className="absolute inset-0 z-10 bg-background/45 backdrop-blur-[2px] flex items-center justify-center">
        <Card className="max-w-md mx-4">
          <CardHeader className="text-center">
            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
