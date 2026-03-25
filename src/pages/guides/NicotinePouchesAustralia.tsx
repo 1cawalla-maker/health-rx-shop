@@ -10,14 +10,24 @@ const PATH = '/guides/nicotine-pouches-australia';
 export default function GuideNicotinePouchesAustralia() {
   const faq = [
     {
+      question: 'Are nicotine pouches legal in Australia?',
+      answer:
+        'Rules around nicotine products can be complex and may change. We don’t provide legal advice, but we do provide a doctor‑supervised pathway where a clinician can explain what applies to your situation.',
+    },
+    {
       question: 'Do nicotine pouches require a prescription in Australia?',
       answer:
-        'Rules for nicotine products can be complex. A doctor can assess your situation and explain the compliant pathway available to you.',
+        'In many cases, nicotine products require medical oversight. A consultation allows a doctor to assess suitability and advise on the appropriate pathway.',
     },
     {
       question: 'How do I get nicotine pouches in Australia?',
       answer:
-        'Start with the questionnaire and book a telehealth consultation. A qualified doctor will assess suitability and guide next steps if clinically appropriate.',
+        'Start with the questionnaire and book a telehealth consultation. If clinically appropriate, a doctor will guide you through the next steps.',
+    },
+    {
+      question: 'How much does it cost?',
+      answer:
+        'Costs typically include a consultation fee (shown at booking), product pricing (shown in the shop), and shipping at checkout. Pricing can change over time.',
     },
     {
       question: 'How long does delivery take?',
@@ -85,6 +95,22 @@ export default function GuideNicotinePouchesAustralia() {
                 Nicotine products are regulated. We provide a doctor‑supervised pathway that starts with a short
                 questionnaire and a telehealth consultation.
               </p>
+              <ol className="list-decimal pl-5 text-muted-foreground space-y-2">
+                <li>Complete the questionnaire (takes a couple of minutes).</li>
+                <li>Book a consultation time that suits you.</li>
+                <li>A doctor assesses suitability and discusses options.</li>
+                <li>If clinically appropriate, access is enabled and any limits are explained.</li>
+              </ol>
+            </div>
+
+            <div className="space-y-2">
+              <h2 className="font-display text-2xl font-semibold">What you can expect</h2>
+              <ul className="list-disc pl-5 text-muted-foreground space-y-2">
+                <li><strong>Phone-first:</strong> consultations are conducted by phone.</li>
+                <li><strong>Doctor-led decisions:</strong> a consultation does not guarantee a prescription.</li>
+                <li><strong>Strength guidance:</strong> if approved, a maximum strength may be set.</li>
+                <li><strong>Order updates:</strong> once you place an order, you’ll see status updates in your account.</li>
+              </ul>
             </div>
 
             <div className="space-y-2">
