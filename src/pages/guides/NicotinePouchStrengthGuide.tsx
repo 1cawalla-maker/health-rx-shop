@@ -24,6 +24,11 @@ export default function GuideNicotinePouchStrengthGuide() {
       answer:
         'Yes, many people step down over time. A consultation is the right place to discuss an appropriate plan.',
     },
+    {
+      question: 'How much does it cost?',
+      answer:
+        'Costs typically include a consultation fee (shown at booking), product pricing (shown in the shop), and shipping at checkout. Pricing can change over time.',
+    },
   ];
 
   return (
@@ -73,6 +78,24 @@ export default function GuideNicotinePouchStrengthGuide() {
                 <li><strong>3mg:</strong> lower strength (often suitable for stepping down)</li>
                 <li><strong>6mg:</strong> mid strength</li>
                 <li><strong>9mg:</strong> higher strength (only if clinically appropriate)</li>
+              </ul>
+              <p>
+                Strength is not just preference—it’s part of clinical suitability. Your doctor may set a maximum
+                strength, and you can usually choose that strength or lower.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>How doctors typically think about strength</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <ul className="list-disc pl-5 space-y-2">
+                <li>Your current nicotine use (cigarettes, vaping, prior pouches)</li>
+                <li>How dependent you feel on nicotine</li>
+                <li>Health history and any risk factors</li>
+                <li>Your goal (maintain, switch, or step down)</li>
               </ul>
             </CardContent>
           </Card>
