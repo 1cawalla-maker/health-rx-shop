@@ -12,12 +12,17 @@ export default function GuideZynVsOtherNicotinePouches() {
     {
       question: 'Is Zyn different from other nicotine pouches?',
       answer:
-        'Zyn is a brand. The important differences are typically strength, ingredients, flavour options, and what’s clinically appropriate for you.',
+        'Zyn is a brand. The most important differences are usually strength options, flavour availability, and what’s clinically appropriate for you.',
     },
     {
       question: 'Can I choose any product and strength?',
       answer:
         'Strength and suitability should be clinically guided. A doctor may set a maximum strength; you can choose that strength or lower.',
+    },
+    {
+      question: 'How much does it cost?',
+      answer:
+        'Costs typically include a consultation fee (shown at booking), product pricing (shown in the shop), and shipping at checkout. Pricing can change over time.',
     },
     {
       question: 'What should I do if I’m unsure?',
@@ -71,6 +76,23 @@ export default function GuideZynVsOtherNicotinePouches() {
                 <li><strong>Suitability:</strong> depends on health history and nicotine dependence</li>
                 <li><strong>Access:</strong> follow the compliant pathway for Australia</li>
               </ul>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>How to choose between brands</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <ul className="list-disc pl-5 space-y-2">
+                <li>Pick your strength first (based on what your doctor approves).</li>
+                <li>Then choose flavour and price based on what’s available in the shop.</li>
+                <li>If your goal is to step down, select a lower strength over time.</li>
+              </ul>
+              <p>
+                If you’re unsure, start with a consultation. A qualified doctor can help guide the right strength
+                and approach.
+              </p>
             </CardContent>
           </Card>
 
