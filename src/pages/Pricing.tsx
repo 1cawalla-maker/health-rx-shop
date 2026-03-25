@@ -17,7 +17,7 @@ const productInfo = [
   {
     title: "Nicotine Pouches",
     description: "Various brands and strengths available based on your prescription.",
-    priceRange: "From $25 AUD per pack",
+    priceRange: "See current pricing in the shop",
   },
 ];
 
@@ -171,22 +171,59 @@ export default function Pricing() {
         </div>
       </section>
 
-      {/* FAQ Preview */}
+      {/* Helpful Guides */}
       <section className="py-16 md:py-24 bg-background">
         <div className="container">
-          <div className="max-w-2xl mx-auto text-center space-y-6">
-            <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">
-              Have Questions?
-            </h2>
-            <p className="text-muted-foreground">
-              Check out our FAQ page for answers to common questions about pricing, 
-              consultations, and the ordering process.
+          <div className="max-w-3xl mx-auto text-center space-y-4 mb-10">
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground">Helpful guides</h2>
+            <p className="text-lg text-muted-foreground">
+              Want quick answers before booking? These guides cover legality, access, and comparisons.
             </p>
-            <Button variant="outline" size="lg" asChild>
-              <Link to="/faq">
-                View FAQ
+          </div>
+
+          <div className="max-w-4xl mx-auto grid gap-4 sm:grid-cols-2">
+            <Link
+              to="/guides/zyn-australia"
+              className="block rounded-xl border border-border bg-card p-6 hover:shadow-md transition-shadow"
+            >
+              <p className="font-display text-lg font-semibold text-foreground">Zyn in Australia</p>
+              <p className="text-sm text-muted-foreground mt-1">Legality, access, and next steps.</p>
+            </Link>
+
+            <Link
+              to="/guides/nicotine-pouches-australia"
+              className="block rounded-xl border border-border bg-card p-6 hover:shadow-md transition-shadow"
+            >
+              <p className="font-display text-lg font-semibold text-foreground">Nicotine pouches in Australia</p>
+              <p className="text-sm text-muted-foreground mt-1">How prescriptions, delivery, and ordering work.</p>
+            </Link>
+
+            <Link
+              to="/guides/how-to-get-nicotine-pouches-in-australia"
+              className="block rounded-xl border border-border bg-card p-6 hover:shadow-md transition-shadow"
+            >
+              <p className="font-display text-lg font-semibold text-foreground">How to get nicotine pouches</p>
+              <p className="text-sm text-muted-foreground mt-1">Step-by-step from questionnaire to consult.</p>
+            </Link>
+
+            <Link
+              to="/guides/nicotine-pouches-vs-vaping"
+              className="block rounded-xl border border-border bg-card p-6 hover:shadow-md transition-shadow"
+            >
+              <p className="font-display text-lg font-semibold text-foreground">Nicotine pouches vs vaping</p>
+              <p className="text-sm text-muted-foreground mt-1">Key differences and considerations.</p>
+            </Link>
+          </div>
+
+          <div className="max-w-4xl mx-auto mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Button variant="hero" size="lg" asChild>
+              <Link to="/eligibility">
+                Start Consultation
                 <ArrowRight className="h-5 w-5" />
               </Link>
+            </Button>
+            <Button variant="outline" size="lg" asChild>
+              <Link to="/faq">View FAQ</Link>
             </Button>
           </div>
         </div>

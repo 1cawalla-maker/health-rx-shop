@@ -194,8 +194,67 @@ export default function HowItWorks() {
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* Helpful Guides Section */}
       <section className="py-16 md:py-24 bg-background">
+        <div className="container">
+          <div className="max-w-3xl mx-auto text-center space-y-4 mb-10">
+            <h2 className="font-display text-3xl font-bold text-foreground">Helpful guides</h2>
+            <p className="text-lg text-muted-foreground">
+              If you found us searching for Zyns in Australia or nicotine pouches, these guides cover the common
+              questions.
+            </p>
+          </div>
+
+          <div className="max-w-4xl mx-auto grid gap-4 sm:grid-cols-2">
+            <Link
+              to="/guides/zyn-australia"
+              className="block rounded-xl border border-border bg-card p-6 hover:shadow-md transition-shadow"
+            >
+              <p className="font-display text-lg font-semibold text-foreground">Zyn in Australia</p>
+              <p className="text-sm text-muted-foreground mt-1">Legality, access, and next steps.</p>
+            </Link>
+
+            <Link
+              to="/guides/nicotine-pouches-australia"
+              className="block rounded-xl border border-border bg-card p-6 hover:shadow-md transition-shadow"
+            >
+              <p className="font-display text-lg font-semibold text-foreground">Nicotine pouches in Australia</p>
+              <p className="text-sm text-muted-foreground mt-1">How prescriptions, delivery, and ordering work.</p>
+            </Link>
+
+            <Link
+              to="/guides/how-to-get-nicotine-pouches-in-australia"
+              className="block rounded-xl border border-border bg-card p-6 hover:shadow-md transition-shadow"
+            >
+              <p className="font-display text-lg font-semibold text-foreground">How to get nicotine pouches</p>
+              <p className="text-sm text-muted-foreground mt-1">Step-by-step from questionnaire to consult.</p>
+            </Link>
+
+            <Link
+              to="/guides/nicotine-pouches-vs-vaping"
+              className="block rounded-xl border border-border bg-card p-6 hover:shadow-md transition-shadow"
+            >
+              <p className="font-display text-lg font-semibold text-foreground">Nicotine pouches vs vaping</p>
+              <p className="text-sm text-muted-foreground mt-1">Key differences and considerations.</p>
+            </Link>
+          </div>
+
+          <div className="max-w-4xl mx-auto mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Button variant="hero" size="lg" asChild>
+              <Link to="/eligibility">
+                Start Consultation
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+            <Button variant="hero-outline" size="lg" asChild>
+              <Link to="/faq">View FAQ</Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-16 md:py-24 gradient-section">
         <div className="container">
           <div className="max-w-2xl mx-auto text-center space-y-6">
             <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground">
