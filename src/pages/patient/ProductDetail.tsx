@@ -211,14 +211,27 @@ export default function PatientProductDetail() {
       <div className="relative">
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="overflow-hidden">
-            <div className="aspect-[4/3] bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
-              <div className="text-center p-6">
-                <p className="font-display text-3xl font-bold text-foreground">{product.name}</p>
-                <p className="text-sm text-muted-foreground">{product.brand}</p>
-                <p className="text-xs text-muted-foreground mt-2">{product.canSizePouches} pouches per can</p>
-              </div>
+            <div className="aspect-[4/3] overflow-hidden bg-muted">
+              {product.imageUrl ? (
+                <img
+                  src={product.imageUrl}
+                  alt={product.name}
+                  loading="lazy"
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div className="h-full w-full bg-gradient-to-br from-primary/10 to-primary/5 animate-pulse" />
+              )}
             </div>
             <CardContent className="pt-6">
+              <div className="space-y-1">
+                <p className="font-display text-2xl font-bold text-foreground">{product.name}</p>
+                <p className="text-sm text-muted-foreground">{product.brand}</p>
+                <p className="text-xs text-muted-foreground">{product.canSizePouches} pouches per can</p>
+              </div>
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Select strength</Label>

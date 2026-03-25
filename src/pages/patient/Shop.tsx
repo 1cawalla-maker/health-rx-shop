@@ -162,11 +162,21 @@ export default function PatientShop() {
                 return (
                   <Link key={product.id} to={`/patient/shop/${product.id}`} className="block">
                     <Card className="overflow-hidden hover:shadow-md transition-shadow h-full">
-                      <div className="aspect-[4/3] bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
-                        <div className="text-center p-3">
-                          <p className="font-display text-xl font-bold text-foreground">{product.name}</p>
-                          <p className="text-xs text-muted-foreground">{product.brand}</p>
-                        </div>
+                      <div className="aspect-[4/3] overflow-hidden bg-muted">
+                        {product.imageUrl ? (
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            loading="lazy"
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                              // Hide broken images and let the skeleton show instead.
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="h-full w-full bg-gradient-to-br from-primary/10 to-primary/5 animate-pulse" />
+                        )}
                       </div>
                       <CardHeader className="pb-2">
                         <CardTitle className="text-base leading-tight">{product.name}</CardTitle>
