@@ -118,6 +118,29 @@ export default function GuideZynAustralia() {
             </div>
 
             <div className="space-y-2">
+              <h2 className="font-display text-2xl font-semibold">How much does it cost?</h2>
+              <p className="text-muted-foreground">
+                Pricing depends on your situation and what’s clinically appropriate. As a guide, costs typically
+                include:
+              </p>
+              <ul className="list-disc pl-5 text-muted-foreground space-y-2">
+                <li>
+                  <strong>Consultation fee:</strong> shown during booking.
+                </li>
+                <li>
+                  <strong>Products:</strong> pricing varies by brand, strength, and quantity. Product prices are shown in
+                  the shop.
+                </li>
+                <li>
+                  <strong>Shipping:</strong> calculated at checkout.
+                </li>
+              </ul>
+              <p className="text-xs text-muted-foreground">
+                Note: A consultation does not guarantee a prescription. Clinical decisions are made by the doctor.
+              </p>
+            </div>
+
+            <div className="space-y-2">
               <h2 className="font-display text-2xl font-semibold">FAQ</h2>
               <div className="space-y-4">
                 {faq.map((q) => (
