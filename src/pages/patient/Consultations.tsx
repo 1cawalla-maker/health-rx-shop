@@ -108,40 +108,55 @@ export default function PatientConsultations() {
     return (
       <Card>
         <CardContent className="pt-6">
-          <div className="flex items-start justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                 <Phone className="h-5 w-5 text-primary" />
               </div>
-              <div>
-                <h3 className="font-medium">Phone Consultation</h3>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-1 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1">
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="font-medium leading-tight">Phone Consultation</h3>
+
+                  {/* On small screens, show status inline with title for a cleaner layout */}
+                  <div className="sm:hidden shrink-0">
+                    {getStatusBadge(booking.status)}
+                  </div>
+                </div>
+
+                <div className="mt-2 grid grid-cols-1 gap-y-2 text-sm text-muted-foreground sm:grid-cols-2 sm:gap-x-6">
+                  <span className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
-                    {format(booking.scheduledAt, 'MMM d, yyyy')}
+                    <span className="truncate">{format(booking.scheduledAt, 'MMM d, yyyy')}</span>
                   </span>
-                  <span className="flex items-center gap-1">
+
+                  <span className="flex items-center gap-2">
                     <Clock className="h-4 w-4" />
-                    {format(booking.scheduledAt, 'h:mm a')} {getTimezoneAbbr(booking.scheduledAt, patientTz)}
+                    <span className="truncate">
+                      {format(booking.scheduledAt, 'h:mm a')} {getTimezoneAbbr(booking.scheduledAt, patientTz)}
+                    </span>
                   </span>
-                  <CountdownChip targetMs={booking.scheduledAt.getTime()} />
+
+                  <div className="sm:col-span-2">
+                    <CountdownChip targetMs={booking.scheduledAt.getTime()} />
+                  </div>
                 </div>
 
                 {!isPastBooking && ['booked', 'confirmed'].includes(booking.status) && (
-                  <p className="text-sm text-primary mt-1">You'll receive a call from the doctor at this time.</p>
+                  <p className="text-sm text-primary mt-2">You'll receive a call from the doctor at this time.</p>
                 )}
 
                 {booking.doctorName && (
-                  <div className="flex items-center gap-1 mt-2 text-sm">
+                  <div className="flex items-center gap-2 mt-3 text-sm">
                     <User className="h-4 w-4 text-muted-foreground" />
-                    <span>{formatDoctorName(booking.doctorName)}</span>
+                    <span className="truncate">{formatDoctorName(booking.doctorName)}</span>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              {getStatusBadge(booking.status)}
+            <div className="flex items-center justify-end gap-2 sm:justify-start">
+              <div className="hidden sm:block">{getStatusBadge(booking.status)}</div>
 
               {!isPastBooking && ['booked', 'confirmed'].includes(booking.status) && (
                 <Button
@@ -157,7 +172,7 @@ export default function PatientConsultations() {
                 </Button>
               )}
 
-              <Button variant="ghost" size="icon" onClick={() => openDetails(booking)}>
+              <Button variant="ghost" size="icon" onClick={() => openDetails(booking)} title="View details">
                 <Eye className="h-4 w-4" />
               </Button>
             </div>
