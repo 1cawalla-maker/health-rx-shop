@@ -124,7 +124,6 @@ export default function BookConsultation() {
           selectedSlot.doctorIds
         );
 
-        toast.success('Proceeding to payment...');
         navigate(`/patient/booking/payment/${booking.id}`);
       }
     } catch (error) {
@@ -339,7 +338,10 @@ export default function BookConsultation() {
               disabled={isSubmitting || (isReschedule && !rescheduleParamsValid)}
             >
               {isSubmitting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Preparing payment...
+                </span>
               ) : isReschedule && rescheduleParamsValid ? (
                 'Confirm New Time'
               ) : (
