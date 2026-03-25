@@ -115,7 +115,7 @@ export default function PatientConsultations() {
               </div>
               <div>
                 <h3 className="font-medium">Phone Consultation</h3>
-                <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-1 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
                     {format(booking.scheduledAt, 'MMM d, yyyy')}
@@ -177,12 +177,12 @@ export default function PatientConsultations() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground">Consultations</h1>
           <p className="text-muted-foreground mt-1">Times shown in {patientTz}</p>
         </div>
-        <Button asChild>
+        <Button asChild className="w-full sm:w-auto">
           <Link to="/patient/book">Book New</Link>
         </Button>
       </div>
