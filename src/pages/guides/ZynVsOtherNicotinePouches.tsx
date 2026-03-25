@@ -1,0 +1,111 @@
+import { PublicLayout } from '@/components/layout/PublicLayout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
+import Seo, { SITE_ORIGIN } from '@/components/seo/Seo';
+import { breadcrumbSchema, faqPageSchema } from '@/components/seo/schema';
+
+const PATH = '/guides/zyn-vs-other-nicotine-pouches';
+
+export default function GuideZynVsOtherNicotinePouches() {
+  const faq = [
+    {
+      question: 'Is Zyn different from other nicotine pouches?',
+      answer:
+        'Zyn is a brand. The important differences are typically strength, ingredients, flavour options, and what’s clinically appropriate for you.',
+    },
+    {
+      question: 'Can I choose any product and strength?',
+      answer:
+        'Strength and suitability should be clinically guided. A doctor may set a maximum strength; you can choose that strength or lower.',
+    },
+    {
+      question: 'What should I do if I’m unsure?',
+      answer:
+        'Start with the questionnaire and book a consultation so a qualified doctor can advise you based on your history and goals.',
+    },
+  ];
+
+  return (
+    <PublicLayout>
+      <Seo
+        title="Zyn vs Other Nicotine Pouches: What Changes (and What Doesn’t)"
+        description="Compare Zyn vs other nicotine pouches: what matters (strength, suitability, access) and how to choose the right next step in Australia."
+        canonicalPath={PATH}
+        jsonLd={[
+          breadcrumbSchema({
+            items: [
+              { name: 'Home', url: `${SITE_ORIGIN}/` },
+              { name: 'Guides', url: `${SITE_ORIGIN}${PATH}` },
+            ],
+          }),
+          faqPageSchema({ url: `${SITE_ORIGIN}${PATH}`, questions: faq }),
+        ]}
+      />
+
+      <section className="py-12 md:py-16">
+        <div className="container max-w-3xl space-y-6">
+          <header className="space-y-3">
+            <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">Zyn vs other nicotine pouches</h1>
+            <p className="text-muted-foreground">Last updated: March 2026</p>
+            <p className="text-muted-foreground">
+              If you’re comparing brands, the most important factor is what’s clinically appropriate for you.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button asChild size="lg">
+                <Link to="/eligibility">Start consultation</Link>
+              </Button>
+              <Button asChild variant="outline" size="lg">
+                <Link to="/guides/zyn-australia">Read: Zyn in Australia</Link>
+              </Button>
+            </div>
+          </header>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>What actually matters</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <ul className="list-disc pl-5 space-y-2">
+                <li><strong>Strength:</strong> 3mg / 6mg / 9mg (doctor‑guided)</li>
+                <li><strong>Suitability:</strong> depends on health history and nicotine dependence</li>
+                <li><strong>Access:</strong> follow the compliant pathway for Australia</li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <h2 className="font-display text-2xl font-semibold">FAQ</h2>
+              <div className="space-y-4">
+                {faq.map((q) => (
+                  <Card key={q.question}>
+                    <CardHeader>
+                      <CardTitle className="text-base">{q.question}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-sm text-muted-foreground">{q.answer}</CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Next step</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-muted-foreground">
+                  Start with the questionnaire and book a consultation. A qualified doctor will make the final
+                  clinical assessment.
+                </p>
+                <Button asChild size="lg" className="w-full sm:w-auto">
+                  <Link to="/eligibility">Start consultation</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+    </PublicLayout>
+  );
+}

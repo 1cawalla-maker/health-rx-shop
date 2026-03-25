@@ -73,6 +73,12 @@ import AdminPrescriptionUploads from "./pages/admin/PrescriptionUploads";
 // SEO / Guides (public)
 import GuideZynAustralia from "./pages/guides/ZynAustralia";
 import GuideNicotinePouchesVsVaping from "./pages/guides/NicotinePouchesVsVaping";
+import GuideNicotinePouchesAustralia from "./pages/guides/NicotinePouchesAustralia";
+import GuideAreNicotinePouchesLegalAustralia from "./pages/guides/AreNicotinePouchesLegalAustralia";
+import GuideHowToGetNicotinePouchesAustralia from "./pages/guides/HowToGetNicotinePouchesAustralia";
+import GuidePersonalImportationSchemeNicotinePouches from "./pages/guides/PersonalImportationSchemeNicotinePouches";
+import GuideNicotinePouchStrengthGuide from "./pages/guides/NicotinePouchStrengthGuide";
+import GuideZynVsOtherNicotinePouches from "./pages/guides/ZynVsOtherNicotinePouches";
 
 const queryClient = new QueryClient();
 
@@ -100,6 +106,12 @@ const App = () => (
 
               {/* SEO guides (public) */}
               <Route path="/guides/zyn-australia" element={<GuideZynAustralia />} />
+              <Route path="/guides/nicotine-pouches-australia" element={<GuideNicotinePouchesAustralia />} />
+              <Route path="/guides/are-nicotine-pouches-legal-in-australia" element={<GuideAreNicotinePouchesLegalAustralia />} />
+              <Route path="/guides/how-to-get-nicotine-pouches-in-australia" element={<GuideHowToGetNicotinePouchesAustralia />} />
+              <Route path="/guides/personal-importation-scheme-nicotine-pouches" element={<GuidePersonalImportationSchemeNicotinePouches />} />
+              <Route path="/guides/nicotine-pouch-strength-3mg-6mg-9mg" element={<GuideNicotinePouchStrengthGuide />} />
+              <Route path="/guides/zyn-vs-other-nicotine-pouches" element={<GuideZynVsOtherNicotinePouches />} />
               <Route path="/guides/nicotine-pouches-vs-vaping" element={<GuideNicotinePouchesVsVaping />} />
 
               {/* Patient routes */}
