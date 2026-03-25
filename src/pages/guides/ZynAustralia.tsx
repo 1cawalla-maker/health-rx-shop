@@ -13,17 +13,22 @@ export default function GuideZynAustralia() {
     {
       question: 'Are Zyns legal in Australia?',
       answer:
-        'Australian rules around nicotine products can be complex. The safest way to access nicotine pouches is via a compliant, doctor‑supervised pathway where a clinician assesses whether it is appropriate for you.',
+        'Australian rules around nicotine products can be complex and can change. The safest way to access nicotine pouches is via a compliant, doctor‑supervised pathway where a clinician assesses whether it is appropriate for you.',
     },
     {
       question: 'How can I get Zyns in Australia legally?',
       answer:
-        'If clinically appropriate, a doctor can assess you via telehealth and guide you through the compliant steps to access nicotine pouches in Australia.',
+        'Start with the questionnaire, then book a telehealth consultation. If clinically appropriate, a doctor can guide you through the next steps to access nicotine pouches in Australia.',
     },
     {
       question: 'Do I need a prescription for nicotine pouches in Australia?',
       answer:
-        'In many cases, nicotine products require medical oversight. A consultation allows a doctor to assess your situation and advise on the appropriate legal pathway.',
+        'In many cases, nicotine products require medical oversight. A consultation allows a doctor to assess your situation and advise on the appropriate pathway.',
+    },
+    {
+      question: 'How much does it cost?',
+      answer:
+        'Costs typically include a consultation fee (shown at booking), product pricing (shown in the shop), and shipping at checkout. Pricing can change over time.',
     },
     {
       question: 'What happens in the consultation?',
@@ -34,6 +39,11 @@ export default function GuideZynAustralia() {
       question: 'How long does it take?',
       answer:
         'Timeframes vary. You can start with the questionnaire and book a consultation; the rest depends on clinical suitability and the steps required for your situation.',
+    },
+    {
+      question: 'Can I choose strength and flavours?',
+      answer:
+        'If a prescription is issued, the doctor may set a maximum strength. You can typically choose that strength or lower and select from available flavours in the shop.',
     },
   ];
 
@@ -107,6 +117,10 @@ export default function GuideZynAustralia() {
                 provide legal advice, but we do provide a compliant, doctor‑supervised pathway where the clinician
                 explains what is appropriate for you.
               </p>
+              <p className="text-muted-foreground">
+                If you’re unsure, the most reliable next step is to start the questionnaire and book a consultation—
+                a doctor can explain what applies to your situation.
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -115,6 +129,12 @@ export default function GuideZynAustralia() {
                 The typical path is: complete a short questionnaire → book a consultation → doctor assesses your
                 situation → next steps are explained if clinically appropriate.
               </p>
+              <ol className="list-decimal pl-5 text-muted-foreground space-y-2">
+                <li>Complete the questionnaire (takes a couple of minutes).</li>
+                <li>Book a consultation time that suits you.</li>
+                <li>Speak with an AHPRA‑registered doctor by phone.</li>
+                <li>If clinically appropriate, your doctor will explain next steps and any limits (like max strength).</li>
+              </ol>
             </div>
 
             <div className="space-y-2">
