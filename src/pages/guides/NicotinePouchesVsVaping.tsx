@@ -29,6 +29,11 @@ export default function GuideNicotinePouchesVsVaping() {
       answer:
         'Start with the questionnaire and book a telehealth consultation. A qualified doctor will assess suitability and explain next steps.',
     },
+    {
+      question: 'How much does it cost?',
+      answer:
+        'Costs vary. A consultation fee applies, and product/shipping costs depend on what’s clinically appropriate and what you choose in the shop.',
+    },
   ];
 
   return (
@@ -89,10 +94,27 @@ export default function GuideNicotinePouchesVsVaping() {
             <div className="space-y-2">
               <h2 className="font-display text-2xl font-semibold">Key differences</h2>
               <ul className="list-disc pl-5 text-muted-foreground space-y-2">
-                <li>Delivery method: mouth vs inhalation</li>
-                <li>Discretion: no vapour/smell vs device use</li>
-                <li>Dose control varies by product</li>
-                <li>Convenience and contexts differ (work, travel, indoors)</li>
+                <li><strong>Delivery:</strong> mouth (pouches) vs inhalation (vaping)</li>
+                <li><strong>Discretion:</strong> no vapour/smell vs device use</li>
+                <li><strong>Nicotine dose:</strong> varies by product and how it’s used</li>
+                <li><strong>Convenience:</strong> contexts differ (work, travel, indoors)</li>
+              </ul>
+              <p className="text-muted-foreground">
+                If you’re unsure which path makes sense, a doctor can help align your choice with your goals and
+                health history.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <h2 className="font-display text-2xl font-semibold">Which option is right for you?</h2>
+              <p className="text-muted-foreground">
+                People compare pouches and vaping for different reasons—quitting smoking, reducing nicotine,
+                discretion, or avoiding devices. The right choice depends on your medical history and nicotine use.
+              </p>
+              <ul className="list-disc pl-5 text-muted-foreground space-y-2">
+                <li>If you want a device‑free option, nicotine pouches may suit.</li>
+                <li>If you’re currently vaping and want to step down, a doctor can help plan the transition.</li>
+                <li>If you have health conditions or take medications, get clinician advice before changing products.</li>
               </ul>
             </div>
 
