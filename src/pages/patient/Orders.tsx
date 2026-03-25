@@ -16,6 +16,116 @@ import { useAuth } from '@/hooks/useAuth';
 import { orderService } from '@/services/orderService';
 import type { Order } from '@/types/shop';
 
+function addBusinessDays(start: Date, businessDays: number): Date {
+  const d = new Date(start);
+  let added = 0;
+  while (added < businessDays) {
+    d.setDate(d.getDate() + 1);
+    const day = d.getDay();
+    // 0 = Sunday, 6 = Saturday
+    if (day !== 0 && day !== 6) {
+      added += 1;
+    }
+  }
+  return d;
+}
+
+function getEstimatedArrivalRange(order: Order): { start: Date; end: Date } | null {
+  if (order.status === 'cancelled' || order.status === 'delivered') return null;
+
+  const created = new Date(order.createdAt);
+
+  // Phase 1 heuristic ETA ranges (business days). Phase 2 will be wired to Shopify fulfilment/carrier estimates.
+  if (order.status === 'processing') {
+    return { start: addBusinessDays(created, 3), end: addBusinessDays(created, 7) };
+  }
+
+  // shipped
+  return { start: addBusinessDays(created, 2), end: addBusinessDays(created, 5) };
+}
+
+function OrderTracking({ order }: { order: Order }) {
+  const eta = getEstimatedArrivalRange(order);
+
+  const steps = [
+    { key: 'processing', label: 'Processing' },
+    { key: 'shipped', label: 'Shipped' },
+    { key: 'delivered', label: 'Arrived' },
+  ] as const;
+
+  const activeIndex = (() => {
+    switch (order.status) {
+      case 'processing':
+        return 0;
+      case 'shipped':
+        return 1;
+      case 'delivered':
+        return 2;
+      case 'cancelled':
+        return -1;
+    }
+  })();
+
+  if (order.status === 'cancelled') {
+    return (
+      <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
+        This order was cancelled.
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-medium text-foreground">Order tracking</p>
+        {eta && (
+          <p className="text-xs text-muted-foreground">
+            Estimated arrival: {format(eta.start, 'MMM d')} – {format(eta.end, 'MMM d')}
+          </p>
+        )}
+      </div>
+
+      <div className="grid grid-cols-3 items-start gap-3">
+        {steps.map((s, idx) => {
+          const isDone = activeIndex >= idx;
+          const isActive = activeIndex === idx;
+          return (
+            <div key={s.key} className="min-w-0">
+              <div className="flex items-center gap-2">
+                <div
+                  className={
+                    'h-3 w-3 rounded-full border ' +
+                    (isDone ? 'bg-primary border-primary' : 'bg-background border-border')
+                  }
+                  aria-hidden
+                />
+                <span className={
+                  'text-xs ' + (isActive ? 'text-foreground font-medium' : 'text-muted-foreground')
+                }>
+                  {s.label}
+                </span>
+              </div>
+              {/* connector line */}
+              {idx < steps.length - 1 && (
+                <div
+                  className={
+                    'mt-2 h-px w-full ' + (activeIndex > idx ? 'bg-primary/60' : 'bg-border')
+                  }
+                  aria-hidden
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        Status updates appear here as your order progresses.
+      </p>
+    </div>
+  );
+}
+
 export default function PatientOrders() {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -145,6 +255,8 @@ export default function PatientOrders() {
                     ))}
                   </div>
                   
+                  <OrderTracking order={order} />
+
                   <div className="flex items-center justify-between pt-4 border-t">
                     <span className="font-medium">Total: ${(order.totalCents / 100).toFixed(2)} AUD</span>
                     <div className="flex gap-2">
