@@ -12,17 +12,27 @@ export default function GuideAreNicotinePouchesLegalAustralia() {
     {
       question: 'Are nicotine pouches legal in Australia?',
       answer:
-        'Regulations around nicotine products can be complex and may change. The safest approach is to use a doctor‑supervised pathway where a clinician can explain the compliant options available to you.',
+        'Regulations around nicotine products can be complex and may change. The safest approach is a doctor‑supervised pathway where a clinician can explain the compliant options available to you.',
     },
     {
       question: 'Do I need a prescription?',
       answer:
-        'Many nicotine products require medical oversight. A consultation allows a doctor to assess suitability and advise on the appropriate pathway.',
+        'In many cases, nicotine products require medical oversight. A consultation allows a doctor to assess suitability and advise on the appropriate pathway.',
+    },
+    {
+      question: 'How do I access nicotine pouches in Australia?',
+      answer:
+        'Start with the questionnaire and book a telehealth consultation. If clinically appropriate, a doctor will guide you through the next steps.',
+    },
+    {
+      question: 'How much does it cost?',
+      answer:
+        'Costs typically include a consultation fee (shown at booking), product pricing (shown in the shop), and shipping at checkout. Pricing can change over time.',
     },
     {
       question: 'What should I do next?',
       answer:
-        'Start with the questionnaire and book a telehealth consultation. A qualified doctor will make the final clinical assessment.',
+        'Start with the questionnaire and book a consultation. A qualified doctor will make the final clinical assessment.',
     },
   ];
 
@@ -70,13 +80,30 @@ export default function GuideAreNicotinePouchesLegalAustralia() {
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-2">
               <p>
-                We don’t provide legal advice. What we do provide is a compliant, doctor‑supervised pathway where a
-                qualified clinician assesses suitability and explains next steps.
+                We don’t provide legal advice. What we do provide is a doctor‑supervised pathway where a qualified
+                clinician assesses suitability and explains the compliant next steps.
               </p>
               <p>
                 If you’re unsure how nicotine pouches apply to you, the simplest step is to complete the
                 questionnaire and book a consultation.
               </p>
+              <p>
+                In practice, the key idea is simple: don’t guess. Regulations can be nuanced and what’s appropriate
+                depends on your circumstances.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Common reasons people ask this</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <ul className="list-disc pl-5 space-y-2">
+                <li>They’ve used Zyn or other nicotine pouches overseas and want to understand Australian rules.</li>
+                <li>They’re comparing nicotine pouches vs vaping and want a device-free option.</li>
+                <li>They want clinician guidance on strength and suitability.</li>
+              </ul>
             </CardContent>
           </Card>
 
