@@ -70,6 +70,10 @@ import AdminUsers from "./pages/admin/Users";
 import AdminPrescriptions from "./pages/admin/Prescriptions";
 import AdminPrescriptionUploads from "./pages/admin/PrescriptionUploads";
 
+// SEO / Guides (public)
+import GuideZynAustralia from "./pages/guides/ZynAustralia";
+import GuideNicotinePouchesVsVaping from "./pages/guides/NicotinePouchesVsVaping";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -93,6 +97,10 @@ const App = () => (
               <Route path="/contact" element={<Contact />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/eligibility" element={<EligibilityQuiz />} />
+
+              {/* SEO guides (public) */}
+              <Route path="/guides/zyn-australia" element={<GuideZynAustralia />} />
+              <Route path="/guides/nicotine-pouches-vs-vaping" element={<GuideNicotinePouchesVsVaping />} />
 
               {/* Patient routes */}
               <Route path="/patient" element={<ProtectedRoute allowedRoles={['patient']}><PatientLayout /></ProtectedRoute>}>
