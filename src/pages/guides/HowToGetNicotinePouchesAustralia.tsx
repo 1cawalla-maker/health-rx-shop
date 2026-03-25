@@ -12,12 +12,17 @@ export default function GuideHowToGetNicotinePouchesAustralia() {
     {
       question: 'How do I get nicotine pouches in Australia?',
       answer:
-        'Start with the questionnaire, then book a telehealth consultation. If clinically appropriate, a doctor will guide you through the compliant next steps.',
+        'Start with the questionnaire, then book a telehealth consultation. If clinically appropriate, a doctor will guide you through the next steps.',
     },
     {
       question: 'Do I choose a doctor?',
       answer:
         'You select a time. A doctor is assigned after booking confirmation.',
+    },
+    {
+      question: 'How much does it cost?',
+      answer:
+        'Costs typically include a consultation fee (shown at booking), product pricing (shown in the shop), and shipping at checkout. Pricing can change over time.',
     },
     {
       question: 'How long does it take?',
@@ -74,6 +79,22 @@ export default function GuideHowToGetNicotinePouchesAustralia() {
                 <li>A qualified doctor assesses suitability during your consultation.</li>
                 <li>If clinically appropriate, next steps are explained and access is enabled.</li>
               </ol>
+              <p className="text-muted-foreground">
+                You don’t need to choose a doctor—just pick a time. A doctor is assigned after booking confirmation.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Tips to make it smooth</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <ul className="list-disc pl-5 space-y-2">
+                <li>Have your phone nearby at your scheduled time (consultations are by phone).</li>
+                <li>Be ready to discuss your nicotine use and any relevant medical history.</li>
+                <li>If a prescription is issued, follow any limits (such as maximum strength).</li>
+              </ul>
             </CardContent>
           </Card>
 
