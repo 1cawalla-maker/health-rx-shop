@@ -1,25 +1,28 @@
-import { useState, useEffect } from 'react';
-import { ShoppingCart, AlertTriangle, Package } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useOutletContext } from 'react-router-dom';
+import { AlertTriangle, Package } from 'lucide-react';
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
+
+import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/contexts/CartContext';
 import { usePrescriptionStatus } from '@/hooks/usePrescriptionStatus';
+
 import { catalogService } from '@/services/catalogService';
 import { orderService } from '@/services/orderService';
+
 import { allowanceUtils } from '@/lib/allowanceUtils';
+
 import { CartButton } from '@/components/shop/CartButton';
 import { CartDrawer } from '@/components/shop/CartDrawer';
 import { ShopLockedOverlay } from '@/components/shop/ShopLockedOverlay';
 import { ShopPendingOverlay } from '@/components/shop/ShopPendingOverlay';
 import { ShopExpiredOverlay } from '@/components/shop/ShopExpiredOverlay';
-import type { Product, ProductVariant } from '@/types/shop';
+
+import type { Product } from '@/types/shop';
 import { PRESCRIPTION_TOTAL_CANS } from '@/types/shop';
-import { useOutletContext } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { toast } from 'sonner';
 
 interface OutletContext {
   hasActivePrescription: boolean;
@@ -30,17 +33,15 @@ interface OutletContext {
 export default function PatientShop() {
   const outletContext = useOutletContext<OutletContext>();
   const { user } = useAuth();
+  const { cart } = useCart();
+
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [cansOrdered, setCansOrdered] = useState(0);
-  const { addToCart, cart } = useCart();
-  
+
   const {
     hasActivePrescription: rxHasActive,
     allowedStrengthMg,
-    referenceId,
-    refreshStatus,
-    isLoading: isLoadingRx,
     isExpired,
     expiredAt,
   } = usePrescriptionStatus();
@@ -49,10 +50,9 @@ export default function PatientShop() {
   const hasActivePrescription = rxHasActive || outletContext.hasActivePrescription;
   const hasPendingPrescription = !rxHasActive && outletContext.hasPendingPrescription;
 
-  // Use prescription strength or default
   const maxStrengthMg = allowedStrengthMg || 0;
 
-  // Calculate remaining allowance using centralized utils
+  // Calculate remaining allowance
   const remainingCans = allowanceUtils.remainingForAddToCart(cansOrdered, cart.totalCans);
   const allowancePercentUsed = allowanceUtils.percentageUsed(cansOrdered, cart.totalCans);
 
@@ -70,7 +70,6 @@ export default function PatientShop() {
     loadProducts();
   }, []);
 
-  // Load orders to calculate cans already ordered
   useEffect(() => {
     const loadCansOrdered = async () => {
       if (!user) return;
@@ -82,37 +81,16 @@ export default function PatientShop() {
       }
     };
     loadCansOrdered();
-  }, [user]);
+  }, [user?.id]);
 
-  // ALLOWANCE CHECK: Recalc from scratch BEFORE add-to-cart mutation
-  const handleAddToCart = async (product: Product, variant: ProductVariant) => {
-    if (!user) {
-      toast.error('Please log in to add items to cart');
-      return;
-    }
-
-    // RECALC FROM SCRATCH using allowanceUtils
-    const freshCansOrdered = await orderService.getTotalCansOrdered(user.id);
-    const freshRemainingCans = allowanceUtils.remainingForAddToCart(freshCansOrdered, cart.totalCans);
-
-    if (freshRemainingCans <= 0) {
-      toast.error('No remaining allowance - you have used your full prescription');
-      return;
-    }
-
-    await addToCart(product, variant, 1);
-  };
-
-  // STRENGTH GATING: Use allowanceUtils helper
-  const isVariantAllowed = (variant: ProductVariant): boolean => {
-    return allowanceUtils.isVariantAllowed(variant.strengthMg, maxStrengthMg);
-  };
-
-  const canAddMore = remainingCans > 0;
+  const productsForGrid = useMemo(() => {
+    // In Phase 1 we show the full catalogue even if locked.
+    // Strength gating happens on the product page.
+    return products;
+  }, [products]);
 
   return (
     <div className="space-y-8">
-      {/* Header with Cart Button */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground">Product Shop</h1>
@@ -121,7 +99,6 @@ export default function PatientShop() {
         {hasActivePrescription && <CartButton />}
       </div>
 
-      {/* Allowance Card */}
       {hasActivePrescription && (
         <Card className="border-primary/20">
           <CardContent className="pt-6">
@@ -142,15 +119,11 @@ export default function PatientShop() {
               <span className="text-muted-foreground">|</span>
               <span className="font-medium text-primary">{remainingCans} remaining</span>
             </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              Max strength: {maxStrengthMg}mg
-            </div>
-            {/* Intentionally hide internal prescription reference ids from the patient UI. */}
+            <div className="text-xs text-muted-foreground mt-1">Max strength: {maxStrengthMg}mg</div>
           </CardContent>
         </Card>
       )}
 
-      {/* Prescription Warning Banner */}
       {hasActivePrescription && remainingCans < 10 && remainingCans > 0 && (
         <Alert variant="default" className="border-amber-500/50 bg-amber-500/10">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
@@ -170,74 +143,42 @@ export default function PatientShop() {
       )}
 
       <div className="relative">
-        {/* Product Grid by Flavour */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {isLoadingProducts ? (
-            Array.from({ length: 3 }).map((_, i) => (
-              <Card key={i} className="overflow-hidden animate-pulse">
-                <div className="aspect-square bg-muted" />
-                <CardHeader className="pb-2">
-                  <div className="h-5 bg-muted rounded w-3/4" />
-                  <div className="h-4 bg-muted rounded w-1/2 mt-2" />
-                </CardHeader>
-                <CardContent className="pb-2">
-                  <div className="h-4 bg-muted rounded w-1/3" />
-                </CardContent>
-                <CardFooter>
-                  <div className="h-10 bg-muted rounded w-full" />
-                </CardFooter>
-              </Card>
-            ))
-          ) : (
-            products.map((product) => (
-              <Card key={product.id} className="overflow-hidden">
-                <div className="aspect-[4/3] bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
-                  <div className="text-center p-4">
-                    <p className="font-display text-2xl font-bold text-foreground">{product.name}</p>
-                    <p className="text-sm text-muted-foreground">{product.brand}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{product.canSizePouches} pouches per can</p>
-                  </div>
-                </div>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">{product.name}</CardTitle>
-                  <CardDescription>{product.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="pb-4">
-                  {/* Variant buttons */}
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Select Strength:</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {product.variants.map((variant) => {
-                        const allowed = isVariantAllowed(variant);
-                        const available = variant.available && allowed && canAddMore;
-                        
-                        return (
-                          <Button
-                            key={variant.id}
-                            variant={allowed ? "outline" : "ghost"}
-                            size="sm"
-                            className={`flex flex-col h-auto py-2 ${
-                              !allowed ? 'opacity-50 cursor-not-allowed' : ''
-                            }`}
-                            onClick={() => available && handleAddToCart(product, variant)}
-                            disabled={!available}
-                          >
-                            <span className="font-semibold">{variant.strengthMg}mg</span>
-                            <span className="text-xs text-muted-foreground">
-                              ${(variant.priceCents / 100).toFixed(2)}
-                            </span>
-                            {!allowed && (
-                              <span className="text-[10px] text-destructive">Not allowed</span>
-                            )}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+          {isLoadingProducts
+            ? Array.from({ length: 6 }).map((_, i) => (
+                <Card key={i} className="overflow-hidden animate-pulse">
+                  <div className="aspect-[4/3] bg-muted" />
+                  <CardHeader className="pb-2">
+                    <div className="h-5 bg-muted rounded w-3/4" />
+                    <div className="h-4 bg-muted rounded w-1/2 mt-2" />
+                  </CardHeader>
+                  <CardContent className="pb-4">
+                    <div className="h-4 bg-muted rounded w-1/3" />
+                  </CardContent>
+                </Card>
+              ))
+            : productsForGrid.map((product) => {
+                const minPriceCents = Math.min(...product.variants.map(v => v.priceCents));
+                return (
+                  <Link key={product.id} to={`/patient/shop/${product.id}`} className="block">
+                    <Card className="overflow-hidden hover:shadow-md transition-shadow h-full">
+                      <div className="aspect-[4/3] bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+                        <div className="text-center p-3">
+                          <p className="font-display text-xl font-bold text-foreground">{product.name}</p>
+                          <p className="text-xs text-muted-foreground">{product.brand}</p>
+                        </div>
+                      </div>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base leading-tight">{product.name}</CardTitle>
+                        <CardDescription className="line-clamp-2">{product.description}</CardDescription>
+                      </CardHeader>
+                      <CardContent className="pb-4">
+                        <p className="text-sm font-medium">From ${(minPriceCents / 100).toFixed(2)}</p>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })}
         </div>
 
         {/* Overlays */}
@@ -246,18 +187,6 @@ export default function PatientShop() {
         {!hasActivePrescription && !hasPendingPrescription && !isExpired && <ShopLockedOverlay />}
       </div>
 
-      {/* Active prescription info */}
-      {hasActivePrescription && (
-        <Card className="bg-green-500/5 border-green-500/20">
-          <CardContent className="pt-6">
-            <p className="text-sm text-green-600">
-              ✓ Your prescription is active. You can order products up to {maxStrengthMg}mg strength within your allowance.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Cart Drawer */}
       <CartDrawer remainingCans={remainingCans} />
     </div>
   );

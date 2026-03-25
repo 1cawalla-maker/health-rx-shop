@@ -35,6 +35,7 @@ import PatientConsultations from "./pages/patient/Consultations";
 import UploadPrescription from "./pages/patient/UploadPrescription";
 import PatientPrescriptions from "./pages/patient/Prescriptions";
 import PatientShop from "./pages/patient/Shop";
+import PatientProductDetail from "./pages/patient/ProductDetail";
 import PatientIntake from "./pages/patient/Intake";
 import PatientAccount from "./pages/patient/Account";
 import PatientCheckout from "./pages/patient/Checkout";
@@ -106,6 +107,7 @@ const App = () => (
                 <Route path="upload-prescription" element={<UploadPrescription />} />
                 <Route path="prescriptions" element={<PatientPrescriptions />} />
                 <Route path="shop" element={<PatientShop />} />
+                <Route path="shop/:productId" element={<PatientProductDetail />} />
                 <Route path="checkout" element={<PatientCheckout />} />
                 <Route path="orders" element={<PatientOrders />} />
                 <Route path="order-success" element={<PatientOrderSuccess />} />
