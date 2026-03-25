@@ -1,9 +1,15 @@
 import { PublicLayout } from "@/components/layout/PublicLayout";
+import Seo from "@/components/seo/Seo";
 import { AlertTriangle } from "lucide-react";
 
 export default function Disclaimer() {
   return (
     <PublicLayout>
+      <Seo
+        title="Medical & Telehealth Disclaimer"
+        description="Medical and telehealth disclaimer for NicoPatch."
+        canonicalPath="/disclaimer"
+      />
       <section className="py-16 md:py-24">
         <div className="container">
           <div className="max-w-3xl mx-auto">

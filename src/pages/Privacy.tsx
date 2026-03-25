@@ -1,8 +1,14 @@
 import { PublicLayout } from "@/components/layout/PublicLayout";
+import Seo from "@/components/seo/Seo";
 
 export default function Privacy() {
   return (
     <PublicLayout>
+      <Seo
+        title="Privacy Policy"
+        description="NicoPatch privacy policy and how we handle personal information."
+        canonicalPath="/privacy"
+      />
       <section className="py-16 md:py-24">
         <div className="container">
           <div className="max-w-3xl mx-auto prose prose-slate">

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { PublicLayout } from "@/components/layout/PublicLayout";
+import Seo from "@/components/seo/Seo";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, Heart, Users, Award } from "lucide-react";
 
@@ -50,6 +51,11 @@ const doctors = [
 export default function About() {
   return (
     <PublicLayout>
+      <Seo
+        title="About NicoPatch: Doctor‑Supervised Nicotine Pouches in Australia"
+        description="NicoPatch is an Australian telehealth platform connecting patients with AHPRA‑registered doctors for nicotine pouch consultations and clinically guided next steps."
+        canonicalPath="/about"
+      />
       {/* Hero Section */}
       <section className="gradient-section py-16 md:py-24">
         <div className="container">

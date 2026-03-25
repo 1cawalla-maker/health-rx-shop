@@ -1,8 +1,14 @@
 import { PublicLayout } from "@/components/layout/PublicLayout";
+import Seo from "@/components/seo/Seo";
 
 export default function Terms() {
   return (
     <PublicLayout>
+      <Seo
+        title="Terms of Service"
+        description="NicoPatch terms of service for using our Australian telehealth platform."
+        canonicalPath="/terms"
+      />
       <section className="py-16 md:py-24">
         <div className="container">
           <div className="max-w-3xl mx-auto prose prose-slate">

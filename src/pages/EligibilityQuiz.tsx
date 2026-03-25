@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PublicLayout } from '@/components/layout/PublicLayout';
+import Seo from '@/components/seo/Seo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -351,6 +352,12 @@ export default function EligibilityQuiz() {
   // Question steps
   return (
     <PublicLayout>
+      <Seo
+        title="Pre‑Consultation Questionnaire"
+        description="Answer a few questions to help a doctor assess whether nicotine pouches may be appropriate for you."
+        canonicalPath="/eligibility"
+        noIndex
+      />
       <section className="py-16 md:py-24 gradient-section min-h-[70vh]">
         <div className="container max-w-2xl">
           <div className="text-center mb-8">

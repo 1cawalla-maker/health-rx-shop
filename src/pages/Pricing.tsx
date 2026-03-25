@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { PublicLayout } from "@/components/layout/PublicLayout";
+import Seo from "@/components/seo/Seo";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, ArrowRight, HelpCircle } from "lucide-react";
 
@@ -23,6 +24,11 @@ const productInfo = [
 export default function Pricing() {
   return (
     <PublicLayout>
+      <Seo
+        title="Pricing: Zyn Australia & Nicotine Pouches Consultation Cost"
+        description="See consultation pricing and how costs work for nicotine pouches in Australia. Product prices and shipping are shown during checkout."
+        canonicalPath="/pricing"
+      />
       {/* Hero Section */}
       <section className="gradient-section py-16 md:py-24">
         <div className="container">

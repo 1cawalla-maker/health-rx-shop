@@ -1,4 +1,5 @@
 import { PublicLayout } from "@/components/layout/PublicLayout";
+import Seo from "@/components/seo/Seo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,6 +46,11 @@ export default function Contact() {
 
   return (
     <PublicLayout>
+      <Seo
+        title="Contact NicoPatch"
+        description="Contact the NicoPatch team for help with consultations, prescriptions, and ordering nicotine pouches in Australia."
+        canonicalPath="/contact"
+      />
       {/* Hero Section */}
       <section className="gradient-section py-16 md:py-24">
         <div className="container">

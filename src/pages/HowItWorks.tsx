@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { PublicLayout } from "@/components/layout/PublicLayout";
+import Seo from "@/components/seo/Seo";
 import { Button } from "@/components/ui/button";
 import { 
   UserPlus, 
@@ -90,6 +91,11 @@ const detailedSteps = [
 export default function HowItWorks() {
   return (
     <PublicLayout>
+      <Seo
+        title="How to Get Nicotine Pouches in Australia (Zyn): How It Works"
+        description="Learn how NicoPatch works: questionnaire, telehealth consultation, clinical assessment, and ordering nicotine pouches in Australia through a compliant pathway."
+        canonicalPath="/how-it-works"
+      />
       {/* Hero Section */}
       <section className="gradient-section py-16 md:py-24">
         <div className="container">

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { PublicLayout } from '@/components/layout/PublicLayout';
+import Seo from '@/components/seo/Seo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -352,6 +353,12 @@ export default function Auth() {
 
   return (
     <PublicLayout>
+      <Seo
+        title="Log In / Sign Up"
+        description="Log in or create your NicoPatch account to book a telehealth consultation."
+        canonicalPath="/auth"
+        noIndex
+      />
       <section className="py-16 md:py-24 gradient-section">
         <div className="container">
           <div className={`mx-auto ${selectedRole === 'doctor' && activeTab === 'signup' ? 'max-w-lg' : 'max-w-md'}`}>
