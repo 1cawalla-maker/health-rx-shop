@@ -124,6 +124,23 @@ export default function GuideAreNicotinePouchesLegalAustralia() {
 
             <Card>
               <CardHeader>
+                <CardTitle>Related guides</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <Link className="text-primary underline underline-offset-4 block" to="/guides/zyn-australia">
+                  Zyn in Australia
+                </Link>
+                <Link className="text-primary underline underline-offset-4 block" to="/guides/how-to-get-nicotine-pouches-in-australia">
+                  How to get nicotine pouches in Australia
+                </Link>
+                <Link className="text-primary underline underline-offset-4 block" to="/guides/personal-importation-scheme-nicotine-pouches">
+                  Personal Importation Scheme (nicotine pouches)
+                </Link>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                 <CardTitle>Next step</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">

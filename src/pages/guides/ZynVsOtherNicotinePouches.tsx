@@ -113,6 +113,23 @@ export default function GuideZynVsOtherNicotinePouches() {
 
             <Card>
               <CardHeader>
+                <CardTitle>Related guides</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <Link className="text-primary underline underline-offset-4 block" to="/guides/zyn-australia">
+                  Zyn in Australia
+                </Link>
+                <Link className="text-primary underline underline-offset-4 block" to="/guides/nicotine-pouch-strength-3mg-6mg-9mg">
+                  Strength guide: 3mg vs 6mg vs 9mg
+                </Link>
+                <Link className="text-primary underline underline-offset-4 block" to="/guides/nicotine-pouches-australia">
+                  Nicotine pouches in Australia
+                </Link>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                 <CardTitle>Next step</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">

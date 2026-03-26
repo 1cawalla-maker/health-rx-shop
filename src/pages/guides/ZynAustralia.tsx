@@ -178,6 +178,23 @@ export default function GuideZynAustralia() {
 
             <Card>
               <CardHeader>
+                <CardTitle>Related guides</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <Link className="text-primary underline underline-offset-4 block" to="/guides/nicotine-pouches-australia">
+                  Nicotine pouches in Australia
+                </Link>
+                <Link className="text-primary underline underline-offset-4 block" to="/guides/how-to-get-nicotine-pouches-in-australia">
+                  How to get nicotine pouches in Australia
+                </Link>
+                <Link className="text-primary underline underline-offset-4 block" to="/guides/nicotine-pouches-vs-vaping">
+                  Nicotine pouches vs vaping
+                </Link>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                 <CardTitle>Ready to get started?</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">

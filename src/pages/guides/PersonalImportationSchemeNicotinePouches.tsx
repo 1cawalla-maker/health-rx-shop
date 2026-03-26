@@ -121,6 +121,23 @@ export default function GuidePersonalImportationSchemeNicotinePouches() {
 
             <Card>
               <CardHeader>
+                <CardTitle>Related guides</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <Link className="text-primary underline underline-offset-4 block" to="/guides/zyn-australia">
+                  Zyn in Australia
+                </Link>
+                <Link className="text-primary underline underline-offset-4 block" to="/guides/nicotine-pouches-australia">
+                  Nicotine pouches in Australia
+                </Link>
+                <Link className="text-primary underline underline-offset-4 block" to="/guides/are-nicotine-pouches-legal-in-australia">
+                  Are nicotine pouches legal in Australia?
+                </Link>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                 <CardTitle>Next step</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
