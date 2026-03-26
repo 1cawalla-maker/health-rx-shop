@@ -74,6 +74,7 @@ import AdminPrescriptionUploads from "./pages/admin/PrescriptionUploads";
 import GuideZynAustralia from "./pages/guides/ZynAustralia";
 import GuideNicotinePouchesVsVaping from "./pages/guides/NicotinePouchesVsVaping";
 import GuideNicotinePouchesAustralia from "./pages/guides/NicotinePouchesAustralia";
+import GuidesIndex from "./pages/guides/GuidesIndex";
 import GuideAreNicotinePouchesLegalAustralia from "./pages/guides/AreNicotinePouchesLegalAustralia";
 import GuideHowToGetNicotinePouchesAustralia from "./pages/guides/HowToGetNicotinePouchesAustralia";
 import GuidePersonalImportationSchemeNicotinePouches from "./pages/guides/PersonalImportationSchemeNicotinePouches";
@@ -105,6 +106,7 @@ const App = () => (
               <Route path="/eligibility" element={<EligibilityQuiz />} />
 
               {/* SEO guides (public) */}
+              <Route path="/guides" element={<GuidesIndex />} />
               <Route path="/guides/zyn-australia" element={<GuideZynAustralia />} />
               <Route path="/guides/nicotine-pouches-australia" element={<GuideNicotinePouchesAustralia />} />
               <Route path="/guides/are-nicotine-pouches-legal-in-australia" element={<GuideAreNicotinePouchesLegalAustralia />} />

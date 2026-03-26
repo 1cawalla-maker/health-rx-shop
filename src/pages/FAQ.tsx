@@ -137,12 +137,20 @@ export default function FAQ() {
             </p>
 
             <div className="pt-2">
-              <Link
-                to="/guides/zyn-australia"
-                className="text-sm text-primary underline underline-offset-4 hover:text-primary/80"
-              >
-                Read: Zyn in Australia — legality and how to get it
-              </Link>
+              <div className="space-y-2">
+                <Link
+                  to="/guides"
+                  className="text-sm text-primary underline underline-offset-4 hover:text-primary/80 block"
+                >
+                  Browse all guides
+                </Link>
+                <Link
+                  to="/guides/zyn-australia"
+                  className="text-sm text-primary underline underline-offset-4 hover:text-primary/80 block"
+                >
+                  Read: Zyn in Australia — legality and how to get it
+                </Link>
+              </div>
             </div>
           </div>
         </div>

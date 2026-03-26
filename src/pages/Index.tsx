@@ -100,12 +100,20 @@ export default function Index() {
             </p>
 
             <div className="pt-2">
-              <Link
-                to="/guides/zyn-australia"
-                className="text-sm text-primary underline underline-offset-4 hover:text-primary/80"
-              >
-                Looking for Zyns in Australia? Read our guide
-              </Link>
+              <div className="space-y-2">
+                <Link
+                  to="/guides/zyn-australia"
+                  className="text-sm text-primary underline underline-offset-4 hover:text-primary/80 block"
+                >
+                  Looking for Zyns in Australia? Read our guide
+                </Link>
+                <Link
+                  to="/guides"
+                  className="text-sm text-primary underline underline-offset-4 hover:text-primary/80 block"
+                >
+                  Browse all guides
+                </Link>
+              </div>
             </div>
           </div>
         </div>
