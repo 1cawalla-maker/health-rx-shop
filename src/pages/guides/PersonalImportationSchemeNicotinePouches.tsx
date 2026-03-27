@@ -64,6 +64,10 @@ export default function GuidePersonalImportationSchemeNicotinePouches() {
               This page provides general information only. Regulations can change and the right pathway depends on
               your circumstances.
             </p>
+            <p className="text-muted-foreground">
+              If you searched for “Zyn Australia” and ended up reading about importing, this explains the topic at
+              a high level—but the safest next step is still a doctor‑supervised consultation.
+            </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Button asChild size="lg">
                 <Link to="/eligibility">Start consultation</Link>

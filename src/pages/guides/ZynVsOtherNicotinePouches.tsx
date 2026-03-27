@@ -54,7 +54,8 @@ export default function GuideZynVsOtherNicotinePouches() {
             <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">Zyn vs other nicotine pouches</h1>
             <p className="text-muted-foreground">Last updated: March 2026</p>
             <p className="text-muted-foreground">
-              If you’re comparing brands, the most important factor is what’s clinically appropriate for you.
+              If you’re comparing brands—especially if you searched for “Zyns Australia”—the most important factor
+              is what’s clinically appropriate for you.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Button asChild size="lg">

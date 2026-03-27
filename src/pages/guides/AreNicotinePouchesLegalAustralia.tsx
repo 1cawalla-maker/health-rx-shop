@@ -64,6 +64,10 @@ export default function GuideAreNicotinePouchesLegalAustralia() {
               The short version: rules around nicotine products can be complex. The safest approach is a
               doctor‑supervised pathway so you get advice that fits your situation.
             </p>
+            <p className="text-muted-foreground">
+              This is also why searches like “are Zyns legal in Australia” are common—people want clarity. The
+              fastest next step is a consultation where a doctor can explain what applies to you.
+            </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Button asChild size="lg">
                 <Link to="/eligibility">Start consultation</Link>

@@ -56,7 +56,8 @@ export default function GuideHowToGetNicotinePouchesAustralia() {
             </h1>
             <p className="text-muted-foreground">Last updated: March 2026</p>
             <p className="text-muted-foreground">
-              If you’re searching “how to get nicotine pouches in Australia”, here’s the simplest compliant path.
+              If you’re searching “how to get nicotine pouches in Australia” (or “how to get Zyns in Australia”),
+              here’s the simplest compliant path.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Button asChild size="lg">

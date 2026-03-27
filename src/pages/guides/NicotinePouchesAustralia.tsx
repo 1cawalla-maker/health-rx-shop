@@ -60,7 +60,8 @@ export default function GuideNicotinePouchesAustralia() {
             <p className="text-muted-foreground">Last updated: March 2026</p>
             <p className="text-muted-foreground">
               This guide explains what nicotine pouches are, how access works in Australia, and the safest next
-              step if you’re considering them.
+              step if you’re considering them. If you’re searching for “Zyns Australia”, this is a good place to
+              start.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Button asChild size="lg">
