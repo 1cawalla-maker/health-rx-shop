@@ -15,6 +15,11 @@ export default function GuideHowToGetNicotinePouchesAustralia() {
         'Start with the questionnaire, then book a telehealth consultation. If clinically appropriate, a doctor will guide you through the next steps.',
     },
     {
+      question: 'How do I get Zyns in Australia?',
+      answer:
+        'Zyn is a brand of nicotine pouches. The simplest compliant path is the same: complete the questionnaire and book a consultation so a doctor can assess suitability and explain next steps.',
+    },
+    {
       question: 'Do I choose a doctor?',
       answer:
         'You select a time. A doctor is assigned after booking confirmation.',
@@ -28,6 +33,16 @@ export default function GuideHowToGetNicotinePouchesAustralia() {
       question: 'How long does it take?',
       answer:
         'Timeframes vary. The fastest way to start is to complete the questionnaire and book a consultation time that suits you.',
+    },
+    {
+      question: 'What happens if I’m not approved?',
+      answer:
+        'Not all consultations result in a prescription. Clinical decisions are made by the doctor during the consultation based on your health history and nicotine use.',
+    },
+    {
+      question: 'Can I upload an existing prescription instead?',
+      answer:
+        'If you already have a valid prescription, you can upload it for review. Otherwise, book a consultation to be assessed by a doctor.',
     },
   ];
 
@@ -88,13 +103,28 @@ export default function GuideHowToGetNicotinePouchesAustralia() {
 
           <Card>
             <CardHeader>
+              <CardTitle>Typical timeframes</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <ul className="list-disc pl-5 space-y-2">
+                <li><strong>Questionnaire:</strong> a couple of minutes.</li>
+                <li><strong>Booking:</strong> choose the next available time that suits you.</li>
+                <li><strong>Consultation:</strong> doctor assesses suitability and discusses next steps.</li>
+                <li><strong>Ordering:</strong> if approved, you can order within your limits and see order status updates in your account.</li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Tips to make it smooth</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-2">
               <ul className="list-disc pl-5 space-y-2">
                 <li>Have your phone nearby at your scheduled time (consultations are by phone).</li>
                 <li>Be ready to discuss your nicotine use and any relevant medical history.</li>
-                <li>If a prescription is issued, follow any limits (such as maximum strength).</li>
+                <li>If a prescription is issued, follow any limits (such as maximum strength and allowance).</li>
+                <li>If you already have a valid prescription, you can upload it instead of booking a consult.</li>
               </ul>
             </CardContent>
           </Card>
