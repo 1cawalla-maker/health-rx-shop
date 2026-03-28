@@ -80,13 +80,25 @@ export default function GuidePersonalImportationSchemeNicotinePouches() {
 
           <Card>
             <CardHeader>
+              <CardTitle>Quick answer</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <p>
+                The Personal Importation Scheme is often mentioned when people search for nicotine pouches or
+                “Zyn Australia”. Because rules can be nuanced and may change, the safest next step is a
+                doctor‑supervised consultation where a clinician can explain what applies to you.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Plain-English summary</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-2">
               <p>
-                The Personal Importation Scheme is often discussed in relation to nicotine products. Because rules
-                can be nuanced and may change, the safest step is a doctor‑supervised pathway where a clinician can
-                explain what’s appropriate for you.
+                The Personal Importation Scheme can apply to certain goods imported for personal use. Whether and
+                how it applies depends on the product and current rules.
               </p>
               <p>
                 If you’re reading about importing nicotine pouches yourself, don’t guess—start with the
@@ -104,6 +116,19 @@ export default function GuidePersonalImportationSchemeNicotinePouches() {
                 <li>Whether a prescription is required and how to get one.</li>
                 <li>What limits apply (strength and quantity).</li>
                 <li>How ordering and delivery work once access is approved.</li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>When to book a consultation</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <ul className="list-disc pl-5 space-y-2">
+                <li>You want clarity on what applies to your situation.</li>
+                <li>You need guidance on suitable strength (3mg / 6mg / 9mg) and stepping down.</li>
+                <li>You want a compliant, clinician‑guided pathway rather than guessing.</li>
               </ul>
             </CardContent>
           </Card>
