@@ -80,6 +80,7 @@ import GuideHowToGetNicotinePouchesAustralia from "./pages/guides/HowToGetNicoti
 import GuidePersonalImportationSchemeNicotinePouches from "./pages/guides/PersonalImportationSchemeNicotinePouches";
 import GuideNicotinePouchStrengthGuide from "./pages/guides/NicotinePouchStrengthGuide";
 import GuideZynVsOtherNicotinePouches from "./pages/guides/ZynVsOtherNicotinePouches";
+import GlobalSchema from "@/components/seo/GlobalSchema";
 
 const queryClient = new QueryClient();
 
@@ -90,6 +91,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <GlobalSchema />
           <BrowserRouter>
             <Routes>
               {/* Public routes */}

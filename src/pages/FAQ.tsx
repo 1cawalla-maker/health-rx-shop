@@ -20,6 +20,19 @@ const faqCategories = [
         answer: "NicoPatch is an Australian telehealth platform that connects you with AHPRA-registered doctors for consultations regarding nicotine pouches. If clinically appropriate, doctors can issue prescriptions that allow you to access nicotine pouches through a compliant pathway.",
       },
       {
+        question: "Are your doctors registered in Australia?",
+        answer: "Yes, all of our doctors are registered with AHPRA (Australian Health Practitioner Regulation Agency) and are fully qualified to practice medicine in Australia. They undergo regular training and follow strict clinical guidelines.",
+      },
+      {
+        question: "Is this service legal in Australia?",
+        answer: "Rules around nicotine products can be complex and may change. We don’t provide legal advice, but we do provide a doctor-supervised consultation pathway where a clinician can explain the compliant options that apply to your situation.",
+      },
+    ],
+  },
+  {
+    title: "Zyn in Australia",
+    faqs: [
+      {
         question: "Are Zyns legal in Australia?",
         answer: "Rules around nicotine products can be complex and may change. The safest next step is a doctor-supervised consultation pathway where a clinician can assess your situation and explain the compliant options available to you.",
       },
@@ -28,12 +41,20 @@ const faqCategories = [
         answer: "Start with the questionnaire, then book a consultation. If clinically appropriate, a doctor will guide you through the next steps to access nicotine pouches in Australia.",
       },
       {
-        question: "Are your doctors registered in Australia?",
-        answer: "Yes, all of our doctors are registered with AHPRA (Australian Health Practitioner Regulation Agency) and are fully qualified to practice medicine in Australia. They undergo regular training and follow strict clinical guidelines.",
+        question: "Do I need a prescription?",
+        answer: "In many cases, nicotine products require medical oversight. A consultation allows a doctor to assess suitability and advise on the appropriate pathway.",
       },
       {
-        question: "Is this service legal in Australia?",
-        answer: "Yes, NicoPatch operates fully within Australian law. Nicotine-containing products require a prescription in Australia, and our platform facilitates legal access through legitimate medical consultations. Products are imported under the TGA's Personal Importation Scheme.",
+        question: "How much does it cost?",
+        answer: "Costs typically include a consultation fee (shown at booking), product pricing (shown in the shop), and shipping at checkout. Pricing can change over time.",
+      },
+      {
+        question: "What strengths are available?",
+        answer: "Strength options vary. If a prescription is issued, a doctor may set a maximum strength. You can typically choose that strength or lower and select from available flavours in the shop.",
+      },
+      {
+        question: "How long does delivery take?",
+        answer: "Delivery times vary. Once an order is placed, you’ll see status updates in your account as it progresses.",
       },
     ],
   },
