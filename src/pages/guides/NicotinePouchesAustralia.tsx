@@ -25,6 +25,16 @@ export default function GuideNicotinePouchesAustralia() {
         'Start with the questionnaire and book a telehealth consultation. If clinically appropriate, a doctor will guide you through the next steps.',
     },
     {
+      question: 'What strengths are available (3mg / 6mg / 9mg)?',
+      answer:
+        'Strength options vary by product. If a prescription is issued, a doctor may set a maximum strength. You can typically choose that strength or lower and select from available flavours in the shop.',
+    },
+    {
+      question: 'How many cans can I order?',
+      answer:
+        'Order limits depend on your prescription. If a limit applies, it will be shown in your account and reflected in the shop and cart.',
+    },
+    {
       question: 'How much does it cost?',
       answer:
         'Costs typically include a consultation fee (shown at booking), product pricing (shown in the shop), and shipping at checkout. Pricing can change over time.',
@@ -33,6 +43,11 @@ export default function GuideNicotinePouchesAustralia() {
       question: 'How long does delivery take?',
       answer:
         'Timeframes vary based on clinical suitability and shipping. We provide updates in your account once an order is placed.',
+    },
+    {
+      question: 'Can I switch flavours?',
+      answer:
+        'If you have an active prescription, you can generally choose from available flavours within your approved strength and allowance.',
     },
   ];
 
@@ -75,12 +90,29 @@ export default function GuideNicotinePouchesAustralia() {
 
           <Card>
             <CardHeader>
-              <CardTitle>What are nicotine pouches?</CardTitle>
+              <CardTitle>Quick answer</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-2">
               <p>
                 Nicotine pouches are placed in the mouth (between gum and lip) and deliver nicotine without smoking
                 or vaping.
+              </p>
+              <p>
+                In Australia, nicotine products are regulated. The safest way to get clarity is a doctor‑supervised
+                telehealth consultation where a clinician can assess suitability and explain the compliant pathway
+                for you.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>What are nicotine pouches?</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <p>
+                Nicotine pouches are small pouches typically placed between the gum and upper lip. Nicotine is
+                absorbed through the mouth. There’s no smoke and no vapour.
               </p>
               <p>
                 The right product and strength depend on your health history and nicotine dependence—this is best
@@ -110,8 +142,18 @@ export default function GuideNicotinePouchesAustralia() {
                 <li><strong>Phone-first:</strong> consultations are conducted by phone.</li>
                 <li><strong>Doctor-led decisions:</strong> a consultation does not guarantee a prescription.</li>
                 <li><strong>Strength guidance:</strong> if approved, a maximum strength may be set.</li>
+                <li><strong>Allowance limits:</strong> you may have quantity limits that are enforced in the shop and cart.</li>
                 <li><strong>Order updates:</strong> once you place an order, you’ll see status updates in your account.</li>
               </ul>
+            </div>
+
+            <div className="space-y-2">
+              <h2 className="font-display text-2xl font-semibold">How Zyn fits in</h2>
+              <p className="text-muted-foreground">
+                Zyn is one brand of nicotine pouches. If you searched for “Zyns Australia”, the key point is that
+                brand is secondary to suitability and access. A doctor may set a maximum strength, and you can then
+                choose from available flavours and products within your approved limits.
+              </p>
             </div>
 
             <div className="space-y-2">
