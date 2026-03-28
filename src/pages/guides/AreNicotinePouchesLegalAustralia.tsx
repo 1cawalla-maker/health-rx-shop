@@ -80,16 +80,32 @@ export default function GuideAreNicotinePouchesLegalAustralia() {
 
           <Card>
             <CardHeader>
+              <CardTitle>Quick answer</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <p>
+                Nicotine products are regulated in Australia and the details can be nuanced and change over time.
+                We don’t provide legal advice.
+              </p>
+              <p>
+                The safest next step is a doctor‑supervised consultation pathway where a qualified clinician can
+                assess suitability and explain the compliant options that apply to your situation.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Plain-English overview</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-2">
               <p>
-                We don’t provide legal advice. What we do provide is a doctor‑supervised pathway where a qualified
-                clinician assesses suitability and explains the compliant next steps.
+                People searching for “are nicotine pouches legal in Australia” (or “are Zyns legal in Australia”)
+                usually want clarity on what’s allowed and what to do next.
               </p>
               <p>
-                If you’re unsure how nicotine pouches apply to you, the simplest step is to complete the
-                questionnaire and book a consultation.
+                We don’t provide legal advice. What we do provide is a doctor‑supervised pathway where a qualified
+                clinician assesses suitability and explains the compliant next steps.
               </p>
               <p>
                 In practice, the key idea is simple: don’t guess. Regulations can be nuanced and what’s appropriate
@@ -108,6 +124,22 @@ export default function GuideAreNicotinePouchesLegalAustralia() {
                 <li>They’re comparing nicotine pouches vs vaping and want a device-free option.</li>
                 <li>They want clinician guidance on strength and suitability.</li>
               </ul>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>What to do next</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <ol className="list-decimal pl-5 space-y-2">
+                <li>Complete the short questionnaire.</li>
+                <li>Book a consultation time that suits you.</li>
+                <li>A doctor will assess your situation and explain next steps if clinically appropriate.</li>
+              </ol>
+              <p>
+                If you already have a valid prescription, you can upload it instead of booking a consultation.
+              </p>
             </CardContent>
           </Card>
 
