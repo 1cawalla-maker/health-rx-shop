@@ -25,7 +25,12 @@ export default function Seo({ title, description, canonicalPath, noIndex, jsonLd
     : '';
 
   const canonical = canonicalPath ? `${SITE_ORIGIN}${canonicalPath}` : undefined;
-  const ogImage = ogImagePath ? `${SITE_ORIGIN}${ogImagePath}` : undefined;
+
+  // Default to a stable placeholder image for indexed pages so shares render consistently,
+  // while ensuring noindex/untitled routes don't emit OG images.
+  const ogImage = !noIndex && hasTitle
+    ? `${SITE_ORIGIN}${ogImagePath || '/placeholder.svg'}`
+    : undefined;
 
   const jsonLdArray = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
 
