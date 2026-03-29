@@ -35,6 +35,14 @@ export default function GlobalSchema() {
           publisher: {
             '@id': `${SITE_ORIGIN}#organization`,
           },
+          potentialAction: {
+            '@type': 'SearchAction',
+            target: {
+              '@type': 'EntryPoint',
+              urlTemplate: `${SITE_ORIGIN}/guides?query={search_term_string}`,
+            },
+            'query-input': 'required name=search_term_string',
+          },
         },
       ]}
     />
