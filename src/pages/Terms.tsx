@@ -8,6 +8,7 @@ export default function Terms() {
         title="Terms of Service"
         description="NicoPatch terms of service for using our Australian telehealth platform."
         canonicalPath="/terms"
+        ogImagePath="/placeholder.svg"
       />
       <section className="py-16 md:py-24">
         <div className="container">

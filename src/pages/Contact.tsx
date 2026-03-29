@@ -50,6 +50,7 @@ export default function Contact() {
         title="Contact NicoPatch"
         description="Contact the NicoPatch team for help with consultations, prescriptions, and ordering nicotine pouches in Australia."
         canonicalPath="/contact"
+        ogImagePath="/placeholder.svg"
       />
       {/* Hero Section */}
       <section className="gradient-section py-16 md:py-24">

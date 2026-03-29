@@ -8,6 +8,7 @@ export default function Privacy() {
         title="Privacy Policy"
         description="NicoPatch privacy policy and how we handle personal information."
         canonicalPath="/privacy"
+        ogImagePath="/placeholder.svg"
       />
       <section className="py-16 md:py-24">
         <div className="container">
