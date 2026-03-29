@@ -69,6 +69,22 @@ export default function GuideZynVsOtherNicotinePouches() {
 
           <Card>
             <CardHeader>
+              <CardTitle>Quick answer</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <p>
+                Zyn is a brand of nicotine pouches. When comparing brands, the most important factor is what’s
+                clinically appropriate for you—especially strength and suitability.
+              </p>
+              <p>
+                If you searched “Zyns Australia”, focus on the compliant pathway first, then choose from available
+                products within your approved limits.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>What actually matters</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-2">

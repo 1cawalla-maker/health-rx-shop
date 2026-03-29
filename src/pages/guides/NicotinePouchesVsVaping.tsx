@@ -22,17 +22,22 @@ export default function GuideNicotinePouchesVsVaping() {
     {
       question: 'Do nicotine pouches contain tobacco?',
       answer:
-        'Many nicotine pouches contain nicotine without tobacco leaf, but product composition varies. We focus on a doctor‑supervised pathway and clinically appropriate guidance.',
+        'Many nicotine pouches contain nicotine without tobacco leaf, but product composition varies.',
     },
     {
       question: 'How do I access nicotine pouches in Australia?',
       answer:
-        'Start with the questionnaire and book a telehealth consultation. A qualified doctor will assess suitability and explain next steps.',
+        'Start with the questionnaire and book a telehealth consultation. A qualified doctor will assess suitability and explain next steps if clinically appropriate.',
     },
     {
       question: 'How much does it cost?',
       answer:
-        'Costs vary. A consultation fee applies, and product/shipping costs depend on what’s clinically appropriate and what you choose in the shop.',
+        'Costs typically include a consultation fee (shown at booking), product pricing (shown in the shop), and shipping at checkout. Pricing can change over time.',
+    },
+    {
+      question: 'Can I switch from vaping to pouches?',
+      answer:
+        'Many people consider switching for discretion or convenience. A doctor can help you choose a suitable strength and a plan that matches your goals.',
     },
   ];
 
@@ -71,6 +76,22 @@ export default function GuideNicotinePouchesVsVaping() {
               </Button>
             </div>
           </header>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick answer</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <p>
+                Nicotine pouches deliver nicotine through the mouth (no smoke, no vapour). Vaping delivers nicotine
+                through inhalation (device-based).
+              </p>
+              <p>
+                If you’re comparing them because you searched “Zyns Australia”, the key decision is not the brand—
+                it’s choosing an approach that matches your goals and health history. A doctor can help with that.
+              </p>
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>

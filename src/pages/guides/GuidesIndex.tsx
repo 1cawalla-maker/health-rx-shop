@@ -71,6 +71,9 @@ export default function GuidesIndex() {
               Plain-English answers for common searches like “Zyns Australia”, “nicotine pouches Australia”, and
               “are Zyns legal in Australia”.
             </p>
+            <p className="text-muted-foreground">
+              Want the fastest start? <Link className="text-primary underline underline-offset-4" to="/eligibility">Start the questionnaire</Link>.
+            </p>
           </header>
 
           <div className="grid gap-4 sm:grid-cols-2">
