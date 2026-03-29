@@ -50,8 +50,9 @@ export default function GuideHowToGetNicotinePouchesAustralia() {
     <PublicLayout>
       <Seo
         title="How to Get Nicotine Pouches in Australia (Step‑by‑Step)"
-        description="Step-by-step: how to get nicotine pouches in Australia via a compliant, doctor-supervised telehealth pathway."
+        description="Step-by-step: how to get nicotine pouches in Australia (including Zyn) via a compliant, doctor-supervised telehealth pathway."
         canonicalPath={PATH}
+        ogImagePath="/placeholder.svg"
         jsonLd={[
           breadcrumbSchema({
             items: [

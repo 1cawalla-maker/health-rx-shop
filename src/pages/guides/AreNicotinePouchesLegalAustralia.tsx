@@ -40,8 +40,9 @@ export default function GuideAreNicotinePouchesLegalAustralia() {
     <PublicLayout>
       <Seo
         title="Are Nicotine Pouches Legal in Australia? (Plain‑English Answer)"
-        description="A plain-English overview of nicotine pouch legality in Australia and the safest next step: a doctor-supervised consultation pathway."
+        description="A plain-English overview of nicotine pouch legality in Australia (including Zyn) and the safest next step: a doctor-supervised consultation pathway."
         canonicalPath={PATH}
+        ogImagePath="/placeholder.svg"
         jsonLd={[
           breadcrumbSchema({
             items: [

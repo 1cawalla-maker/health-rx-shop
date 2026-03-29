@@ -66,8 +66,9 @@ export default function GuideZynAustralia() {
     <PublicLayout>
       <Seo
         title="Zyn in Australia: Is It Legal & How to Get It (2026 Guide)"
-        description="Plain-English guidance on Zyns in Australia, including legality, prescriptions, consultation steps, and what to do next."
+        description="Plain-English guidance on Zyns in Australia, including legality, prescriptions, consultation steps, costs, and what to do next."
         canonicalPath={PATH}
+        ogImagePath="/placeholder.svg"
         jsonLd={[
           breadcrumbSchema({
             items: [
