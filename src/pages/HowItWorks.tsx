@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import Seo, { SITE_ORIGIN } from "@/components/seo/Seo";
-import { serviceSchema, webPageSchema } from "@/components/seo/schema";
+import { breadcrumbSchema, serviceSchema, webPageSchema } from "@/components/seo/schema";
 import { Button } from "@/components/ui/button";
 import { 
   UserPlus, 
@@ -105,6 +105,12 @@ export default function HowItWorks() {
             description:
               'Learn how NicoPatch works: questionnaire, telehealth consultation, clinical assessment, and ordering nicotine pouches in Australia through a compliant pathway.',
             dateModified: '2026-03-29',
+          }),
+          breadcrumbSchema({
+            items: [
+              { name: 'Home', url: `${SITE_ORIGIN}/` },
+              { name: 'How It Works', url: `${SITE_ORIGIN}/how-it-works` },
+            ],
           }),
           serviceSchema({
             url: `${SITE_ORIGIN}/how-it-works`,

@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import Seo, { SITE_ORIGIN } from "@/components/seo/Seo";
-import { serviceSchema, webPageSchema } from "@/components/seo/schema";
+import { breadcrumbSchema, serviceSchema, webPageSchema } from "@/components/seo/schema";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, ArrowRight, HelpCircle } from "lucide-react";
 
@@ -38,6 +38,12 @@ export default function Pricing() {
             description:
               'See consultation pricing and how costs work for nicotine pouches in Australia. Product prices and shipping are shown during checkout.',
             dateModified: '2026-03-29',
+          }),
+          breadcrumbSchema({
+            items: [
+              { name: 'Home', url: `${SITE_ORIGIN}/` },
+              { name: 'Pricing', url: `${SITE_ORIGIN}/pricing` },
+            ],
           }),
           serviceSchema({
             url: `${SITE_ORIGIN}/pricing`,

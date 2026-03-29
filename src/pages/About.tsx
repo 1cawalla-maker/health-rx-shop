@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import Seo, { SITE_ORIGIN } from "@/components/seo/Seo";
-import { aboutPageSchema, serviceSchema } from "@/components/seo/schema";
+import { aboutPageSchema, breadcrumbSchema, serviceSchema } from "@/components/seo/schema";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, Heart, Users, Award } from "lucide-react";
 
@@ -65,6 +65,12 @@ export default function About() {
             description:
               'NicoPatch is an Australian telehealth platform connecting patients with AHPRA-registered doctors for nicotine pouch consultations and clinically guided next steps.',
             dateModified: '2026-03-29',
+          }),
+          breadcrumbSchema({
+            items: [
+              { name: 'Home', url: `${SITE_ORIGIN}/` },
+              { name: 'About', url: `${SITE_ORIGIN}/about` },
+            ],
           }),
           serviceSchema({
             url: `${SITE_ORIGIN}/about`,
