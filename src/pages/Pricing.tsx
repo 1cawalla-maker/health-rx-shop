@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { PublicLayout } from "@/components/layout/PublicLayout";
-import Seo from "@/components/seo/Seo";
+import Seo, { SITE_ORIGIN } from "@/components/seo/Seo";
+import { webPageSchema } from "@/components/seo/schema";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, ArrowRight, HelpCircle } from "lucide-react";
 
@@ -29,6 +30,12 @@ export default function Pricing() {
         description="See consultation pricing and how costs work for nicotine pouches in Australia. Product prices and shipping are shown during checkout."
         canonicalPath="/pricing"
         ogImagePath="/placeholder.svg"
+        jsonLd={webPageSchema({
+          url: `${SITE_ORIGIN}/pricing`,
+          name: 'Pricing',
+          description:
+            'See consultation pricing and how costs work for nicotine pouches in Australia. Product prices and shipping are shown during checkout.',
+        })}
       />
       {/* Hero Section */}
       <section className="gradient-section py-16 md:py-24">

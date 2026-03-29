@@ -1,5 +1,6 @@
 import { PublicLayout } from "@/components/layout/PublicLayout";
-import Seo from "@/components/seo/Seo";
+import Seo, { SITE_ORIGIN } from "@/components/seo/Seo";
+import { webPageSchema } from "@/components/seo/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -51,6 +52,12 @@ export default function Contact() {
         description="Contact the NicoPatch team for help with consultations, prescriptions, and ordering nicotine pouches in Australia."
         canonicalPath="/contact"
         ogImagePath="/placeholder.svg"
+        jsonLd={webPageSchema({
+          url: `${SITE_ORIGIN}/contact`,
+          name: 'Contact',
+          description:
+            'Contact the NicoPatch team for help with consultations, prescriptions, and ordering nicotine pouches in Australia.',
+        })}
       />
       {/* Hero Section */}
       <section className="gradient-section py-16 md:py-24">

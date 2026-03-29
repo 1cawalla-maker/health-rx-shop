@@ -34,3 +34,19 @@ export function breadcrumbSchema(params: {
     })),
   };
 }
+
+export function webPageSchema(params: {
+  url: string;
+  name: string;
+  description?: string;
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    '@id': params.url,
+    url: params.url,
+    name: params.name,
+    description: params.description,
+    inLanguage: 'en-AU',
+  };
+}

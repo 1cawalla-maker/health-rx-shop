@@ -1,5 +1,6 @@
 import { PublicLayout } from "@/components/layout/PublicLayout";
-import Seo from "@/components/seo/Seo";
+import Seo, { SITE_ORIGIN } from "@/components/seo/Seo";
+import { webPageSchema } from "@/components/seo/schema";
 
 export default function Terms() {
   return (
@@ -9,6 +10,11 @@ export default function Terms() {
         description="NicoPatch terms of service for using our Australian telehealth platform."
         canonicalPath="/terms"
         ogImagePath="/placeholder.svg"
+        jsonLd={webPageSchema({
+          url: `${SITE_ORIGIN}/terms`,
+          name: 'Terms of service',
+          description: 'NicoPatch terms of service for using our Australian telehealth platform.',
+        })}
       />
       <section className="py-16 md:py-24">
         <div className="container">

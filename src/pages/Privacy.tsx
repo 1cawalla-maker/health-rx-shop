@@ -1,5 +1,6 @@
 import { PublicLayout } from "@/components/layout/PublicLayout";
-import Seo from "@/components/seo/Seo";
+import Seo, { SITE_ORIGIN } from "@/components/seo/Seo";
+import { webPageSchema } from "@/components/seo/schema";
 
 export default function Privacy() {
   return (
@@ -9,6 +10,11 @@ export default function Privacy() {
         description="NicoPatch privacy policy and how we handle personal information."
         canonicalPath="/privacy"
         ogImagePath="/placeholder.svg"
+        jsonLd={webPageSchema({
+          url: `${SITE_ORIGIN}/privacy`,
+          name: 'Privacy policy',
+          description: 'NicoPatch privacy policy and how we handle personal information.',
+        })}
       />
       <section className="py-16 md:py-24">
         <div className="container">
