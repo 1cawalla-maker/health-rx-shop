@@ -1,6 +1,7 @@
 // Availability Service - handles doctor availability management
 // Phase 1: mock/localStorage only
 import type { AvailabilitySlot, AvailabilityType, FiveMinuteSlot, BookingReservation, MockAvailabilityBlock, MockBooking } from '@/types/telehealth';
+import { supabase } from '@/integrations/supabase/client';
 
 // Constants
 const SLOT_DURATION_MINUTES = 5;
@@ -399,11 +400,82 @@ export const mockAvailabilityService = {
   },
 };
 
+export const doctorAvailabilityBlocksService = {
+  async getDoctorBlocks(doctorId: string): Promise<MockAvailabilityBlock[]> {
+    const { data, error } = await supabase
+      .from('doctor_availability_blocks')
+      .select('*')
+      .eq('doctor_id', doctorId)
+      .order('day_of_week', { ascending: true })
+      .order('start_time', { ascending: true });
+
+    if (error) throw error;
+
+    return (data || []).map((r: any) => ({
+      id: r.id,
+      doctorId: r.doctor_id,
+      doctorName: '',
+      dayOfWeek: r.day_of_week,
+      specificDate: r.specific_date,
+      startTime: (r.start_time || '').slice(0, 5),
+      endTime: (r.end_time || '').slice(0, 5),
+      timezone: r.timezone,
+      isRecurring: Boolean(r.is_recurring),
+      isActive: true,
+    }));
+  },
+
+  async addDoctorBlock(
+    doctorId: string,
+    block: Omit<MockAvailabilityBlock, 'id' | 'doctorId' | 'doctorName' | 'isActive'>
+  ): Promise<MockAvailabilityBlock> {
+    const { data, error } = await supabase
+      .from('doctor_availability_blocks')
+      .insert({
+        doctor_id: doctorId,
+        day_of_week: block.dayOfWeek,
+        specific_date: block.specificDate,
+        start_time: block.startTime,
+        end_time: block.endTime,
+        timezone: block.timezone,
+        is_recurring: block.isRecurring,
+      })
+      .select('*')
+      .single();
+
+    if (error) throw error;
+
+    return {
+      id: data.id,
+      doctorId: data.doctor_id,
+      doctorName: '',
+      dayOfWeek: data.day_of_week,
+      specificDate: data.specific_date,
+      startTime: (data.start_time || '').slice(0, 5),
+      endTime: (data.end_time || '').slice(0, 5),
+      timezone: data.timezone,
+      isRecurring: Boolean(data.is_recurring),
+      isActive: true,
+    };
+  },
+
+  async removeDoctorBlock(doctorId: string, blockId: string): Promise<boolean> {
+    const { error, count } = await supabase
+      .from('doctor_availability_blocks')
+      .delete({ count: 'exact' })
+      .eq('id', blockId)
+      .eq('doctor_id', doctorId);
+
+    if (error) throw error;
+    return (count || 0) > 0;
+  },
+};
+
 export const availabilityService = {
-  // Phase 1: Supabase-backed availability is disabled.
-  // Use mockAvailabilityService for all availability and slot generation.
+  // Phase 2 (in progress): public availability slots are still mock-derived.
+  // We are first wiring doctor availability CRUD to Supabase via doctorAvailabilityBlocksService.
   async getDoctorAvailability(_doctorId: string): Promise<AvailabilitySlot[]> {
-    console.warn('[Phase 1] availabilityService.getDoctorAvailability disabled');
+    console.warn('[Phase 2] availabilityService.getDoctorAvailability not wired yet');
     return [];
   },
 

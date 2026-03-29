@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { mockAvailabilityService } from '@/services/availabilityService';
+import { doctorAvailabilityBlocksService } from '@/services/availabilityService';
 import { userPreferencesService } from '@/services/userPreferencesService';
 import { doctorPortalService } from '@/services/doctorPortalService';
 import { AvailabilityGrid, type GridBooking } from '@/components/doctor/AvailabilityGrid';
@@ -30,12 +30,15 @@ export default function DoctorAvailability() {
     [user?.id]
   );
 
-  const refresh = () => {
+  const refresh = async () => {
     if (!user?.id) return;
-    setBlocks(mockAvailabilityService.getDoctorBlocks(user.id));
+    const data = await doctorAvailabilityBlocksService.getDoctorBlocks(user.id);
+    setBlocks(data);
   };
 
-  useEffect(() => { refresh(); }, [user?.id]);
+  useEffect(() => {
+    void refresh();
+  }, [user?.id]);
 
   const byDay = useMemo(() => {
     const map: Record<number, MockAvailabilityBlock[]> = {};
@@ -69,7 +72,7 @@ export default function DoctorAvailability() {
       });
   }, [user?.id, blocks]); // re-derive when blocks change (proxy for refresh)
 
-  const handleAddBlock = (dayOfWeek: number, startTime: string, endTime: string) => {
+  const handleAddBlock = async (dayOfWeek: number, startTime: string, endTime: string) => {
     if (!user?.id) return;
     const existing = byDay[dayOfWeek] || [];
     const overlapping = existing.find((b) => blocksOverlap({ startTime, endTime }, b));
@@ -79,7 +82,7 @@ export default function DoctorAvailability() {
       );
       return;
     }
-    mockAvailabilityService.addDoctorBlock(user.id, {
+    await doctorAvailabilityBlocksService.addDoctorBlock(user.id, {
       dayOfWeek,
       specificDate: null,
       startTime,
@@ -88,19 +91,19 @@ export default function DoctorAvailability() {
       isRecurring: true,
     });
     toast.success('Block added');
-    refresh();
+    await refresh();
   };
 
-  const handleRemoveBlock = (blockId: string) => {
+  const handleRemoveBlock = async (blockId: string) => {
     if (!user?.id) return;
-    mockAvailabilityService.removeDoctorBlock(user.id, blockId);
-    refresh();
+    await doctorAvailabilityBlocksService.removeDoctorBlock(user.id, blockId);
+    await refresh();
   };
 
-  const handleEditBlock = (blockId: string, dayOfWeek: number, startTime: string, endTime: string) => {
+  const handleEditBlock = async (blockId: string, dayOfWeek: number, startTime: string, endTime: string) => {
     if (!user?.id) return;
-    mockAvailabilityService.removeDoctorBlock(user.id, blockId);
-    mockAvailabilityService.addDoctorBlock(user.id, {
+    await doctorAvailabilityBlocksService.removeDoctorBlock(user.id, blockId);
+    await doctorAvailabilityBlocksService.addDoctorBlock(user.id, {
       dayOfWeek,
       specificDate: null,
       startTime,
@@ -108,7 +111,7 @@ export default function DoctorAvailability() {
       timezone: doctorTz,
       isRecurring: true,
     });
-    refresh();
+    await refresh();
   };
 
   const handleCopyMondayToWeekdays = () => {
