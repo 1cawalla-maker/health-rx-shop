@@ -42,6 +42,7 @@ export function webPageSchema(params: {
   url: string;
   name: string;
   description?: string;
+  dateModified?: string;
 }) {
   return {
     '@context': 'https://schema.org',
@@ -50,9 +51,46 @@ export function webPageSchema(params: {
     url: params.url,
     name: params.name,
     description: params.description,
+    dateModified: params.dateModified,
     inLanguage: 'en-AU',
   };
 }
+
+export function typedWebPageSchema(
+  type: 'AboutPage' | 'ContactPage' | 'MedicalWebPage',
+  params: {
+    url: string;
+    name: string;
+    description?: string;
+    dateModified?: string;
+  },
+) {
+  return {
+    ...webPageSchema(params),
+    '@type': type,
+  };
+}
+
+export const aboutPageSchema = (params: {
+  url: string;
+  name: string;
+  description?: string;
+  dateModified?: string;
+}) => typedWebPageSchema('AboutPage', params);
+
+export const contactPageSchema = (params: {
+  url: string;
+  name: string;
+  description?: string;
+  dateModified?: string;
+}) => typedWebPageSchema('ContactPage', params);
+
+export const medicalWebPageSchema = (params: {
+  url: string;
+  name: string;
+  description?: string;
+  dateModified?: string;
+}) => typedWebPageSchema('MedicalWebPage', params);
 
 export function articleSchema(params: {
   url: string;

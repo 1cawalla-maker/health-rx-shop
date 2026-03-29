@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import Seo, { SITE_ORIGIN } from "@/components/seo/Seo";
-import { serviceSchema, webPageSchema } from "@/components/seo/schema";
+import { aboutPageSchema, serviceSchema } from "@/components/seo/schema";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, Heart, Users, Award } from "lucide-react";
 
@@ -58,11 +58,12 @@ export default function About() {
         canonicalPath="/about"
         ogImagePath="/placeholder.svg"
         jsonLd={[
-          webPageSchema({
+          aboutPageSchema({
             url: `${SITE_ORIGIN}/about`,
             name: 'About NicoPatch',
             description:
               'NicoPatch is an Australian telehealth platform connecting patients with AHPRA-registered doctors for nicotine pouch consultations and clinically guided next steps.',
+            dateModified: '2026-03-29',
           }),
           serviceSchema({
             url: `${SITE_ORIGIN}/about`,

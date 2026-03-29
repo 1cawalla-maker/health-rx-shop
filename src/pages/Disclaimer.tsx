@@ -1,6 +1,6 @@
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import Seo, { SITE_ORIGIN } from "@/components/seo/Seo";
-import { webPageSchema } from "@/components/seo/schema";
+import { medicalWebPageSchema } from "@/components/seo/schema";
 import { AlertTriangle } from "lucide-react";
 
 export default function Disclaimer() {
@@ -11,11 +11,12 @@ export default function Disclaimer() {
         description="Medical and telehealth disclaimer for NicoPatch, including clinical suitability, consultation limits, and important safety information."
         canonicalPath="/disclaimer"
         ogImagePath="/placeholder.svg"
-        jsonLd={webPageSchema({
+        jsonLd={medicalWebPageSchema({
           url: `${SITE_ORIGIN}/disclaimer`,
           name: 'Medical & Telehealth Disclaimer',
           description:
             'Medical and telehealth disclaimer for NicoPatch, including clinical suitability, consultation limits, and important safety information.',
+          dateModified: '2026-03-29',
         })}
       />
       <section className="py-16 md:py-24">

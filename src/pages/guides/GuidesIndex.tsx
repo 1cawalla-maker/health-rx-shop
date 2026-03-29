@@ -72,6 +72,7 @@ export default function GuidesIndex() {
           {
             '@context': 'https://schema.org',
             '@type': 'CollectionPage',
+            '@id': `${SITE_ORIGIN}${PATH}#collection`,
             name: 'Guides',
             url: `${SITE_ORIGIN}${PATH}`,
             inLanguage: 'en-AU',
