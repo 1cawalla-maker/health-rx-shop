@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import Seo, { SITE_ORIGIN } from "@/components/seo/Seo";
-import { faqPageSchema, serviceSchema, webPageSchema } from "@/components/seo/schema";
+import { breadcrumbSchema, faqPageSchema, serviceSchema, webPageSchema } from "@/components/seo/schema";
 import { Button } from "@/components/ui/button";
 import {
   Accordion,
@@ -149,6 +149,12 @@ export default function FAQ() {
             description:
               'Answers to common questions about nicotine pouches in Australia, including Zyn, legality, prescriptions, consultations, and delivery.',
             dateModified: '2026-03-29',
+          }),
+          breadcrumbSchema({
+            items: [
+              { name: 'Home', url: `${SITE_ORIGIN}/` },
+              { name: 'FAQ', url: `${SITE_ORIGIN}/faq` },
+            ],
           }),
           serviceSchema({
             url: `${SITE_ORIGIN}/faq`,

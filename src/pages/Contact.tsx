@@ -1,6 +1,6 @@
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import Seo, { SITE_ORIGIN } from "@/components/seo/Seo";
-import { contactPageSchema, serviceSchema } from "@/components/seo/schema";
+import { breadcrumbSchema, contactPageSchema, serviceSchema } from "@/components/seo/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,6 +60,12 @@ export default function Contact() {
             description:
               'Contact the NicoPatch team for help with consultations, prescriptions, and ordering nicotine pouches in Australia.',
             dateModified: '2026-03-29',
+          }),
+          breadcrumbSchema({
+            items: [
+              { name: 'Home', url: `${SITE_ORIGIN}/` },
+              { name: 'Contact', url: `${SITE_ORIGIN}/contact` },
+            ],
           }),
           serviceSchema({
             url: `${SITE_ORIGIN}/contact`,

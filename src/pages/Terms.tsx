@@ -1,6 +1,6 @@
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import Seo, { SITE_ORIGIN } from "@/components/seo/Seo";
-import { webPageSchema } from "@/components/seo/schema";
+import { breadcrumbSchema, webPageSchema } from "@/components/seo/schema";
 
 export default function Terms() {
   return (
@@ -11,12 +11,20 @@ export default function Terms() {
         canonicalPath="/terms"
         ogImagePath="/placeholder.svg"
         ogType="website"
-        jsonLd={webPageSchema({
-          url: `${SITE_ORIGIN}/terms`,
-          name: 'Terms of service',
-          description: 'NicoPatch terms of service for using our Australian telehealth platform.',
-          dateModified: '2026-03-29',
-        })}
+        jsonLd={[
+          webPageSchema({
+            url: `${SITE_ORIGIN}/terms`,
+            name: 'Terms of service',
+            description: 'NicoPatch terms of service for using our Australian telehealth platform.',
+            dateModified: '2026-03-29',
+          }),
+          breadcrumbSchema({
+            items: [
+              { name: 'Home', url: `${SITE_ORIGIN}/` },
+              { name: 'Terms', url: `${SITE_ORIGIN}/terms` },
+            ],
+          }),
+        ]}
       />
       <section className="py-16 md:py-24">
         <div className="container">
