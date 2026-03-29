@@ -144,3 +144,27 @@ export function serviceSchema(params: {
     inLanguage: 'en-AU',
   };
 }
+
+export function howToSchema(params: {
+  url: string;
+  name: string;
+  description?: string;
+  steps: Array<{ name: string; text?: string; url?: string }>;
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    '@id': `${params.url}#howto`,
+    url: params.url,
+    name: params.name,
+    description: params.description,
+    inLanguage: 'en-AU',
+    step: params.steps.map((s, idx) => ({
+      '@type': 'HowToStep',
+      position: idx + 1,
+      name: s.name,
+      text: s.text,
+      ...(s.url ? { url: s.url } : {}),
+    })),
+  };
+}

@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Button } from "@/components/ui/button";
 import Seo, { SITE_ORIGIN } from "@/components/seo/Seo";
-import { serviceSchema, webPageSchema } from "@/components/seo/schema";
+import { breadcrumbSchema, serviceSchema, webPageSchema } from "@/components/seo/schema";
 import { 
   Calendar, 
   ClipboardCheck, 
@@ -78,6 +78,9 @@ export default function Index() {
             description:
               'Doctor-supervised telehealth consultations for nicotine pouches in Australia, including clinical assessment and next steps if clinically appropriate.',
             providerUrl: SITE_ORIGIN,
+          }),
+          breadcrumbSchema({
+            items: [{ name: 'Home', url: `${SITE_ORIGIN}/` }],
           }),
         ]}
       />
