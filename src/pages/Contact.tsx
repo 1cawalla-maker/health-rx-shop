@@ -1,6 +1,6 @@
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import Seo, { SITE_ORIGIN } from "@/components/seo/Seo";
-import { webPageSchema } from "@/components/seo/schema";
+import { serviceSchema, webPageSchema } from "@/components/seo/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -52,12 +52,21 @@ export default function Contact() {
         description="Contact the NicoPatch team for help with consultations, prescriptions, and ordering nicotine pouches in Australia."
         canonicalPath="/contact"
         ogImagePath="/placeholder.svg"
-        jsonLd={webPageSchema({
-          url: `${SITE_ORIGIN}/contact`,
-          name: 'Contact',
-          description:
-            'Contact the NicoPatch team for help with consultations, prescriptions, and ordering nicotine pouches in Australia.',
-        })}
+        jsonLd={[
+          webPageSchema({
+            url: `${SITE_ORIGIN}/contact`,
+            name: 'Contact',
+            description:
+              'Contact the NicoPatch team for help with consultations, prescriptions, and ordering nicotine pouches in Australia.',
+          }),
+          serviceSchema({
+            url: `${SITE_ORIGIN}/contact`,
+            name: 'Customer support',
+            description:
+              'Customer support for NicoPatch consultations and ordering questions.',
+            providerUrl: SITE_ORIGIN,
+          }),
+        ]}
       />
       {/* Hero Section */}
       <section className="gradient-section py-16 md:py-24">

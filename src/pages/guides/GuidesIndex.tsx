@@ -1,6 +1,6 @@
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import Seo, { SITE_ORIGIN } from '@/components/seo/Seo';
-import { webPageSchema } from '@/components/seo/schema';
+import { serviceSchema, webPageSchema } from '@/components/seo/schema';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
 
@@ -62,6 +62,12 @@ export default function GuidesIndex() {
             url: `${SITE_ORIGIN}${PATH}`,
             name: 'Guides',
             description: 'Guides about Zyn in Australia, nicotine pouches, legality, access, strength, and comparisons.',
+          }),
+          serviceSchema({
+            url: `${SITE_ORIGIN}${PATH}`,
+            name: 'Nicotine pouch education',
+            description: 'Plain-English education about nicotine pouches in Australia, including legality, access, strength, and comparisons.',
+            providerUrl: SITE_ORIGIN,
           }),
           {
             '@context': 'https://schema.org',
