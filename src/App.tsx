@@ -81,6 +81,7 @@ import GuidePersonalImportationSchemeNicotinePouches from "./pages/guides/Person
 import GuideNicotinePouchStrengthGuide from "./pages/guides/NicotinePouchStrengthGuide";
 import GuideZynVsOtherNicotinePouches from "./pages/guides/ZynVsOtherNicotinePouches";
 import GlobalSchema from "@/components/seo/GlobalSchema";
+import NoIndexRoutes from "@/components/seo/NoIndexRoutes";
 
 const queryClient = new QueryClient();
 
@@ -93,6 +94,7 @@ const App = () => (
           <Sonner />
           <GlobalSchema />
           <BrowserRouter>
+            <NoIndexRoutes />
             <Routes>
               {/* Public routes */}
               <Route path="/" element={<Index />} />
