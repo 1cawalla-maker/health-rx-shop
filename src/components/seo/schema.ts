@@ -88,6 +88,7 @@ export function serviceSchema(params: {
   url: string;
   name: string;
   description?: string;
+  providerUrl: string;
 }) {
   return {
     '@context': 'https://schema.org',
@@ -99,7 +100,7 @@ export function serviceSchema(params: {
     provider: {
       '@type': 'Organization',
       name: 'NicoPatch',
-      url: 'https://nicopatch.com.au',
+      url: params.providerUrl,
     },
     areaServed: {
       '@type': 'Country',

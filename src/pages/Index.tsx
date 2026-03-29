@@ -75,6 +75,7 @@ export default function Index() {
             name: 'Telehealth consultation for nicotine pouches',
             description:
               'Doctor-supervised telehealth consultations for nicotine pouches in Australia, including clinical assessment and next steps if clinically appropriate.',
+            providerUrl: SITE_ORIGIN,
           }),
         ]}
       />

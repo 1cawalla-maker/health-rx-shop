@@ -11,6 +11,7 @@ export default function GlobalSchema() {
         {
           '@context': 'https://schema.org',
           '@type': 'Organization',
+          '@id': `${SITE_ORIGIN}#organization`,
           name: 'NicoPatch',
           url: SITE_ORIGIN,
           inLanguage: 'en-AU',
@@ -27,9 +28,13 @@ export default function GlobalSchema() {
         {
           '@context': 'https://schema.org',
           '@type': 'WebSite',
+          '@id': `${SITE_ORIGIN}#website`,
           name: 'NicoPatch',
           url: SITE_ORIGIN,
           inLanguage: 'en-AU',
+          publisher: {
+            '@id': `${SITE_ORIGIN}#organization`,
+          },
         },
       ]}
     />

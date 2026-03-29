@@ -42,6 +42,7 @@ export default function Pricing() {
             name: 'Consultation pricing',
             description:
               'Consultation pricing and how costs work for nicotine pouches in Australia, including products and shipping at checkout.',
+            providerUrl: SITE_ORIGIN,
           }),
         ]}
       />

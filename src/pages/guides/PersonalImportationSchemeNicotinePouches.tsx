@@ -56,7 +56,7 @@ export default function GuidePersonalImportationSchemeNicotinePouches() {
             headline: 'Personal Importation Scheme: nicotine pouches in Australia (guide)',
             description:
               'Plain-English guide to the Personal Importation Scheme and how it relates to nicotine pouches in Australia, with a doctor-supervised next step.',
-            dateModified: '2026-03-01',
+            dateModified: '2026-03-29',
           }),
           breadcrumbSchema({
             items: [

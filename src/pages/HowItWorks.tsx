@@ -109,6 +109,7 @@ export default function HowItWorks() {
             name: 'How NicoPatch works',
             description:
               'Questionnaire, telehealth consultation, clinical assessment, and next steps for nicotine pouches in Australia through a doctor-supervised pathway.',
+            providerUrl: SITE_ORIGIN,
           }),
         ]}
       />

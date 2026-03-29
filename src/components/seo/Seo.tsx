@@ -39,6 +39,7 @@ export default function Seo({ title, description, canonicalPath, noIndex, jsonLd
       {hasTitle && <title>{fullTitle}</title>}
       {description && <meta name="description" content={description} />}
       {!noIndex && hasTitle && <meta name="author" content={SITE_NAME} />}
+      {!noIndex && <meta httpEquiv="content-language" content="en-AU" />}
       {canonical && <link rel="canonical" href={canonical} />}
       {canonical && <link rel="alternate" hrefLang="en-au" href={canonical} />}
       {canonical && <link rel="alternate" hrefLang="x-default" href={canonical} />}
