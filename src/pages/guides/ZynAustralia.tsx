@@ -76,7 +76,7 @@ export default function GuideZynAustralia() {
             name: 'Zyn in Australia',
             description:
               'Plain-English guidance on Zyns in Australia, including legality, prescriptions, consultation steps, costs, and what to do next.',
-            dateModified: '2026-03-29',
+            dateModified: '2026-03-30',
           }),
           articleSchema({
             url: `${SITE_ORIGIN}${PATH}`,
@@ -84,7 +84,7 @@ export default function GuideZynAustralia() {
             headline: 'Zyn in Australia: legality, access, and safe next steps',
             description:
               'Plain-English guidance on Zyns in Australia, including legality, prescriptions, consultation steps, costs, and what to do next.',
-            dateModified: '2026-03-29',
+            dateModified: '2026-03-30',
           }),
           breadcrumbSchema({
             items: [
