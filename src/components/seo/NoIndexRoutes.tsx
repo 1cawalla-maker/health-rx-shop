@@ -3,7 +3,7 @@ import Seo from './Seo';
 
 // Ensures non-public route areas never appear in search results.
 // This does not change UI layout; it only adds a meta robots tag.
-const NOINDEX_PREFIXES = ['/patient', '/doctor', '/admin'];
+const NOINDEX_PREFIXES = ['/patient', '/doctor', '/admin', '/auth', '/eligibility'];
 
 export default function NoIndexRoutes() {
   const { pathname } = useLocation();
