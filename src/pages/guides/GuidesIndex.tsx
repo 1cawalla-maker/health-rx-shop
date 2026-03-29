@@ -55,6 +55,7 @@ export default function GuidesIndex() {
         title="Guides: Zyn Australia & Nicotine Pouches"
         description="Guides about Zyn in Australia, nicotine pouches, legality, access, strength, and comparisons."
         canonicalPath={PATH}
+        ogImagePath="/placeholder.svg"
         jsonLd={{
           '@context': 'https://schema.org',
           '@type': 'CollectionPage',

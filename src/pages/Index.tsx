@@ -61,6 +61,7 @@ export default function Index() {
         title="Nicotine Pouches in Australia (Zyn): Consult with Australian Doctors"
         description="Doctor-supervised telehealth consultations for nicotine pouches in Australia. If clinically appropriate, receive a prescription and access nicotine pouches legally."
         canonicalPath="/"
+        ogImagePath="/placeholder.svg"
       />
       {/* Hero Section */}
       <section className="relative overflow-hidden gradient-section">
