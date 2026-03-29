@@ -29,6 +29,11 @@ export default function GuideNicotinePouchStrengthGuide() {
       answer:
         'Costs typically include a consultation fee (shown at booking), product pricing (shown in the shop), and shipping at checkout. Pricing can change over time.',
     },
+    {
+      question: 'Can I choose flavours?',
+      answer:
+        'If you have an active prescription, you can generally choose from available flavours within your approved strength and allowance.',
+    },
   ];
 
   return (
@@ -71,6 +76,22 @@ export default function GuideNicotinePouchStrengthGuide() {
 
           <Card>
             <CardHeader>
+              <CardTitle>Quick answer</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <p>
+                Most people choose between 3mg, 6mg, and 9mg based on what they currently use (cigarettes, vaping,
+                or prior pouches) and their goal (maintain, switch, or step down).
+              </p>
+              <p>
+                Strength is not just preference—it’s part of clinical suitability. A doctor may set a maximum
+                strength, and you can usually choose that strength or lower.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Quick comparison</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-2">
@@ -79,10 +100,6 @@ export default function GuideNicotinePouchStrengthGuide() {
                 <li><strong>6mg:</strong> mid strength</li>
                 <li><strong>9mg:</strong> higher strength (only if clinically appropriate)</li>
               </ul>
-              <p>
-                Strength is not just preference—it’s part of clinical suitability. Your doctor may set a maximum
-                strength, and you can usually choose that strength or lower.
-              </p>
             </CardContent>
           </Card>
 

@@ -31,6 +31,16 @@ export default function GuideZynAustralia() {
         'Costs typically include a consultation fee (shown at booking), product pricing (shown in the shop), and shipping at checkout. Pricing can change over time.',
     },
     {
+      question: 'What strengths are available (3mg / 6mg / 9mg)?',
+      answer:
+        'Strength options vary by product. If a prescription is issued, a doctor may set a maximum strength. You can typically choose that strength or lower and select from available flavours in the shop.',
+    },
+    {
+      question: 'How many cans can I order?',
+      answer:
+        'Order limits depend on your prescription. If a limit applies, it will be shown in your account and enforced in the shop and cart.',
+    },
+    {
       question: 'What happens in the consultation?',
       answer:
         'A doctor reviews your health history, nicotine use, and suitability, then explains next steps. Clinical decisions are made by the doctor during the consultation.',
@@ -44,6 +54,11 @@ export default function GuideZynAustralia() {
       question: 'Can I choose strength and flavours?',
       answer:
         'If a prescription is issued, the doctor may set a maximum strength. You can typically choose that strength or lower and select from available flavours in the shop.',
+    },
+    {
+      question: 'How long does delivery take?',
+      answer:
+        'Delivery times vary. Once an order is placed, you’ll see status updates in your account as it progresses.',
     },
   ];
 
@@ -105,8 +120,13 @@ export default function GuideZynAustralia() {
             <div className="space-y-2">
               <h2 className="font-display text-2xl font-semibold">What is Zyn?</h2>
               <p className="text-muted-foreground">
-                Zyns are nicotine pouches. They are placed in the mouth (between gum and lip) and deliver nicotine
-                without smoking or vaping.
+                Zyn is a brand of nicotine pouches. Nicotine pouches are placed in the mouth (between gum and lip)
+                and deliver nicotine without smoking or vaping.
+              </p>
+              <p className="text-muted-foreground">
+                People typically search “Zyns Australia” because they want a discreet, device‑free nicotine option.
+                In Australia, the important part isn’t the brand name—it’s following a compliant pathway and using
+                a product/strength that’s clinically appropriate.
               </p>
             </div>
 
@@ -135,6 +155,22 @@ export default function GuideZynAustralia() {
                 <li>Speak with an AHPRA‑registered doctor by phone.</li>
                 <li>If clinically appropriate, your doctor will explain next steps and any limits (like max strength).</li>
               </ol>
+              <p className="text-muted-foreground">
+                Prefer to read first? Start here: <Link className="text-primary underline underline-offset-4" to="/guides">Browse all guides</Link>.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <h2 className="font-display text-2xl font-semibold">Strength, limits, and ordering</h2>
+              <p className="text-muted-foreground">
+                If a prescription is issued, your doctor may set a maximum strength. You can typically choose that
+                strength or lower and select from available flavours in the shop.
+              </p>
+              <ul className="list-disc pl-5 text-muted-foreground space-y-2">
+                <li><strong>Strength:</strong> commonly 3mg / 6mg / 9mg (doctor‑guided).</li>
+                <li><strong>Allowance:</strong> you may have quantity limits that are enforced in the shop and cart.</li>
+                <li><strong>Order updates:</strong> once you place an order, you’ll see tracking/status updates in your account.</li>
+              </ul>
             </div>
 
             <div className="space-y-2">
