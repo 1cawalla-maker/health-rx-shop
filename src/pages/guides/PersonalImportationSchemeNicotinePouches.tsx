@@ -50,7 +50,7 @@ export default function GuidePersonalImportationSchemeNicotinePouches() {
             name: 'Personal Importation Scheme (nicotine pouches)',
             description:
               'Plain-English guide to the Personal Importation Scheme and how it relates to nicotine pouches in Australia, with a doctor-supervised next step.',
-            dateModified: '2026-03-29',
+            dateModified: '2026-03-30',
           }),
           articleSchema({
             url: `${SITE_ORIGIN}${PATH}`,
@@ -58,7 +58,7 @@ export default function GuidePersonalImportationSchemeNicotinePouches() {
             headline: 'Personal Importation Scheme: nicotine pouches in Australia (guide)',
             description:
               'Plain-English guide to the Personal Importation Scheme and how it relates to nicotine pouches in Australia, with a doctor-supervised next step.',
-            dateModified: '2026-03-29',
+            dateModified: '2026-03-30',
           }),
           breadcrumbSchema({
             items: [
