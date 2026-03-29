@@ -41,7 +41,7 @@ export default function Disclaimer() {
             </div>
             
             <p className="text-muted-foreground mb-6">
-              Last updated: December 2024
+              Last updated: March 2026
             </p>
 
             <div className="space-y-8 text-muted-foreground">
