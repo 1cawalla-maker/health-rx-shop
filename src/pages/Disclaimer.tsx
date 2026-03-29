@@ -7,8 +7,9 @@ export default function Disclaimer() {
     <PublicLayout>
       <Seo
         title="Medical & Telehealth Disclaimer"
-        description="Medical and telehealth disclaimer for NicoPatch."
+        description="Medical and telehealth disclaimer for NicoPatch, including clinical suitability, consultation limits, and important safety information."
         canonicalPath="/disclaimer"
+        ogImagePath="/placeholder.svg"
       />
       <section className="py-16 md:py-24">
         <div className="container">
