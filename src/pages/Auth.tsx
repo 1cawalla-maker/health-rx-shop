@@ -357,6 +357,7 @@ export default function Auth() {
         title="Log In / Sign Up"
         description="Log in or create your NicoPatch account to book a telehealth consultation."
         canonicalPath="/auth"
+        ogType="website"
         noIndex
       />
       <section className="py-16 md:py-24 gradient-section">

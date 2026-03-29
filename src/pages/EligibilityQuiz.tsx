@@ -356,6 +356,7 @@ export default function EligibilityQuiz() {
         title="Pre‑Consultation Questionnaire"
         description="Answer a few questions to help a doctor assess whether nicotine pouches may be appropriate for you."
         canonicalPath="/eligibility"
+        ogType="website"
         noIndex
       />
       <section className="py-16 md:py-24 gradient-section min-h-[70vh]">

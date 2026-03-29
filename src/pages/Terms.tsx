@@ -10,6 +10,7 @@ export default function Terms() {
         description="NicoPatch terms of service for using our Australian telehealth platform."
         canonicalPath="/terms"
         ogImagePath="/placeholder.svg"
+        ogType="website"
         jsonLd={webPageSchema({
           url: `${SITE_ORIGIN}/terms`,
           name: 'Terms of service',
