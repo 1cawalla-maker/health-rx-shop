@@ -45,8 +45,9 @@ export default function GuideNicotinePouchesVsVaping() {
     <PublicLayout>
       <Seo
         title="Nicotine Pouches vs Vaping (Australia): Differences, Risks & Access"
-        description="Compare nicotine pouches vs vaping in Australia: key differences, considerations, and how a doctor can help you decide on the right next step."
+        description="Compare nicotine pouches vs vaping in Australia: key differences, considerations, and how a doctor can help you choose the right next step."
         canonicalPath={PATH}
+        ogImagePath="/placeholder.svg"
         jsonLd={[
           breadcrumbSchema({
             items: [

@@ -40,8 +40,9 @@ export default function GuideNicotinePouchStrengthGuide() {
     <PublicLayout>
       <Seo
         title="3mg vs 6mg vs 9mg Nicotine Pouches: Strength Guide (Australia)"
-        description="A simple guide to nicotine pouch strengths (3mg, 6mg, 9mg) in Australia and how a doctor helps choose what’s appropriate."
+        description="Strength guide for nicotine pouches in Australia (3mg vs 6mg vs 9mg): how clinicians choose what’s appropriate and how to step down over time."
         canonicalPath={PATH}
+        ogImagePath="/placeholder.svg"
         jsonLd={[
           breadcrumbSchema({
             items: [

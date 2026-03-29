@@ -55,8 +55,9 @@ export default function GuideNicotinePouchesAustralia() {
     <PublicLayout>
       <Seo
         title="Nicotine Pouches in Australia: Legal Access, Prescriptions & Delivery"
-        description="A plain-English guide to nicotine pouches in Australia: how access works, prescriptions, consultations, and what to do next."
+        description="A plain-English guide to nicotine pouches in Australia (including Zyn): legality, prescriptions, consultation steps, delivery, and what to do next."
         canonicalPath={PATH}
+        ogImagePath="/placeholder.svg"
         jsonLd={[
           breadcrumbSchema({
             items: [
