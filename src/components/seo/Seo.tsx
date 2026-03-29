@@ -36,6 +36,8 @@ export default function Seo({ title, description, canonicalPath, noIndex, jsonLd
     ? `${SITE_ORIGIN}${ogImagePath || '/placeholder.svg'}`
     : undefined;
 
+  const ogImageIsRaster = Boolean(ogImage && ogImage.match(/\.(png|jpe?g|webp)(\?.*)?$/i));
+
   const jsonLdArray = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
 
   return (
@@ -44,9 +46,9 @@ export default function Seo({ title, description, canonicalPath, noIndex, jsonLd
       {description && <meta name="description" content={description} />}
       {!noIndex && hasTitle && <meta name="author" content={SITE_NAME} />}
       {!noIndex && <meta httpEquiv="content-language" content="en-AU" />}
-      {canonical && <link rel="canonical" href={canonical} />}
-      {canonical && <link rel="alternate" hrefLang="en-au" href={canonical} />}
-      {canonical && <link rel="alternate" hrefLang="x-default" href={canonical} />}
+      {!noIndex && canonical && <link rel="canonical" href={canonical} />}
+      {!noIndex && canonical && <link rel="alternate" hrefLang="en-au" href={canonical} />}
+      {!noIndex && canonical && <link rel="alternate" hrefLang="x-default" href={canonical} />}
       {noIndex ? (
         <meta name="robots" content="noindex, nofollow" />
       ) : (
@@ -57,7 +59,7 @@ export default function Seo({ title, description, canonicalPath, noIndex, jsonLd
       )}
 
       {/* OpenGraph / Twitter */}
-      {canonical && <meta property="og:url" content={canonical.replace(/\/+$/, '')} />}
+      {!noIndex && canonical && <meta property="og:url" content={canonical.replace(/\/+$/, '')} />}
       <meta property="og:site_name" content={SITE_NAME} />
       <meta property="og:locale" content="en_AU" />
       <meta property="og:type" content={ogType} />
@@ -65,8 +67,8 @@ export default function Seo({ title, description, canonicalPath, noIndex, jsonLd
       {description && <meta property="og:description" content={description} />}
       {ogImage && <meta property="og:image" content={ogImage} />}
       {ogImage && <meta property="og:image:alt" content={hasTitle ? fullTitle : SITE_NAME} />}
-      {ogImage && <meta property="og:image:width" content="1200" />}
-      {ogImage && <meta property="og:image:height" content="630" />}
+      {ogImageIsRaster && <meta property="og:image:width" content="1200" />}
+      {ogImageIsRaster && <meta property="og:image:height" content="630" />}
 
       <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
       {hasTitle && <meta name="twitter:title" content={fullTitle} />}
