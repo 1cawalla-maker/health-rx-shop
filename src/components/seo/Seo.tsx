@@ -42,7 +42,14 @@ export default function Seo({ title, description, canonicalPath, noIndex, jsonLd
       {canonical && <link rel="canonical" href={canonical} />}
       {canonical && <link rel="alternate" hrefLang="en-au" href={canonical} />}
       {canonical && <link rel="alternate" hrefLang="x-default" href={canonical} />}
-      {noIndex && <meta name="robots" content="noindex, nofollow" />}
+      {noIndex ? (
+        <meta name="robots" content="noindex, nofollow" />
+      ) : (
+        <meta
+          name="robots"
+          content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
+        />
+      )}
 
       {/* OpenGraph / Twitter */}
       {canonical && <meta property="og:url" content={canonical} />}
