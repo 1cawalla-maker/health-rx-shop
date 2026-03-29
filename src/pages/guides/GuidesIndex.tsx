@@ -61,6 +61,7 @@ export default function GuidesIndex() {
           '@type': 'CollectionPage',
           name: 'Guides',
           url: `${SITE_ORIGIN}${PATH}`,
+          inLanguage: 'en-AU',
         }}
       />
 
