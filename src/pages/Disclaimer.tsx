@@ -18,7 +18,7 @@ export default function Disclaimer() {
             name: 'Medical & Telehealth Disclaimer',
             description:
               'Medical and telehealth disclaimer for NicoPatch, including clinical suitability, consultation limits, and important safety information.',
-            dateModified: '2026-03-29',
+            dateModified: '2026-03-30',
           }),
           breadcrumbSchema({
             items: [

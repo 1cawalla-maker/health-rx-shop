@@ -16,7 +16,7 @@ export default function Terms() {
             url: `${SITE_ORIGIN}/terms`,
             name: 'Terms of service',
             description: 'NicoPatch terms of service for using our Australian telehealth platform.',
-            dateModified: '2026-03-29',
+            dateModified: '2026-03-30',
           }),
           breadcrumbSchema({
             items: [
