@@ -64,7 +64,7 @@ export default function About() {
             name: 'About NicoPatch',
             description:
               'NicoPatch is an Australian telehealth platform connecting patients with AHPRA-registered doctors for nicotine pouch consultations and clinically guided next steps.',
-            dateModified: '2026-03-29',
+            dateModified: '2026-03-30',
           }),
           breadcrumbSchema({
             items: [

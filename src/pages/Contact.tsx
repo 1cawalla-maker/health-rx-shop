@@ -59,7 +59,7 @@ export default function Contact() {
             name: 'Contact',
             description:
               'Contact the NicoPatch team for help with consultations, prescriptions, and ordering nicotine pouches in Australia.',
-            dateModified: '2026-03-29',
+            dateModified: '2026-03-30',
           }),
           breadcrumbSchema({
             items: [
