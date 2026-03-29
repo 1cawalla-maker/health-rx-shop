@@ -24,7 +24,11 @@ export default function Seo({ title, description, canonicalPath, noIndex, jsonLd
     ? (title.includes(SITE_NAME) ? title : `${title} | ${SITE_NAME}`)
     : '';
 
-  const canonical = canonicalPath ? `${SITE_ORIGIN}${canonicalPath}` : undefined;
+  const canonical = canonicalPath
+    ? (canonicalPath === '/'
+        ? `${SITE_ORIGIN}/`
+        : `${SITE_ORIGIN}${canonicalPath.replace(/\/+$/, '')}`)
+    : undefined;
 
   // Default to a stable placeholder image for indexed pages so shares render consistently,
   // while ensuring noindex/untitled routes don't emit OG images.
@@ -53,7 +57,7 @@ export default function Seo({ title, description, canonicalPath, noIndex, jsonLd
       )}
 
       {/* OpenGraph / Twitter */}
-      {canonical && <meta property="og:url" content={canonical.replace(/\/$/, '')} />}
+      {canonical && <meta property="og:url" content={canonical.replace(/\/+$/, '')} />}
       <meta property="og:site_name" content={SITE_NAME} />
       <meta property="og:locale" content="en_AU" />
       <meta property="og:type" content={ogType} />

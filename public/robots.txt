@@ -7,6 +7,8 @@ Disallow: /admin/
 
 # Auth and tool pages should not appear in search results
 Disallow: /auth
+Disallow: /auth/
 Disallow: /eligibility
+Disallow: /eligibility/
 
 Sitemap: https://nicopatch.com.au/sitemap.xml
