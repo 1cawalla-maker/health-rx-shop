@@ -9,6 +9,7 @@ interface SeoProps {
   noIndex?: boolean;
   jsonLd?: JsonLd | JsonLd[];
   ogImagePath?: string;
+  ogType?: 'website' | 'article';
 }
 
 const SITE_NAME = 'NicoPatch';
@@ -17,7 +18,7 @@ const SITE_NAME = 'NicoPatch';
 // Vite exposes env vars as import.meta.env.* at build time.
 const SITE_ORIGIN: string = (import.meta as any)?.env?.VITE_SITE_ORIGIN || 'https://nicopatch.com.au';
 
-export default function Seo({ title, description, canonicalPath, noIndex, jsonLd, ogImagePath }: SeoProps) {
+export default function Seo({ title, description, canonicalPath, noIndex, jsonLd, ogImagePath, ogType = 'website' }: SeoProps) {
   const hasTitle = Boolean(title && title.trim());
   const fullTitle = hasTitle
     ? (title.includes(SITE_NAME) ? title : `${title} | ${SITE_NAME}`)
@@ -38,7 +39,7 @@ export default function Seo({ title, description, canonicalPath, noIndex, jsonLd
       {/* OpenGraph / Twitter */}
       {canonical && <meta property="og:url" content={canonical} />}
       <meta property="og:site_name" content={SITE_NAME} />
-      <meta property="og:type" content="website" />
+      <meta property="og:type" content={ogType} />
       {hasTitle && <meta property="og:title" content={fullTitle} />}
       {description && <meta property="og:description" content={description} />}
       {ogImage && <meta property="og:image" content={ogImage} />}

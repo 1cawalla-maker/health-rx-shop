@@ -53,6 +53,7 @@ export default function GuideHowToGetNicotinePouchesAustralia() {
         description="Step-by-step: how to get nicotine pouches in Australia (including Zyn) via a compliant, doctor-supervised telehealth pathway."
         canonicalPath={PATH}
         ogImagePath="/placeholder.svg"
+        ogType="article"
         jsonLd={[
           breadcrumbSchema({
             items: [

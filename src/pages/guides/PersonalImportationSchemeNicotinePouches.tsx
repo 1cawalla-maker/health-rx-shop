@@ -42,6 +42,8 @@ export default function GuidePersonalImportationSchemeNicotinePouches() {
         title="Personal Importation Scheme: Nicotine Pouches in Australia (Guide)"
         description="Plain-English guide to the Personal Importation Scheme and how it relates to nicotine pouches in Australia, with a doctor-supervised next step."
         canonicalPath={PATH}
+        ogImagePath="/placeholder.svg"
+        ogType="article"
         jsonLd={[
           breadcrumbSchema({
             items: [

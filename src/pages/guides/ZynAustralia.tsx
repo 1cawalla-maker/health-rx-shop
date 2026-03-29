@@ -69,6 +69,7 @@ export default function GuideZynAustralia() {
         description="Plain-English guidance on Zyns in Australia, including legality, prescriptions, consultation steps, costs, and what to do next."
         canonicalPath={PATH}
         ogImagePath="/placeholder.svg"
+        ogType="article"
         jsonLd={[
           breadcrumbSchema({
             items: [
