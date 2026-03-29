@@ -28,6 +28,7 @@ export default function Pricing() {
         title="Pricing: Zyn Australia & Nicotine Pouches Consultation Cost"
         description="See consultation pricing and how costs work for nicotine pouches in Australia. Product prices and shipping are shown during checkout."
         canonicalPath="/pricing"
+        ogImagePath="/placeholder.svg"
       />
       {/* Hero Section */}
       <section className="gradient-section py-16 md:py-24">

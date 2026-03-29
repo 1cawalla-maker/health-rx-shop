@@ -95,6 +95,7 @@ export default function HowItWorks() {
         title="How to Get Nicotine Pouches in Australia (Zyn): How It Works"
         description="Learn how NicoPatch works: questionnaire, telehealth consultation, clinical assessment, and ordering nicotine pouches in Australia through a compliant pathway."
         canonicalPath="/how-it-works"
+        ogImagePath="/placeholder.svg"
       />
       {/* Hero Section */}
       <section className="gradient-section py-16 md:py-24">
