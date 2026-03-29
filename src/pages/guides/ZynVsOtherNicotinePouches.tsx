@@ -43,7 +43,7 @@ export default function GuideZynVsOtherNicotinePouches() {
           breadcrumbSchema({
             items: [
               { name: 'Home', url: `${SITE_ORIGIN}/` },
-              { name: 'Guides', url: `${SITE_ORIGIN}${PATH}` },
+              { name: 'Guides', url: `${SITE_ORIGIN}/guides` },
             ],
           }),
           faqPageSchema({ url: `${SITE_ORIGIN}${PATH}`, questions: faq }),
