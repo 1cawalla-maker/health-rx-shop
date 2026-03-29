@@ -1,6 +1,6 @@
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import Seo, { SITE_ORIGIN } from '@/components/seo/Seo';
-import { serviceSchema, webPageSchema } from '@/components/seo/schema';
+import { breadcrumbSchema, serviceSchema, webPageSchema } from '@/components/seo/schema';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
 
@@ -71,6 +71,12 @@ export default function GuidesIndex() {
             description: 'Plain-English education about nicotine pouches in Australia, including legality, access, strength, and comparisons.',
             providerUrl: SITE_ORIGIN,
           }),
+          breadcrumbSchema({
+            items: [
+              { name: 'Home', url: `${SITE_ORIGIN}/` },
+              { name: 'Guides', url: `${SITE_ORIGIN}${PATH}` },
+            ],
+          }),
           {
             '@context': 'https://schema.org',
             '@type': 'CollectionPage',
@@ -78,6 +84,19 @@ export default function GuidesIndex() {
             name: 'Guides',
             url: `${SITE_ORIGIN}${PATH}`,
             inLanguage: 'en-AU',
+          },
+          {
+            '@context': 'https://schema.org',
+            '@type': 'ItemList',
+            '@id': `${SITE_ORIGIN}${PATH}#itemlist`,
+            itemListOrder: 'https://schema.org/ItemListOrderUnordered',
+            numberOfItems: guides.length,
+            itemListElement: guides.map((g, idx) => ({
+              '@type': 'ListItem',
+              position: idx + 1,
+              name: g.title,
+              url: `${SITE_ORIGIN}${g.to}`,
+            })),
           },
         ]}
       />

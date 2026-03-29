@@ -1,6 +1,6 @@
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import Seo, { SITE_ORIGIN } from "@/components/seo/Seo";
-import { medicalWebPageSchema } from "@/components/seo/schema";
+import { breadcrumbSchema, medicalWebPageSchema } from "@/components/seo/schema";
 import { AlertTriangle } from "lucide-react";
 
 export default function Disclaimer() {
@@ -12,13 +12,21 @@ export default function Disclaimer() {
         canonicalPath="/disclaimer"
         ogImagePath="/placeholder.svg"
         ogType="website"
-        jsonLd={medicalWebPageSchema({
-          url: `${SITE_ORIGIN}/disclaimer`,
-          name: 'Medical & Telehealth Disclaimer',
-          description:
-            'Medical and telehealth disclaimer for NicoPatch, including clinical suitability, consultation limits, and important safety information.',
-          dateModified: '2026-03-29',
-        })}
+        jsonLd={[
+          medicalWebPageSchema({
+            url: `${SITE_ORIGIN}/disclaimer`,
+            name: 'Medical & Telehealth Disclaimer',
+            description:
+              'Medical and telehealth disclaimer for NicoPatch, including clinical suitability, consultation limits, and important safety information.',
+            dateModified: '2026-03-29',
+          }),
+          breadcrumbSchema({
+            items: [
+              { name: 'Home', url: `${SITE_ORIGIN}/` },
+              { name: 'Disclaimer', url: `${SITE_ORIGIN}/disclaimer` },
+            ],
+          }),
+        ]}
       />
       <section className="py-16 md:py-24">
         <div className="container">

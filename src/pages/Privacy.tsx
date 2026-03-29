@@ -1,6 +1,6 @@
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import Seo, { SITE_ORIGIN } from "@/components/seo/Seo";
-import { webPageSchema } from "@/components/seo/schema";
+import { breadcrumbSchema, webPageSchema } from "@/components/seo/schema";
 
 export default function Privacy() {
   return (
@@ -11,12 +11,20 @@ export default function Privacy() {
         canonicalPath="/privacy"
         ogImagePath="/placeholder.svg"
         ogType="website"
-        jsonLd={webPageSchema({
-          url: `${SITE_ORIGIN}/privacy`,
-          name: 'Privacy policy',
-          description: 'NicoPatch privacy policy and how we handle personal information.',
-          dateModified: '2026-03-29',
-        })}
+        jsonLd={[
+          webPageSchema({
+            url: `${SITE_ORIGIN}/privacy`,
+            name: 'Privacy policy',
+            description: 'NicoPatch privacy policy and how we handle personal information.',
+            dateModified: '2026-03-29',
+          }),
+          breadcrumbSchema({
+            items: [
+              { name: 'Home', url: `${SITE_ORIGIN}/` },
+              { name: 'Privacy', url: `${SITE_ORIGIN}/privacy` },
+            ],
+          }),
+        ]}
       />
       <section className="py-16 md:py-24">
         <div className="container">
