@@ -97,11 +97,12 @@ export function articleSchema(params: {
   headline: string;
   description?: string;
   dateModified?: string;
+  siteOrigin: string;
 }) {
   return {
     '@context': 'https://schema.org',
     '@type': 'Article',
-    '@id': params.url,
+    '@id': `${params.url}#article`,
     mainEntityOfPage: {
       '@type': 'WebPage',
       '@id': params.url,
@@ -112,12 +113,10 @@ export function articleSchema(params: {
     dateModified: params.dateModified,
     inLanguage: 'en-AU',
     author: {
-      '@type': 'Organization',
-      name: 'NicoPatch',
+      '@id': `${params.siteOrigin}#organization`,
     },
     publisher: {
-      '@type': 'Organization',
-      name: 'NicoPatch',
+      '@id': `${params.siteOrigin}#organization`,
     },
   };
 }
@@ -136,9 +135,7 @@ export function serviceSchema(params: {
     name: params.name,
     description: params.description,
     provider: {
-      '@type': 'Organization',
-      name: 'NicoPatch',
-      url: params.providerUrl,
+      '@id': `${params.providerUrl}#organization`,
     },
     areaServed: {
       '@type': 'Country',

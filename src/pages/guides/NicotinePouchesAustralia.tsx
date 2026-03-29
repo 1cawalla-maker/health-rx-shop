@@ -69,6 +69,7 @@ export default function GuideNicotinePouchesAustralia() {
           }),
           articleSchema({
             url: `${SITE_ORIGIN}${PATH}`,
+            siteOrigin: SITE_ORIGIN,
             headline: 'Nicotine pouches in Australia: legal access, prescriptions, and delivery',
             description:
               'A plain-English guide to nicotine pouches in Australia (including Zyn): legality, prescriptions, consultation steps, delivery, and what to do next.',

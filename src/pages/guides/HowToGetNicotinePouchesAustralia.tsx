@@ -64,6 +64,7 @@ export default function GuideHowToGetNicotinePouchesAustralia() {
           }),
           articleSchema({
             url: `${SITE_ORIGIN}${PATH}`,
+            siteOrigin: SITE_ORIGIN,
             headline: 'How to get nicotine pouches in Australia (step-by-step)',
             description:
               'Step-by-step: how to get nicotine pouches in Australia (including Zyn) via a compliant, doctor-supervised telehealth pathway.',

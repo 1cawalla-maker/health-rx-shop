@@ -49,6 +49,7 @@ export default function GuideZynVsOtherNicotinePouches() {
           }),
           articleSchema({
             url: `${SITE_ORIGIN}${PATH}`,
+            siteOrigin: SITE_ORIGIN,
             headline: 'Zyn vs other nicotine pouches (Australia): what actually matters',
             description:
               'Zyn is a brand of nicotine pouches. This guide explains what actually matters when comparing brands: strength, suitability, and the compliant pathway in Australia.',

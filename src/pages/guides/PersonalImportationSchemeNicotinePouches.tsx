@@ -54,6 +54,7 @@ export default function GuidePersonalImportationSchemeNicotinePouches() {
           }),
           articleSchema({
             url: `${SITE_ORIGIN}${PATH}`,
+            siteOrigin: SITE_ORIGIN,
             headline: 'Personal Importation Scheme: nicotine pouches in Australia (guide)',
             description:
               'Plain-English guide to the Personal Importation Scheme and how it relates to nicotine pouches in Australia, with a doctor-supervised next step.',
