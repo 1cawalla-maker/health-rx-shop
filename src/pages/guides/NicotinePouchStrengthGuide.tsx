@@ -49,6 +49,7 @@ export default function GuideNicotinePouchStrengthGuide() {
             items: [
               { name: 'Home', url: `${SITE_ORIGIN}/` },
               { name: 'Guides', url: `${SITE_ORIGIN}/guides` },
+              { name: 'Nicotine pouch strength guide', url: `${SITE_ORIGIN}${PATH}` },
             ],
           }),
           faqPageSchema({ url: `${SITE_ORIGIN}${PATH}`, questions: faq }),
