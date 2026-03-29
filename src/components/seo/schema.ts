@@ -5,6 +5,9 @@ export function faqPageSchema(params: {
   return {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
+    '@id': params.url,
+    url: params.url,
+    inLanguage: 'en-AU',
     mainEntity: params.questions.map((q) => ({
       '@type': 'Question',
       name: q.question,
@@ -22,6 +25,7 @@ export function breadcrumbSchema(params: {
   return {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
+    inLanguage: 'en-AU',
     itemListElement: params.items.map((it, idx) => ({
       '@type': 'ListItem',
       position: idx + 1,
