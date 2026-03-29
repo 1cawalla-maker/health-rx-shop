@@ -53,7 +53,6 @@ export default function Seo({ title, description, canonicalPath, noIndex, jsonLd
       )}
 
       {/* OpenGraph / Twitter */}
-      {canonical && <meta property="og:url" content={canonical} />}
       {canonical && <meta property="og:url" content={canonical.replace(/\/$/, '')} />}
       <meta property="og:site_name" content={SITE_NAME} />
       <meta property="og:locale" content="en_AU" />
