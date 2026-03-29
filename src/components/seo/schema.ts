@@ -22,9 +22,12 @@ export function faqPageSchema(params: {
 export function breadcrumbSchema(params: {
   items: Array<{ name: string; url: string }>;
 }) {
+  const id = params.items.length ? `${params.items[params.items.length - 1].url}#breadcrumb` : undefined;
+
   return {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
+    ...(id ? { '@id': id } : {}),
     inLanguage: 'en-AU',
     itemListElement: params.items.map((it, idx) => ({
       '@type': 'ListItem',

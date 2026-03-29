@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import Seo, { SITE_ORIGIN } from '@/components/seo/Seo';
-import { breadcrumbSchema, faqPageSchema } from '@/components/seo/schema';
+import { articleSchema, breadcrumbSchema, faqPageSchema, webPageSchema } from '@/components/seo/schema';
 
 const PATH = '/guides/personal-importation-scheme-nicotine-pouches';
 
@@ -45,6 +45,19 @@ export default function GuidePersonalImportationSchemeNicotinePouches() {
         ogImagePath="/placeholder.svg"
         ogType="article"
         jsonLd={[
+          webPageSchema({
+            url: `${SITE_ORIGIN}${PATH}`,
+            name: 'Personal Importation Scheme (nicotine pouches)',
+            description:
+              'Plain-English guide to the Personal Importation Scheme and how it relates to nicotine pouches in Australia, with a doctor-supervised next step.',
+          }),
+          articleSchema({
+            url: `${SITE_ORIGIN}${PATH}`,
+            headline: 'Personal Importation Scheme: nicotine pouches in Australia (guide)',
+            description:
+              'Plain-English guide to the Personal Importation Scheme and how it relates to nicotine pouches in Australia, with a doctor-supervised next step.',
+            dateModified: '2026-03-01',
+          }),
           breadcrumbSchema({
             items: [
               { name: 'Home', url: `${SITE_ORIGIN}/` },

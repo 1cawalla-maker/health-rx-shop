@@ -49,11 +49,15 @@ export default function Seo({ title, description, canonicalPath, noIndex, jsonLd
       {hasTitle && <meta property="og:title" content={fullTitle} />}
       {description && <meta property="og:description" content={description} />}
       {ogImage && <meta property="og:image" content={ogImage} />}
+      {ogImage && <meta property="og:image:alt" content={hasTitle ? fullTitle : SITE_NAME} />}
+      {ogImage && <meta property="og:image:width" content="1200" />}
+      {ogImage && <meta property="og:image:height" content="630" />}
 
       <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
       {hasTitle && <meta name="twitter:title" content={fullTitle} />}
       {description && <meta name="twitter:description" content={description} />}
       {ogImage && <meta name="twitter:image" content={ogImage} />}
+      {ogImage && <meta name="twitter:image:alt" content={hasTitle ? fullTitle : SITE_NAME} />}
 
       {jsonLdArray.map((obj, i) => (
         <script key={i} type="application/ld+json">{JSON.stringify(obj)}</script>
