@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import Seo from '@/components/seo/Seo';
-import { breadcrumbSchema, faqPageSchema, webPageSchema } from '@/components/seo/schema';
+import { articleSchema, breadcrumbSchema, faqPageSchema, webPageSchema } from '@/components/seo/schema';
 import { SITE_ORIGIN } from '@/components/seo/Seo';
 
 const PATH = '/guides/zyn-australia';
@@ -76,6 +76,13 @@ export default function GuideZynAustralia() {
             name: 'Zyn in Australia',
             description:
               'Plain-English guidance on Zyns in Australia, including legality, prescriptions, consultation steps, costs, and what to do next.',
+          }),
+          articleSchema({
+            url: `${SITE_ORIGIN}${PATH}`,
+            headline: 'Zyn in Australia: legality, access, and safe next steps',
+            description:
+              'Plain-English guidance on Zyns in Australia, including legality, prescriptions, consultation steps, costs, and what to do next.',
+            dateModified: '2026-03-01',
           }),
           breadcrumbSchema({
             items: [

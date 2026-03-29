@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import Seo, { SITE_ORIGIN } from '@/components/seo/Seo';
-import { breadcrumbSchema, faqPageSchema } from '@/components/seo/schema';
+import { articleSchema, breadcrumbSchema, faqPageSchema, webPageSchema } from '@/components/seo/schema';
 
 const PATH = '/guides/nicotine-pouches-vs-vaping';
 
@@ -50,6 +50,19 @@ export default function GuideNicotinePouchesVsVaping() {
         ogImagePath="/placeholder.svg"
         ogType="article"
         jsonLd={[
+          webPageSchema({
+            url: `${SITE_ORIGIN}${PATH}`,
+            name: 'Nicotine pouches vs vaping',
+            description:
+              'Compare nicotine pouches vs vaping in Australia: key differences, considerations, and how a doctor can help you choose the right next step.',
+          }),
+          articleSchema({
+            url: `${SITE_ORIGIN}${PATH}`,
+            headline: 'Nicotine pouches vs vaping (Australia): differences, risks, and access',
+            description:
+              'Compare nicotine pouches vs vaping in Australia: key differences, considerations, and how a doctor can help you choose the right next step.',
+            dateModified: '2026-03-01',
+          }),
           breadcrumbSchema({
             items: [
               { name: 'Home', url: `${SITE_ORIGIN}/` },

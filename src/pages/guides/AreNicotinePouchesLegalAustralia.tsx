@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import Seo, { SITE_ORIGIN } from '@/components/seo/Seo';
-import { breadcrumbSchema, faqPageSchema, webPageSchema } from '@/components/seo/schema';
+import { articleSchema, breadcrumbSchema, faqPageSchema, webPageSchema } from '@/components/seo/schema';
 
 const PATH = '/guides/are-nicotine-pouches-legal-in-australia';
 
@@ -50,6 +50,13 @@ export default function GuideAreNicotinePouchesLegalAustralia() {
             name: 'Are nicotine pouches legal in Australia?',
             description:
               'A plain-English overview of nicotine pouch legality in Australia (including Zyn) and the safest next step: a doctor-supervised consultation pathway.',
+          }),
+          articleSchema({
+            url: `${SITE_ORIGIN}${PATH}`,
+            headline: 'Are nicotine pouches legal in Australia? (plain-English answer)',
+            description:
+              'A plain-English overview of nicotine pouch legality in Australia (including Zyn) and the safest next step: a doctor-supervised consultation pathway.',
+            dateModified: '2026-03-01',
           }),
           breadcrumbSchema({
             items: [

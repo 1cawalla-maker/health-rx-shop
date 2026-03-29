@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import Seo, { SITE_ORIGIN } from '@/components/seo/Seo';
-import { breadcrumbSchema, faqPageSchema } from '@/components/seo/schema';
+import { articleSchema, breadcrumbSchema, faqPageSchema, webPageSchema } from '@/components/seo/schema';
 
 const PATH = '/guides/zyn-vs-other-nicotine-pouches';
 
@@ -40,6 +40,19 @@ export default function GuideZynVsOtherNicotinePouches() {
         ogImagePath="/placeholder.svg"
         ogType="article"
         jsonLd={[
+          webPageSchema({
+            url: `${SITE_ORIGIN}${PATH}`,
+            name: 'Zyn vs other nicotine pouches',
+            description:
+              'Zyn is a brand of nicotine pouches. This guide explains what actually matters when comparing brands: strength, suitability, and the compliant pathway in Australia.',
+          }),
+          articleSchema({
+            url: `${SITE_ORIGIN}${PATH}`,
+            headline: 'Zyn vs other nicotine pouches (Australia): what actually matters',
+            description:
+              'Zyn is a brand of nicotine pouches. This guide explains what actually matters when comparing brands: strength, suitability, and the compliant pathway in Australia.',
+            dateModified: '2026-03-01',
+          }),
           breadcrumbSchema({
             items: [
               { name: 'Home', url: `${SITE_ORIGIN}/` },

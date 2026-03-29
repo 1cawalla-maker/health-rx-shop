@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import Seo, { SITE_ORIGIN } from '@/components/seo/Seo';
-import { breadcrumbSchema, faqPageSchema } from '@/components/seo/schema';
+import { articleSchema, breadcrumbSchema, faqPageSchema, webPageSchema } from '@/components/seo/schema';
 
 const PATH = '/guides/nicotine-pouch-strength-3mg-6mg-9mg';
 
@@ -45,6 +45,19 @@ export default function GuideNicotinePouchStrengthGuide() {
         ogImagePath="/placeholder.svg"
         ogType="article"
         jsonLd={[
+          webPageSchema({
+            url: `${SITE_ORIGIN}${PATH}`,
+            name: 'Nicotine pouch strength guide',
+            description:
+              'Strength guide for nicotine pouches in Australia (3mg vs 6mg vs 9mg): how clinicians choose what’s appropriate and how to step down over time.',
+          }),
+          articleSchema({
+            url: `${SITE_ORIGIN}${PATH}`,
+            headline: '3mg vs 6mg vs 9mg nicotine pouches: strength guide (Australia)',
+            description:
+              'Strength guide for nicotine pouches in Australia (3mg vs 6mg vs 9mg): how clinicians choose what’s appropriate and how to step down over time.',
+            dateModified: '2026-03-01',
+          }),
           breadcrumbSchema({
             items: [
               { name: 'Home', url: `${SITE_ORIGIN}/` },

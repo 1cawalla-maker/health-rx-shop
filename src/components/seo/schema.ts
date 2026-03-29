@@ -50,3 +50,33 @@ export function webPageSchema(params: {
     inLanguage: 'en-AU',
   };
 }
+
+export function articleSchema(params: {
+  url: string;
+  headline: string;
+  description?: string;
+  dateModified?: string;
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    '@id': params.url,
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': params.url,
+    },
+    url: params.url,
+    headline: params.headline,
+    description: params.description,
+    dateModified: params.dateModified,
+    inLanguage: 'en-AU',
+    author: {
+      '@type': 'Organization',
+      name: 'NicoPatch',
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'NicoPatch',
+    },
+  };
+}
