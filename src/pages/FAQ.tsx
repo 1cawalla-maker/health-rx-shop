@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import Seo, { SITE_ORIGIN } from "@/components/seo/Seo";
-import { faqPageSchema } from "@/components/seo/schema";
+import { faqPageSchema, webPageSchema } from "@/components/seo/schema";
 import { Button } from "@/components/ui/button";
 import {
   Accordion,
@@ -141,10 +141,18 @@ export default function FAQ() {
         description="Answers to common questions about nicotine pouches in Australia, including Zyn, legality, prescriptions, consultations, and delivery."
         canonicalPath="/faq"
         ogImagePath="/placeholder.svg"
-        jsonLd={faqPageSchema({
-          url: `${SITE_ORIGIN}/faq`,
-          questions: allFaqs.map((f) => ({ question: f.question, answer: f.answer })),
-        })}
+        jsonLd={[
+          webPageSchema({
+            url: `${SITE_ORIGIN}/faq`,
+            name: 'FAQ',
+            description:
+              'Answers to common questions about nicotine pouches in Australia, including Zyn, legality, prescriptions, consultations, and delivery.',
+          }),
+          faqPageSchema({
+            url: `${SITE_ORIGIN}/faq`,
+            questions: allFaqs.map((f) => ({ question: f.question, answer: f.answer })),
+          }),
+        ]}
       />
       {/* Hero Section */}
       <section className="gradient-section py-16 md:py-24">

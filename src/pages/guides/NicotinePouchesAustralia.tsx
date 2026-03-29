@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import Seo, { SITE_ORIGIN } from '@/components/seo/Seo';
-import { breadcrumbSchema, faqPageSchema } from '@/components/seo/schema';
+import { breadcrumbSchema, faqPageSchema, webPageSchema } from '@/components/seo/schema';
 
 const PATH = '/guides/nicotine-pouches-australia';
 
@@ -60,6 +60,12 @@ export default function GuideNicotinePouchesAustralia() {
         ogImagePath="/placeholder.svg"
         ogType="article"
         jsonLd={[
+          webPageSchema({
+            url: `${SITE_ORIGIN}${PATH}`,
+            name: 'Nicotine pouches in Australia',
+            description:
+              'A plain-English guide to nicotine pouches in Australia (including Zyn): legality, prescriptions, consultation steps, delivery, and what to do next.',
+          }),
           breadcrumbSchema({
             items: [
               { name: 'Home', url: `${SITE_ORIGIN}/` },

@@ -1,5 +1,6 @@
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import Seo, { SITE_ORIGIN } from '@/components/seo/Seo';
+import { webPageSchema } from '@/components/seo/schema';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
 
@@ -56,13 +57,20 @@ export default function GuidesIndex() {
         description="Guides about Zyn in Australia, nicotine pouches, legality, access, strength, and comparisons."
         canonicalPath={PATH}
         ogImagePath="/placeholder.svg"
-        jsonLd={{
-          '@context': 'https://schema.org',
-          '@type': 'CollectionPage',
-          name: 'Guides',
-          url: `${SITE_ORIGIN}${PATH}`,
-          inLanguage: 'en-AU',
-        }}
+        jsonLd={[
+          webPageSchema({
+            url: `${SITE_ORIGIN}${PATH}`,
+            name: 'Guides',
+            description: 'Guides about Zyn in Australia, nicotine pouches, legality, access, strength, and comparisons.',
+          }),
+          {
+            '@context': 'https://schema.org',
+            '@type': 'CollectionPage',
+            name: 'Guides',
+            url: `${SITE_ORIGIN}${PATH}`,
+            inLanguage: 'en-AU',
+          },
+        ]}
       />
 
       <section className="py-12 md:py-16">
