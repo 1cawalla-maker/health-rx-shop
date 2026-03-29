@@ -14,6 +14,7 @@ export default function Privacy() {
           url: `${SITE_ORIGIN}/privacy`,
           name: 'Privacy policy',
           description: 'NicoPatch privacy policy and how we handle personal information.',
+          dateModified: '2026-03-29',
         })}
       />
       <section className="py-16 md:py-24">

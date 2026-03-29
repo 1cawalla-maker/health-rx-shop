@@ -36,6 +36,7 @@ export default function Pricing() {
             name: 'Pricing',
             description:
               'See consultation pricing and how costs work for nicotine pouches in Australia. Product prices and shipping are shown during checkout.',
+            dateModified: '2026-03-29',
           }),
           serviceSchema({
             url: `${SITE_ORIGIN}/pricing`,

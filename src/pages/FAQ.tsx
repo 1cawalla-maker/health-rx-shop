@@ -147,6 +147,7 @@ export default function FAQ() {
             name: 'FAQ',
             description:
               'Answers to common questions about nicotine pouches in Australia, including Zyn, legality, prescriptions, consultations, and delivery.',
+            dateModified: '2026-03-29',
           }),
           serviceSchema({
             url: `${SITE_ORIGIN}/faq`,
