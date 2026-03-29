@@ -13,6 +13,15 @@ export default function GlobalSchema() {
           '@type': 'Organization',
           name: 'NicoPatch',
           url: SITE_ORIGIN,
+          inLanguage: 'en-AU',
+          contactPoint: [
+            {
+              '@type': 'ContactPoint',
+              contactType: 'customer support',
+              email: 'support@nicopatch.com.au',
+              availableLanguage: ['en-AU'],
+            },
+          ],
           // logo can be added later once we have a stable asset path
         },
         {
@@ -20,6 +29,7 @@ export default function GlobalSchema() {
           '@type': 'WebSite',
           name: 'NicoPatch',
           url: SITE_ORIGIN,
+          inLanguage: 'en-AU',
         },
       ]}
     />
