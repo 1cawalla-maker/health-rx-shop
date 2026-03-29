@@ -59,6 +59,7 @@ export default function GuideHowToGetNicotinePouchesAustralia() {
             items: [
               { name: 'Home', url: `${SITE_ORIGIN}/` },
               { name: 'Guides', url: `${SITE_ORIGIN}/guides` },
+              { name: 'How to get nicotine pouches in Australia', url: `${SITE_ORIGIN}${PATH}` },
             ],
           }),
           faqPageSchema({ url: `${SITE_ORIGIN}${PATH}`, questions: faq }),
