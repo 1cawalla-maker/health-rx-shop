@@ -54,6 +54,7 @@ export default function GuideNicotinePouchesVsVaping() {
             items: [
               { name: 'Home', url: `${SITE_ORIGIN}/` },
               { name: 'Guides', url: `${SITE_ORIGIN}/guides` },
+              { name: 'Nicotine pouches vs vaping', url: `${SITE_ORIGIN}${PATH}` },
             ],
           }),
           faqPageSchema({ url: `${SITE_ORIGIN}${PATH}`, questions: faq }),

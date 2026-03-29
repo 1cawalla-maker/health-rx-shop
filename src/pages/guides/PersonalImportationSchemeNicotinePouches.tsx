@@ -49,6 +49,7 @@ export default function GuidePersonalImportationSchemeNicotinePouches() {
             items: [
               { name: 'Home', url: `${SITE_ORIGIN}/` },
               { name: 'Guides', url: `${SITE_ORIGIN}/guides` },
+              { name: 'Personal Importation Scheme', url: `${SITE_ORIGIN}${PATH}` },
             ],
           }),
           faqPageSchema({ url: `${SITE_ORIGIN}${PATH}`, questions: faq }),

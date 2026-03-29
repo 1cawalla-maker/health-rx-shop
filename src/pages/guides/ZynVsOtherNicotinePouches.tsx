@@ -44,6 +44,7 @@ export default function GuideZynVsOtherNicotinePouches() {
             items: [
               { name: 'Home', url: `${SITE_ORIGIN}/` },
               { name: 'Guides', url: `${SITE_ORIGIN}/guides` },
+              { name: 'Zyn vs other nicotine pouches', url: `${SITE_ORIGIN}${PATH}` },
             ],
           }),
           faqPageSchema({ url: `${SITE_ORIGIN}${PATH}`, questions: faq }),
