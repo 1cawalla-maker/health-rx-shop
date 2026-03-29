@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import Seo, { SITE_ORIGIN } from "@/components/seo/Seo";
-import { webPageSchema } from "@/components/seo/schema";
+import { serviceSchema, webPageSchema } from "@/components/seo/schema";
 import { Button } from "@/components/ui/button";
 import { 
   UserPlus, 
@@ -97,12 +97,20 @@ export default function HowItWorks() {
         description="Learn how NicoPatch works: questionnaire, telehealth consultation, clinical assessment, and ordering nicotine pouches in Australia through a compliant pathway."
         canonicalPath="/how-it-works"
         ogImagePath="/placeholder.svg"
-        jsonLd={webPageSchema({
-          url: `${SITE_ORIGIN}/how-it-works`,
-          name: 'How it works',
-          description:
-            'Learn how NicoPatch works: questionnaire, telehealth consultation, clinical assessment, and ordering nicotine pouches in Australia through a compliant pathway.',
-        })}
+        jsonLd={[
+          webPageSchema({
+            url: `${SITE_ORIGIN}/how-it-works`,
+            name: 'How it works',
+            description:
+              'Learn how NicoPatch works: questionnaire, telehealth consultation, clinical assessment, and ordering nicotine pouches in Australia through a compliant pathway.',
+          }),
+          serviceSchema({
+            url: `${SITE_ORIGIN}/how-it-works`,
+            name: 'How NicoPatch works',
+            description:
+              'Questionnaire, telehealth consultation, clinical assessment, and next steps for nicotine pouches in Australia through a doctor-supervised pathway.',
+          }),
+        ]}
       />
       {/* Hero Section */}
       <section className="gradient-section py-16 md:py-24">

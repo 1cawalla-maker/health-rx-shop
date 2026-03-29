@@ -83,3 +83,28 @@ export function articleSchema(params: {
     },
   };
 }
+
+export function serviceSchema(params: {
+  url: string;
+  name: string;
+  description?: string;
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    '@id': `${params.url}#service`,
+    url: params.url,
+    name: params.name,
+    description: params.description,
+    provider: {
+      '@type': 'Organization',
+      name: 'NicoPatch',
+      url: 'https://nicopatch.com.au',
+    },
+    areaServed: {
+      '@type': 'Country',
+      name: 'Australia',
+    },
+    inLanguage: 'en-AU',
+  };
+}

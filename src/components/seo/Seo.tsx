@@ -38,7 +38,10 @@ export default function Seo({ title, description, canonicalPath, noIndex, jsonLd
     <Helmet>
       {hasTitle && <title>{fullTitle}</title>}
       {description && <meta name="description" content={description} />}
+      {!noIndex && hasTitle && <meta name="author" content={SITE_NAME} />}
       {canonical && <link rel="canonical" href={canonical} />}
+      {canonical && <link rel="alternate" hrefLang="en-au" href={canonical} />}
+      {canonical && <link rel="alternate" hrefLang="x-default" href={canonical} />}
       {noIndex && <meta name="robots" content="noindex, nofollow" />}
 
       {/* OpenGraph / Twitter */}

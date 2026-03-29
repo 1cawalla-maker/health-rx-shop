@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Button } from "@/components/ui/button";
 import Seo, { SITE_ORIGIN } from "@/components/seo/Seo";
-import { webPageSchema } from "@/components/seo/schema";
+import { serviceSchema, webPageSchema } from "@/components/seo/schema";
 import { 
   Calendar, 
   ClipboardCheck, 
@@ -63,12 +63,20 @@ export default function Index() {
         description="Doctor-supervised telehealth consultations for nicotine pouches in Australia. If clinically appropriate, receive a prescription and access nicotine pouches legally."
         canonicalPath="/"
         ogImagePath="/placeholder.svg"
-        jsonLd={webPageSchema({
-          url: `${SITE_ORIGIN}/`,
-          name: 'NicoPatch: Nicotine pouches in Australia',
-          description:
-            'Doctor-supervised telehealth consultations for nicotine pouches in Australia. If clinically appropriate, receive a prescription and access nicotine pouches legally.',
-        })}
+        jsonLd={[
+          webPageSchema({
+            url: `${SITE_ORIGIN}/`,
+            name: 'NicoPatch: Nicotine pouches in Australia',
+            description:
+              'Doctor-supervised telehealth consultations for nicotine pouches in Australia. If clinically appropriate, receive a prescription and access nicotine pouches legally.',
+          }),
+          serviceSchema({
+            url: `${SITE_ORIGIN}/`,
+            name: 'Telehealth consultation for nicotine pouches',
+            description:
+              'Doctor-supervised telehealth consultations for nicotine pouches in Australia, including clinical assessment and next steps if clinically appropriate.',
+          }),
+        ]}
       />
       {/* Hero Section */}
       <section className="relative overflow-hidden gradient-section">
