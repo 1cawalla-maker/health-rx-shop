@@ -30,6 +30,7 @@ export default function Pricing() {
         description="See consultation pricing and how costs work for nicotine pouches in Australia. Product prices and shipping are shown during checkout."
         canonicalPath="/pricing"
         ogImagePath="/placeholder.svg"
+        ogType="website"
         jsonLd={[
           webPageSchema({
             url: `${SITE_ORIGIN}/pricing`,

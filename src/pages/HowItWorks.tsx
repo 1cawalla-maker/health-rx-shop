@@ -97,6 +97,7 @@ export default function HowItWorks() {
         description="Learn how NicoPatch works: questionnaire, telehealth consultation, clinical assessment, and ordering nicotine pouches in Australia through a compliant pathway."
         canonicalPath="/how-it-works"
         ogImagePath="/placeholder.svg"
+        ogType="website"
         jsonLd={[
           webPageSchema({
             url: `${SITE_ORIGIN}/how-it-works`,

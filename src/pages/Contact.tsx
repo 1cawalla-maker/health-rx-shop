@@ -52,6 +52,7 @@ export default function Contact() {
         description="Contact the NicoPatch team for help with consultations, prescriptions, and ordering nicotine pouches in Australia."
         canonicalPath="/contact"
         ogImagePath="/placeholder.svg"
+        ogType="website"
         jsonLd={[
           contactPageSchema({
             url: `${SITE_ORIGIN}/contact`,

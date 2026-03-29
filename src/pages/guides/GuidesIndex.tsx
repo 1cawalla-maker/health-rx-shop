@@ -57,6 +57,7 @@ export default function GuidesIndex() {
         description="Guides about Zyn in Australia, nicotine pouches, legality, access, strength, and comparisons."
         canonicalPath={PATH}
         ogImagePath="/placeholder.svg"
+        ogType="website"
         jsonLd={[
           webPageSchema({
             url: `${SITE_ORIGIN}${PATH}`,
