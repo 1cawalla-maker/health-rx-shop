@@ -54,7 +54,12 @@ export default function DoctorConsultations() {
 
       // Map to existing MockBooking shape used by the UI.
       const mapped: MockBooking[] = rows.map((r) => {
-        const scheduled = new Date(r.scheduled_at);
+        // scheduled_at is timestamptz. Supabase usually returns ISO, but be defensive.
+        const scheduledIso = String(r.scheduled_at).includes('T')
+          ? String(r.scheduled_at)
+          : String(r.scheduled_at).replace(' ', 'T');
+        const scheduled = new Date(scheduledIso);
+
         const yyyy = scheduled.getFullYear();
         const mm = String(scheduled.getMonth() + 1).padStart(2, '0');
         const dd = String(scheduled.getDate()).padStart(2, '0');
@@ -67,6 +72,7 @@ export default function DoctorConsultations() {
           if (r.status === 'completed') return 'completed';
           if (r.status === 'confirmed') return 'booked';
           if (r.status === 'called' || r.status === 'ready_for_call') return 'in_progress';
+          // requested/intake_pending/etc.
           return 'pending_payment';
         })();
 
@@ -78,7 +84,7 @@ export default function DoctorConsultations() {
           scheduledDate: `${yyyy}-${mm}-${dd}`,
           timeWindowStart: `${hh}:${min}`,
           timeWindowEnd: `${hh}:${min}`,
-          utcTimestamp: r.scheduled_at,
+          utcTimestamp: scheduled.toISOString(),
           displayTimezone: r.timezone || 'Australia/Brisbane',
           status,
           amountPaid: null,
@@ -92,8 +98,13 @@ export default function DoctorConsultations() {
 
       setBookings(mapped);
     } catch (err) {
-      console.error('Failed to load consultations from Supabase, falling back to mock:', err);
-      setBookings(doctorPortalService.getDoctorBookings(user.id));
+      console.error('Failed to load consultations from Supabase:', err);
+      if (import.meta.env.DEV) {
+        setBookings(doctorPortalService.getDoctorBookings(user.id));
+      } else {
+        toast.error('Could not load consultations');
+        setBookings([]);
+      }
     }
   };
 
