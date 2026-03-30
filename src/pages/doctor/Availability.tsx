@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { doctorAvailabilityBlocksService } from '@/services/availabilityService';
 import { userPreferencesService } from '@/services/userPreferencesService';
+import { supabase } from '@/integrations/supabase/client';
 import { doctorPortalService } from '@/services/doctorPortalService';
 import { AvailabilityGrid, type GridBooking } from '@/components/doctor/AvailabilityGrid';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -23,6 +24,7 @@ function blocksOverlap(a: { startTime: string; endTime: string }, b: { startTime
 
 export default function DoctorAvailability() {
   const { user } = useAuth();
+  const [doctorRowId, setDoctorRowId] = useState<string | null>(null);
   const [blocks, setBlocks] = useState<MockAvailabilityBlock[]>([]);
 
   const doctorTz = useMemo(
@@ -30,15 +32,39 @@ export default function DoctorAvailability() {
     [user?.id]
   );
 
+  useEffect(() => {
+    const loadDoctorRowId = async () => {
+      if (!user?.id) {
+        setDoctorRowId(null);
+        return;
+      }
+      const { data, error } = await supabase
+        .from('doctors')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Failed to load doctor row id:', error);
+        setDoctorRowId(null);
+        return;
+      }
+
+      setDoctorRowId(data?.id ?? null);
+    };
+
+    void loadDoctorRowId();
+  }, [user?.id]);
+
   const refresh = async () => {
-    if (!user?.id) return;
-    const data = await doctorAvailabilityBlocksService.getDoctorBlocks(user.id);
+    if (!doctorRowId) return;
+    const data = await doctorAvailabilityBlocksService.getDoctorBlocks(doctorRowId);
     setBlocks(data);
   };
 
   useEffect(() => {
     void refresh();
-  }, [user?.id]);
+  }, [doctorRowId]);
 
   const byDay = useMemo(() => {
     const map: Record<number, MockAvailabilityBlock[]> = {};
@@ -73,7 +99,7 @@ export default function DoctorAvailability() {
   }, [user?.id, blocks]); // re-derive when blocks change (proxy for refresh)
 
   const handleAddBlock = async (dayOfWeek: number, startTime: string, endTime: string) => {
-    if (!user?.id) return;
+    if (!doctorRowId) return;
     const existing = byDay[dayOfWeek] || [];
     const overlapping = existing.find((b) => blocksOverlap({ startTime, endTime }, b));
     if (overlapping) {
@@ -82,7 +108,7 @@ export default function DoctorAvailability() {
       );
       return;
     }
-    await doctorAvailabilityBlocksService.addDoctorBlock(user.id, {
+    await doctorAvailabilityBlocksService.addDoctorBlock(doctorRowId, {
       dayOfWeek,
       specificDate: null,
       startTime,
@@ -95,15 +121,15 @@ export default function DoctorAvailability() {
   };
 
   const handleRemoveBlock = async (blockId: string) => {
-    if (!user?.id) return;
-    await doctorAvailabilityBlocksService.removeDoctorBlock(user.id, blockId);
+    if (!doctorRowId) return;
+    await doctorAvailabilityBlocksService.removeDoctorBlock(doctorRowId, blockId);
     await refresh();
   };
 
   const handleEditBlock = async (blockId: string, dayOfWeek: number, startTime: string, endTime: string) => {
-    if (!user?.id) return;
-    await doctorAvailabilityBlocksService.removeDoctorBlock(user.id, blockId);
-    await doctorAvailabilityBlocksService.addDoctorBlock(user.id, {
+    if (!doctorRowId) return;
+    await doctorAvailabilityBlocksService.removeDoctorBlock(doctorRowId, blockId);
+    await doctorAvailabilityBlocksService.addDoctorBlock(doctorRowId, {
       dayOfWeek,
       specificDate: null,
       startTime,
@@ -114,18 +140,17 @@ export default function DoctorAvailability() {
     await refresh();
   };
 
-  const handleCopyMondayToWeekdays = () => {
-    if (!user?.id) return;
+  const handleCopyMondayToWeekdays = async () => {
+    if (!doctorRowId) return;
     const monBlocks = byDay[1] || [];
     if (monBlocks.length === 0) {
       toast.error('No Monday blocks to copy');
       return;
     }
+
     let copied = 0;
     for (const targetDay of [2, 3, 4, 5]) {
-      const existing = mockAvailabilityService.getDoctorBlocks(user.id).filter(
-        (b) => b.dayOfWeek === targetDay
-      );
+      const existing = byDay[targetDay] || [];
       for (const block of monBlocks) {
         const isDuplicate = existing.some(
           (eb) => eb.startTime === block.startTime && eb.endTime === block.endTime
@@ -133,7 +158,8 @@ export default function DoctorAvailability() {
         if (isDuplicate) continue;
         const overlapping = existing.find((eb) => blocksOverlap(block, eb));
         if (overlapping) continue;
-        mockAvailabilityService.addDoctorBlock(user.id, {
+
+        await doctorAvailabilityBlocksService.addDoctorBlock(doctorRowId, {
           dayOfWeek: targetDay,
           specificDate: null,
           startTime: block.startTime,
@@ -141,32 +167,36 @@ export default function DoctorAvailability() {
           timezone: doctorTz,
           isRecurring: true,
         });
-        existing.push({ ...block, id: '', doctorId: user.id, doctorName: '', isActive: true, dayOfWeek: targetDay });
         copied++;
       }
     }
+
     toast.success(`Copied ${copied} block(s) to Tue–Fri`);
-    refresh();
+    await refresh();
   };
 
-  const handleClearWeek = () => {
-    if (!user?.id) return;
+  const handleClearWeek = async () => {
+    if (!doctorRowId) return;
     for (const b of blocks) {
-      mockAvailabilityService.removeDoctorBlock(user.id, b.id);
+      await doctorAvailabilityBlocksService.removeDoctorBlock(doctorRowId, b.id);
     }
     toast.success('All blocks cleared');
-    refresh();
+    await refresh();
   };
 
-  const handleSetWeekdayPreset = () => {
-    if (!user?.id) return;
+  const handleSetWeekdayPreset = async () => {
+    if (!doctorRowId) return;
+
+    // Clear existing weekday blocks
     for (const b of blocks) {
       if (b.dayOfWeek !== null && b.dayOfWeek >= 1 && b.dayOfWeek <= 5) {
-        mockAvailabilityService.removeDoctorBlock(user.id, b.id);
+        await doctorAvailabilityBlocksService.removeDoctorBlock(doctorRowId, b.id);
       }
     }
+
+    // Add preset
     for (const day of [1, 2, 3, 4, 5]) {
-      mockAvailabilityService.addDoctorBlock(user.id, {
+      await doctorAvailabilityBlocksService.addDoctorBlock(doctorRowId, {
         dayOfWeek: day,
         specificDate: null,
         startTime: '09:00',
@@ -175,8 +205,9 @@ export default function DoctorAvailability() {
         isRecurring: true,
       });
     }
+
     toast.success('Set 9:00 AM – 5:00 PM for weekdays');
-    refresh();
+    await refresh();
   };
 
   return (
