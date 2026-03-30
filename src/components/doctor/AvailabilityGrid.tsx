@@ -522,6 +522,12 @@ export function AvailabilityGrid({
                             open={isEditing || isMobileActive}
                             onOpenChange={(open) => {
                               if (!open) {
+                                // Radix Select renders its listbox in a portal; opening it can trigger
+                                // Popover "interact outside" and close the editor immediately.
+                                // If a listbox is currently present, ignore this close.
+                                if (typeof document !== 'undefined' && document.querySelector('[role="listbox"]')) {
+                                  return;
+                                }
                                 setEditingBlockId(null);
                                 setMobilePopoverBlockId(null);
                               }
