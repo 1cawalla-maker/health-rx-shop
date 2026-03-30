@@ -40,6 +40,13 @@ export default function Seo({ title, description, canonicalPath, noIndex, jsonLd
     : undefined;
 
   const ogImageIsRaster = Boolean(ogImage && ogImage.match(/\.(png|jpe?g|webp)(\?.*)?$/i));
+  const ogImageMime = ogImage?.match(/\.png(\?.*)?$/i)
+    ? 'image/png'
+    : ogImage?.match(/\.jpe?g(\?.*)?$/i)
+      ? 'image/jpeg'
+      : ogImage?.match(/\.webp(\?.*)?$/i)
+        ? 'image/webp'
+        : undefined;
 
   const jsonLdArray = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
 
@@ -69,6 +76,8 @@ export default function Seo({ title, description, canonicalPath, noIndex, jsonLd
       {!schemaOnly && hasTitle && <meta property="og:title" content={fullTitle} />}
       {!schemaOnly && description && <meta property="og:description" content={description} />}
       {!schemaOnly && ogImage && <meta property="og:image" content={ogImage} />}
+      {!schemaOnly && ogImage && <meta property="og:image:secure_url" content={ogImage} />}
+      {!schemaOnly && ogImageMime && <meta property="og:image:type" content={ogImageMime} />}
       {!schemaOnly && ogImage && <meta property="og:image:alt" content={hasTitle ? fullTitle : SITE_NAME} />}
       {!schemaOnly && ogImageIsRaster && <meta property="og:image:width" content="1200" />}
       {!schemaOnly && ogImageIsRaster && <meta property="og:image:height" content="630" />}
