@@ -18,10 +18,9 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Calendar, Clock, Phone, Plus, CheckCircle, XCircle, AlertCircle, FileText, PhoneOff, Copy, User, PhoneCall } from 'lucide-react';
+import { Calendar, Clock, Phone, Plus, CheckCircle, XCircle, AlertCircle, FileText, PhoneOff, Copy, User } from 'lucide-react';
 import { format } from 'date-fns';
 import type { BookingStatus, MockBooking } from '@/types/telehealth';
-import type { ConsultationStatus } from '@/services/consultationsSupabaseService';
 
 const TERMINAL: BookingStatus[] = ['completed', 'no_answer', 'cancelled'];
 
@@ -68,6 +67,7 @@ export default function DoctorConsultationView() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [consultNotes, setConsultNotes] = useState('');
+  const [prescriptionIssued, setPrescriptionIssued] = useState(false);
 
   const doctorTz = useMemo(() => user?.id ? userPreferencesService.getTimezone(user.id) : 'Australia/Brisbane', [user?.id]);
 
@@ -197,21 +197,7 @@ export default function DoctorConsultationView() {
 
   const isSupabaseConsult = useCallback(() => consultSource === 'supabase', [consultSource]);
 
-  const setConsultationStatus = useCallback(async (next: ConsultationStatus) => {
-    if (!id) return;
-    if (!isSupabaseConsult()) {
-      toast.error('This consultation is still using the mock backend');
-      return;
-    }
-    try {
-      await consultationsSupabaseService.updateStatus(id, next);
-      toast.success(`Status → ${next.replaceAll('_', ' ')}`);
-      await reload();
-    } catch (err: any) {
-      console.error('Failed to update consultation status in Supabase:', err);
-      toast.error(err?.message || 'Could not update status');
-    }
-  }, [id, isSupabaseConsult, reload]);
+  // Status progression buttons removed: status is advanced only after issuing/declining.
 
   const doStatus = async (status: BookingStatus) => {
     if (!id) return;
@@ -268,7 +254,15 @@ export default function DoctorConsultationView() {
     doctorPortalService.setConsultNotes(id, consultNotes);
     doctorPortalService.issuePrescription({ doctorId: booking.doctorId, patientId: booking.patientId, maxStrengthMg: maxStrength });
     toast.success(`Prescription issued (max ${maxStrength}mg)`);
-    doctorPortalService.setBookingStatus(id, 'completed');
+
+    // Don't auto-complete the consultation.
+    // Completing is an explicit action after issuing to avoid accidental lock-outs.
+    setPrescriptionIssued(true);
+  };
+
+  const doCompleteConsultation = async () => {
+    if (!id) return;
+    await doStatus('completed');
     navigate('/doctor/consultations');
   };
 
@@ -381,38 +375,6 @@ export default function DoctorConsultationView() {
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" onClick={() => setCancelOpen(true)}>Cancel Consultation</Button>
 
-                  {/* Phase 2 (Supabase): explicit status progression */}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => void setConsultationStatus('ready_for_call')}
-                    disabled={isTerminal || !isDoctor}
-                    title="Queue: ready for call"
-                  >
-                    <Phone className="h-4 w-4 mr-2" />
-                    Ready
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => void setConsultationStatus('called')}
-                    disabled={isTerminal || !isDoctor}
-                    title="Call in progress"
-                  >
-                    <PhoneCall className="h-4 w-4 mr-2" />
-                    Called
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => void setConsultationStatus('completed')}
-                    disabled={isTerminal || !isDoctor}
-                    title="Mark completed"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Complete
-                  </Button>
-
                   <Button size="sm" variant="outline" onClick={() => doStatus('no_answer')} disabled={!canMarkNoShow}
                     title={canMarkNoShow ? 'Mark as no-show' : `Need ${3 - unansweredCount} more unanswered attempt(s)`}
                   >
@@ -524,11 +486,19 @@ export default function DoctorConsultationView() {
                   <p className="text-xs text-muted-foreground">Patient may step down but not exceed this strength.</p>
                 </div>
                 <div className="flex items-end">
-                  <Button onClick={doIssue} className="w-full" disabled={isTerminal}>
-                    <CheckCircle className="h-4 w-4 mr-2" />Issue Prescription
+                  <Button onClick={doIssue} className="w-full" disabled={isTerminal || prescriptionIssued}>
+                    <CheckCircle className="h-4 w-4 mr-2" />{prescriptionIssued ? 'Prescription Issued' : 'Issue Prescription'}
                   </Button>
                 </div>
               </div>
+
+              {prescriptionIssued && !isTerminal && (
+                <div className="pt-2">
+                  <Button className="w-full" onClick={doCompleteConsultation}>
+                    Complete consultation
+                  </Button>
+                </div>
+              )}
 
               <div className="border-t pt-4 space-y-2">
                 <Label>Decline reason</Label>
