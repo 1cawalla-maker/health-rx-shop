@@ -400,10 +400,12 @@ export const mockAvailabilityService = {
   },
 };
 
+// NOTE: The live Supabase schema uses `doctor_availability` (weekly recurring), not `doctor_availability_blocks`.
+// We keep the UI contract as "blocks" and map to the DB table.
 export const doctorAvailabilityBlocksService = {
   async getDoctorBlocks(doctorId: string): Promise<MockAvailabilityBlock[]> {
     const { data, error } = await supabase
-      .from('doctor_availability_blocks')
+      .from('doctor_availability')
       .select('*')
       .eq('doctor_id', doctorId)
       .order('day_of_week', { ascending: true })
@@ -416,12 +418,12 @@ export const doctorAvailabilityBlocksService = {
       doctorId: r.doctor_id,
       doctorName: '',
       dayOfWeek: r.day_of_week,
-      specificDate: r.specific_date,
+      specificDate: null,
       startTime: (r.start_time || '').slice(0, 5),
       endTime: (r.end_time || '').slice(0, 5),
       timezone: r.timezone,
-      isRecurring: Boolean(r.is_recurring),
-      isActive: true,
+      isRecurring: true,
+      isActive: r.is_available ?? true,
     }));
   },
 
@@ -429,16 +431,19 @@ export const doctorAvailabilityBlocksService = {
     doctorId: string,
     block: Omit<MockAvailabilityBlock, 'id' | 'doctorId' | 'doctorName' | 'isActive'>
   ): Promise<MockAvailabilityBlock> {
+    if (block.specificDate) {
+      console.warn('[doctorAvailabilityBlocksService] specificDate is not supported by doctor_availability; ignoring');
+    }
+
     const { data, error } = await supabase
-      .from('doctor_availability_blocks')
+      .from('doctor_availability')
       .insert({
         doctor_id: doctorId,
-        day_of_week: block.dayOfWeek,
-        specific_date: block.specificDate,
+        day_of_week: block.dayOfWeek ?? 0,
         start_time: block.startTime,
         end_time: block.endTime,
         timezone: block.timezone,
-        is_recurring: block.isRecurring,
+        is_available: true,
       })
       .select('*')
       .single();
@@ -450,18 +455,18 @@ export const doctorAvailabilityBlocksService = {
       doctorId: data.doctor_id,
       doctorName: '',
       dayOfWeek: data.day_of_week,
-      specificDate: data.specific_date,
+      specificDate: null,
       startTime: (data.start_time || '').slice(0, 5),
       endTime: (data.end_time || '').slice(0, 5),
       timezone: data.timezone,
-      isRecurring: Boolean(data.is_recurring),
-      isActive: true,
+      isRecurring: true,
+      isActive: data.is_available ?? true,
     };
   },
 
   async removeDoctorBlock(doctorId: string, blockId: string): Promise<boolean> {
     const { error, count } = await supabase
-      .from('doctor_availability_blocks')
+      .from('doctor_availability')
       .delete({ count: 'exact' })
       .eq('id', blockId)
       .eq('doctor_id', doctorId);
