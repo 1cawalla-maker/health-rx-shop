@@ -255,6 +255,7 @@ export function AvailabilityGrid({
     if (!dragState) return;
 
     const onMove = (e: PointerEvent) => {
+      if (editingBlockId) return;
       if (activePointerIdRef.current !== e.pointerId) return;
       const colEl = activeColRef.current;
       if (!colEl) return;
@@ -264,6 +265,7 @@ export function AvailabilityGrid({
     };
 
     const onUp = (e: PointerEvent) => {
+      if (editingBlockId) return;
       if (activePointerIdRef.current !== e.pointerId) return;
       activePointerIdRef.current = null;
       activeColRef.current = null;
@@ -305,7 +307,7 @@ export function AvailabilityGrid({
       window.removeEventListener('pointerup', onUp);
       window.removeEventListener('pointercancel', onUp);
     };
-  }, [dragState, getMinutesFromPointer, stopAutoScroll, blocksByDay, bookingsByDay, onAddBlock]);
+  }, [dragState, getMinutesFromPointer, stopAutoScroll, blocksByDay, bookingsByDay, onAddBlock, editingBlockId]);
 
   // Pointer up is handled at window-level while dragging; keep this as a no-op safety.
   const handlePointerUp = useCallback(() => {
@@ -450,7 +452,13 @@ export function AvailabilityGrid({
           if (!open) setEditingBlockId(null);
         }}
       >
-        <DialogContent className="max-w-sm">
+        <DialogContent
+          className="max-w-sm"
+          // Prevent any pointer events inside the dialog from starting grid drag interactions behind it.
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerMove={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+        >
           <DialogHeader>
             <DialogTitle>Edit times</DialogTitle>
             <DialogDescription>Adjust the start and end times for this availability block.</DialogDescription>
