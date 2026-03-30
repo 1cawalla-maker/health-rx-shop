@@ -58,8 +58,13 @@ export default function DoctorAvailability() {
 
   const refresh = async () => {
     if (!doctorRowId) return;
-    const data = await doctorAvailabilityBlocksService.getDoctorBlocks(doctorRowId);
-    setBlocks(data);
+    try {
+      const data = await doctorAvailabilityBlocksService.getDoctorBlocks(doctorRowId);
+      setBlocks(data);
+    } catch (err: any) {
+      console.error('Failed to load availability blocks:', err);
+      toast.error(err?.message || 'Failed to load availability');
+    }
   };
 
   useEffect(() => {
@@ -108,36 +113,51 @@ export default function DoctorAvailability() {
       );
       return;
     }
-    await doctorAvailabilityBlocksService.addDoctorBlock(doctorRowId, {
-      dayOfWeek,
-      specificDate: null,
-      startTime,
-      endTime,
-      timezone: doctorTz,
-      isRecurring: true,
-    });
-    toast.success('Block added');
-    await refresh();
+    try {
+      await doctorAvailabilityBlocksService.addDoctorBlock(doctorRowId, {
+        dayOfWeek,
+        specificDate: null,
+        startTime,
+        endTime,
+        timezone: doctorTz,
+        isRecurring: true,
+      });
+      toast.success('Block added');
+      await refresh();
+    } catch (err: any) {
+      console.error('Failed to add block:', err);
+      toast.error(err?.message || 'Failed to add block');
+    }
   };
 
   const handleRemoveBlock = async (blockId: string) => {
     if (!doctorRowId) return;
-    await doctorAvailabilityBlocksService.removeDoctorBlock(doctorRowId, blockId);
-    await refresh();
+    try {
+      await doctorAvailabilityBlocksService.removeDoctorBlock(doctorRowId, blockId);
+      await refresh();
+    } catch (err: any) {
+      console.error('Failed to remove block:', err);
+      toast.error(err?.message || 'Failed to remove block');
+    }
   };
 
   const handleEditBlock = async (blockId: string, dayOfWeek: number, startTime: string, endTime: string) => {
     if (!doctorRowId) return;
-    await doctorAvailabilityBlocksService.removeDoctorBlock(doctorRowId, blockId);
-    await doctorAvailabilityBlocksService.addDoctorBlock(doctorRowId, {
-      dayOfWeek,
-      specificDate: null,
-      startTime,
-      endTime,
-      timezone: doctorTz,
-      isRecurring: true,
-    });
-    await refresh();
+    try {
+      await doctorAvailabilityBlocksService.removeDoctorBlock(doctorRowId, blockId);
+      await doctorAvailabilityBlocksService.addDoctorBlock(doctorRowId, {
+        dayOfWeek,
+        specificDate: null,
+        startTime,
+        endTime,
+        timezone: doctorTz,
+        isRecurring: true,
+      });
+      await refresh();
+    } catch (err: any) {
+      console.error('Failed to edit block:', err);
+      toast.error(err?.message || 'Failed to edit block');
+    }
   };
 
   const handleCopyMondayToWeekdays = async () => {
@@ -148,66 +168,81 @@ export default function DoctorAvailability() {
       return;
     }
 
-    let copied = 0;
-    for (const targetDay of [2, 3, 4, 5]) {
-      const existing = byDay[targetDay] || [];
-      for (const block of monBlocks) {
-        const isDuplicate = existing.some(
-          (eb) => eb.startTime === block.startTime && eb.endTime === block.endTime
-        );
-        if (isDuplicate) continue;
-        const overlapping = existing.find((eb) => blocksOverlap(block, eb));
-        if (overlapping) continue;
+    try {
+      let copied = 0;
+      for (const targetDay of [2, 3, 4, 5]) {
+        const existing = byDay[targetDay] || [];
+        for (const block of monBlocks) {
+          const isDuplicate = existing.some(
+            (eb) => eb.startTime === block.startTime && eb.endTime === block.endTime
+          );
+          if (isDuplicate) continue;
+          const overlapping = existing.find((eb) => blocksOverlap(block, eb));
+          if (overlapping) continue;
 
-        await doctorAvailabilityBlocksService.addDoctorBlock(doctorRowId, {
-          dayOfWeek: targetDay,
-          specificDate: null,
-          startTime: block.startTime,
-          endTime: block.endTime,
-          timezone: doctorTz,
-          isRecurring: true,
-        });
-        copied++;
+          await doctorAvailabilityBlocksService.addDoctorBlock(doctorRowId, {
+            dayOfWeek: targetDay,
+            specificDate: null,
+            startTime: block.startTime,
+            endTime: block.endTime,
+            timezone: doctorTz,
+            isRecurring: true,
+          });
+          copied++;
+        }
       }
-    }
 
-    toast.success(`Copied ${copied} block(s) to Tue–Fri`);
-    await refresh();
+      toast.success(`Copied ${copied} block(s) to Tue–Fri`);
+      await refresh();
+    } catch (err: any) {
+      console.error('Failed to copy blocks:', err);
+      toast.error(err?.message || 'Failed to copy blocks');
+    }
   };
 
   const handleClearWeek = async () => {
     if (!doctorRowId) return;
-    for (const b of blocks) {
-      await doctorAvailabilityBlocksService.removeDoctorBlock(doctorRowId, b.id);
+    try {
+      for (const b of blocks) {
+        await doctorAvailabilityBlocksService.removeDoctorBlock(doctorRowId, b.id);
+      }
+      toast.success('All blocks cleared');
+      await refresh();
+    } catch (err: any) {
+      console.error('Failed to clear week:', err);
+      toast.error(err?.message || 'Failed to clear week');
     }
-    toast.success('All blocks cleared');
-    await refresh();
   };
 
   const handleSetWeekdayPreset = async () => {
     if (!doctorRowId) return;
 
-    // Clear existing weekday blocks
-    for (const b of blocks) {
-      if (b.dayOfWeek !== null && b.dayOfWeek >= 1 && b.dayOfWeek <= 5) {
-        await doctorAvailabilityBlocksService.removeDoctorBlock(doctorRowId, b.id);
+    try {
+      // Clear existing weekday blocks
+      for (const b of blocks) {
+        if (b.dayOfWeek !== null && b.dayOfWeek >= 1 && b.dayOfWeek <= 5) {
+          await doctorAvailabilityBlocksService.removeDoctorBlock(doctorRowId, b.id);
+        }
       }
-    }
 
-    // Add preset
-    for (const day of [1, 2, 3, 4, 5]) {
-      await doctorAvailabilityBlocksService.addDoctorBlock(doctorRowId, {
-        dayOfWeek: day,
-        specificDate: null,
-        startTime: '09:00',
-        endTime: '17:00',
-        timezone: doctorTz,
-        isRecurring: true,
-      });
-    }
+      // Add preset
+      for (const day of [1, 2, 3, 4, 5]) {
+        await doctorAvailabilityBlocksService.addDoctorBlock(doctorRowId, {
+          dayOfWeek: day,
+          specificDate: null,
+          startTime: '09:00',
+          endTime: '17:00',
+          timezone: doctorTz,
+          isRecurring: true,
+        });
+      }
 
-    toast.success('Set 9:00 AM – 5:00 PM for weekdays');
-    await refresh();
+      toast.success('Set 9:00 AM – 5:00 PM for weekdays');
+      await refresh();
+    } catch (err: any) {
+      console.error('Failed to set weekday preset:', err);
+      toast.error(err?.message || 'Failed to set weekday preset');
+    }
   };
 
   return (
