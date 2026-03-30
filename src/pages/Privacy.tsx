@@ -17,6 +17,7 @@ export default function Privacy() {
             name: 'Privacy policy',
             description: 'NicoPatch privacy policy and how we handle personal information.',
             dateModified: '2026-03-30',
+            siteOrigin: SITE_ORIGIN,
           }),
           breadcrumbSchema({
             items: [

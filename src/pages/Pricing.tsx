@@ -38,6 +38,7 @@ export default function Pricing() {
             description:
               'See consultation pricing and how costs work for nicotine pouches in Australia. Product prices and shipping are shown during checkout.',
             dateModified: '2026-03-30',
+            siteOrigin: SITE_ORIGIN,
           }),
           breadcrumbSchema({
             items: [

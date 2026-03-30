@@ -105,6 +105,7 @@ export default function HowItWorks() {
             description:
               'Learn how NicoPatch works: questionnaire, telehealth consultation, clinical assessment, and ordering nicotine pouches in Australia through a compliant pathway.',
             dateModified: '2026-03-30',
+            siteOrigin: SITE_ORIGIN,
           }),
           breadcrumbSchema({
             items: [
