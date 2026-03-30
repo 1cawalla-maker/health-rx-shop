@@ -18,9 +18,10 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Calendar, Clock, Phone, Plus, CheckCircle, XCircle, AlertCircle, FileText, PhoneOff, Copy, User } from 'lucide-react';
+import { Calendar, Clock, Phone, Plus, CheckCircle, XCircle, AlertCircle, FileText, PhoneOff, Copy, User, PhoneCall } from 'lucide-react';
 import { format } from 'date-fns';
 import type { BookingStatus, MockBooking } from '@/types/telehealth';
+import type { ConsultationStatus } from '@/services/consultationsSupabaseService';
 
 const TERMINAL: BookingStatus[] = ['completed', 'no_answer', 'cancelled'];
 
@@ -189,6 +190,24 @@ export default function DoctorConsultationView() {
   const unansweredCount = (booking?.callAttempts || []).filter((a) => !a.answered).length;
   const canMarkNoShow = unansweredCount >= 3;
 
+  const isSupabaseConsult = useCallback(() => Boolean(id && !doctorPortalService.getBooking(id)), [id]);
+
+  const setConsultationStatus = useCallback(async (next: ConsultationStatus) => {
+    if (!id) return;
+    if (!isSupabaseConsult()) {
+      toast.error('This consultation is still using the mock backend');
+      return;
+    }
+    try {
+      await consultationsSupabaseService.updateStatus(id, next);
+      toast.success(`Status → ${next.replaceAll('_', ' ')}`);
+      await reload();
+    } catch (err: any) {
+      console.error('Failed to update consultation status in Supabase:', err);
+      toast.error(err?.message || 'Could not update status');
+    }
+  }, [id, isSupabaseConsult]);
+
   const doStatus = async (status: BookingStatus) => {
     if (!id) return;
 
@@ -197,11 +216,12 @@ export default function DoctorConsultationView() {
     if (!local) {
       try {
         // Map BookingStatus-like UI states to consultation_status enum.
-        const mapped = ((): any => {
+        const mapped: ConsultationStatus = ((): any => {
           if (status === 'cancelled') return 'cancelled';
           if (status === 'completed') return 'completed';
           if (status === 'in_progress') return 'called';
           if (status === 'booked') return 'confirmed';
+          if (status === 'no_answer') return 'cancelled';
           return 'requested';
         })();
 
@@ -355,6 +375,39 @@ export default function DoctorConsultationView() {
               <CardContent>
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" onClick={() => setCancelOpen(true)}>Cancel Consultation</Button>
+
+                  {/* Phase 2 (Supabase): explicit status progression */}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void setConsultationStatus('ready_for_call')}
+                    disabled={isTerminal || !isDoctor}
+                    title="Queue: ready for call"
+                  >
+                    <Phone className="h-4 w-4 mr-2" />
+                    Ready
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void setConsultationStatus('called')}
+                    disabled={isTerminal || !isDoctor}
+                    title="Call in progress"
+                  >
+                    <PhoneCall className="h-4 w-4 mr-2" />
+                    Called
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void setConsultationStatus('completed')}
+                    disabled={isTerminal || !isDoctor}
+                    title="Mark completed"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Complete
+                  </Button>
+
                   <Button size="sm" variant="outline" onClick={() => doStatus('no_answer')} disabled={!canMarkNoShow}
                     title={canMarkNoShow ? 'Mark as no-show' : `Need ${3 - unansweredCount} more unanswered attempt(s)`}
                   >
