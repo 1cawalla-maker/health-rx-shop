@@ -71,6 +71,7 @@ export default function Index() {
             description:
               'Doctor-supervised telehealth consultations for nicotine pouches in Australia. If clinically appropriate, receive a prescription and access nicotine pouches legally.',
             dateModified: '2026-03-30',
+            siteOrigin: SITE_ORIGIN,
           }),
           serviceSchema({
             url: `${SITE_ORIGIN}/`,

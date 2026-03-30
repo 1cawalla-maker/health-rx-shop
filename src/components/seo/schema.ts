@@ -43,6 +43,7 @@ export function webPageSchema(params: {
   name: string;
   description?: string;
   dateModified?: string;
+  siteOrigin?: string;
 }) {
   return {
     '@context': 'https://schema.org',
@@ -53,6 +54,12 @@ export function webPageSchema(params: {
     description: params.description,
     dateModified: params.dateModified,
     inLanguage: 'en-AU',
+    ...(params.siteOrigin
+      ? {
+          isPartOf: { '@id': `${params.siteOrigin}#website` },
+          about: { '@id': `${params.siteOrigin}#organization` },
+        }
+      : {}),
   };
 }
 
@@ -97,8 +104,11 @@ export function articleSchema(params: {
   headline: string;
   description?: string;
   dateModified?: string;
+  datePublished?: string;
   siteOrigin: string;
 }) {
+  const datePublished = params.datePublished || params.dateModified;
+
   return {
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -107,9 +117,11 @@ export function articleSchema(params: {
       '@type': 'WebPage',
       '@id': params.url,
     },
+    isPartOf: { '@id': `${params.siteOrigin}#website` },
     url: params.url,
     headline: params.headline,
     description: params.description,
+    datePublished,
     dateModified: params.dateModified,
     inLanguage: 'en-AU',
     author: {
