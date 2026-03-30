@@ -56,6 +56,7 @@ export default function Seo({ title, description, canonicalPath, noIndex, jsonLd
       {description && <meta name="description" content={description} />}
       {!schemaOnly && !noIndex && hasTitle && <meta name="author" content={SITE_NAME} />}
       {!schemaOnly && !noIndex && <meta httpEquiv="content-language" content="en-AU" />}
+      {!schemaOnly && <meta name="referrer" content="strict-origin-when-cross-origin" />}
       {!schemaOnly && !noIndex && canonical && <link rel="canonical" href={canonical} />}
       {!schemaOnly && !noIndex && canonical && <link rel="alternate" hrefLang="en-au" href={canonical} />}
       {!schemaOnly && !noIndex && canonical && <link rel="alternate" hrefLang="x-default" href={canonical} />}
