@@ -449,37 +449,36 @@ export function AvailabilityGrid({
           </DialogHeader>
 
           <div className="space-y-3">
+            {/* Use native selects here to avoid any portal/pointer-event quirks from Radix Select inside a drag grid. */}
             <div className="space-y-2">
               <div>
                 <label className="text-xs text-muted-foreground">Start</label>
-                <Select value={editStart} onValueChange={setEditStart}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {TIME_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value} className="text-sm">
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <select
+                  className="mt-1 w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                  value={editStart}
+                  onChange={(e) => setEditStart(e.target.value)}
+                >
+                  {TIME_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
                 <label className="text-xs text-muted-foreground">End</label>
-                <Select value={editEnd} onValueChange={setEditEnd}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {TIME_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value} className="text-sm">
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <select
+                  className="mt-1 w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                  value={editEnd}
+                  onChange={(e) => setEditEnd(e.target.value)}
+                >
+                  {TIME_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>
@@ -487,12 +486,16 @@ export function AvailabilityGrid({
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setEditingBlockId(null)}
+              onClick={() => {
+                toast.message('Cancel clicked');
+                setEditingBlockId(null);
+              }}
             >
               Cancel
             </Button>
             <Button
               onClick={() => {
+                toast.message('Save clicked');
                 if (editingBlock) handleSaveEdit(editingBlock);
               }}
             >
