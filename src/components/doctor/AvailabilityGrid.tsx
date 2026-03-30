@@ -227,6 +227,10 @@ export function AvailabilityGrid({
   }, []);
 
   const handlePointerDown = useCallback((e: React.PointerEvent, day: number) => {
+    // Left-click / primary pointer only
+    // @ts-ignore
+    if (typeof (e as any).button === 'number' && (e as any).button !== 0) return;
+
     // If the edit dialog is open, never start a drag-create interaction.
     if (editingBlockId) return;
 
@@ -576,8 +580,6 @@ export function AvailabilityGrid({
                   className="relative cursor-crosshair select-none touch-none"
                   style={{ height: totalHeight }}
                   onPointerDown={(e) => handlePointerDown(e, day)}
-                  onPointerMove={(e) => handlePointerMove(e, day)}
-                  onPointerUp={handlePointerUp}
                 >
                   {/* Hour lines */}
                   {hourMarkers.map((h) => (
