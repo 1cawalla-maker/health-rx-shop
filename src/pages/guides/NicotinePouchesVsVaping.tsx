@@ -47,7 +47,7 @@ export default function GuideNicotinePouchesVsVaping() {
         title="Nicotine Pouches vs Vaping (Australia): Differences, Risks & Access"
         description="Compare nicotine pouches vs vaping in Australia: key differences, considerations, and how a doctor can help you choose the right next step."
         canonicalPath={PATH}
-        ogImagePath="/placeholder.svg"
+        ogImagePath="/og/nicotine-pouches-vs-vaping.png"
         ogType="article"
         jsonLd={[
           webPageSchema({

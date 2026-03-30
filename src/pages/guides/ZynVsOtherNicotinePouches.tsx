@@ -37,7 +37,7 @@ export default function GuideZynVsOtherNicotinePouches() {
         title="Zyn vs Other Nicotine Pouches: What Changes (and What Doesn’t)"
         description="Compare Zyn vs other nicotine pouches: what matters (strength, suitability, access) and how to choose the right next step in Australia."
         canonicalPath={PATH}
-        ogImagePath="/placeholder.svg"
+        ogImagePath="/og/zyn-vs-other-nicotine-pouches.png"
         ogType="article"
         jsonLd={[
           webPageSchema({
