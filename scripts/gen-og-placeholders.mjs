@@ -61,6 +61,9 @@ const names = [
   'pricing',
   'faq',
   'about',
+  'contact',
+  'how-it-works',
+  'guides',
   'zyn-australia',
   'nicotine-pouches-australia',
 ];
