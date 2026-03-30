@@ -227,6 +227,9 @@ export function AvailabilityGrid({
   }, []);
 
   const handlePointerDown = useCallback((e: React.PointerEvent, day: number) => {
+    // If the edit dialog is open, never start a drag-create interaction.
+    if (editingBlockId) return;
+
     if ((e.target as HTMLElement).closest('[data-block]') || (e.target as HTMLElement).closest('[data-booking]')) return;
     const colEl = e.currentTarget as HTMLElement;
     const minutes = getMinutesFromPointer(e.clientY, colEl);
@@ -237,7 +240,7 @@ export function AvailabilityGrid({
     setDragState({ day, startMin: minutes, currentMin: minutes });
     pointerYRef.current = e.clientY;
     startAutoScroll();
-  }, [getMinutesFromPointer, startAutoScroll]);
+  }, [getMinutesFromPointer, startAutoScroll, editingBlockId]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent, day: number) => {
     if (!dragState || dragState.day !== day) return;
@@ -354,6 +357,11 @@ export function AvailabilityGrid({
 
   /* ─── E5: inline edit handlers ─── */
   const openEditor = (block: MockAvailabilityBlock) => {
+    // Ensure no drag state is active when opening the editor.
+    setDragState(null);
+    activePointerIdRef.current = null;
+    activeColRef.current = null;
+
     setEditingBlockId(block.id);
     setEditStart(block.startTime);
     setEditEnd(block.endTime);
@@ -524,7 +532,10 @@ export function AvailabilityGrid({
       {/* Grid with scroll container */}
       <div
         ref={scrollRef}
-        className="overflow-auto border rounded-lg bg-background"
+        className={cn(
+          "overflow-auto border rounded-lg bg-background",
+          editingBlockId ? "pointer-events-none" : ""
+        )}
         style={{ maxHeight: '70vh' }}
       >
         <div ref={gridRef} className="flex min-w-[700px]">
