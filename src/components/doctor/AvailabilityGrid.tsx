@@ -294,10 +294,18 @@ export function AvailabilityGrid({
   // Deselect on click-away
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (!(e.target as HTMLElement).closest('[data-block]') && !(e.target as HTMLElement).closest('[data-popover-content]')) {
-        setSelectedBlockId(null);
-        setMobilePopoverBlockId(null);
+      const el = e.target as HTMLElement;
+      // Ignore clicks inside blocks, popovers, or Radix portal content (Select/Popover render in portals)
+      if (
+        el.closest('[data-block]') ||
+        el.closest('[data-popover-content]') ||
+        el.closest('[data-radix-popper-content-wrapper]') ||
+        el.closest('[role="listbox"]')
+      ) {
+        return;
       }
+      setSelectedBlockId(null);
+      setMobilePopoverBlockId(null);
     };
     window.addEventListener('mousedown', handler);
     return () => window.removeEventListener('mousedown', handler);

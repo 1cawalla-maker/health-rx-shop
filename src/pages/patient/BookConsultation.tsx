@@ -55,9 +55,14 @@ export default function BookConsultation() {
         setDatesWithAvailability(new Set(dates));
       } catch (e) {
         console.error('Failed to load availability dates:', e);
-        // Fallback to mock so UI still works in dev
-        const dates = mockAvailabilityService.getDatesWithAvailability(minDate, maxDate);
-        setDatesWithAvailability(new Set(dates));
+        // Do NOT silently fall back in prod, otherwise the UI misrepresents real availability.
+        if (import.meta.env.DEV) {
+          const dates = mockAvailabilityService.getDatesWithAvailability(minDate, maxDate);
+          setDatesWithAvailability(new Set(dates));
+        } else {
+          toast.error('Could not load live doctor availability');
+          setDatesWithAvailability(new Set());
+        }
       }
     };
     void run();
@@ -76,8 +81,13 @@ export default function BookConsultation() {
           setAvailableSlots(slots);
         } catch (e) {
           console.error('Failed to load slots:', e);
-          const slots = mockAvailabilityService.getAggregatedSlotsForDate(dateStr);
-          setAvailableSlots(slots);
+          if (import.meta.env.DEV) {
+            const slots = mockAvailabilityService.getAggregatedSlotsForDate(dateStr);
+            setAvailableSlots(slots);
+          } else {
+            toast.error('Could not load live time slots');
+            setAvailableSlots([]);
+          }
         } finally {
           setLoadingSlots(false);
         }
