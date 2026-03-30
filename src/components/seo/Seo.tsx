@@ -83,6 +83,7 @@ export default function Seo({ title, description, canonicalPath, noIndex, jsonLd
       {!schemaOnly && ogImageIsRaster && <meta property="og:image:height" content="630" />}
 
       {!schemaOnly && <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />}
+      {!schemaOnly && !noIndex && canonical && <meta name="twitter:url" content={canonical.replace(/\/+$/, '')} />}
       {!schemaOnly && hasTitle && <meta name="twitter:title" content={fullTitle} />}
       {!schemaOnly && description && <meta name="twitter:description" content={description} />}
       {!schemaOnly && ogImage && <meta name="twitter:image" content={ogImage} />}
