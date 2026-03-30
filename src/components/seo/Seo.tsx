@@ -24,6 +24,9 @@ export default function Seo({ title, description, canonicalPath, noIndex, jsonLd
     ? (title.includes(SITE_NAME) ? title : `${title} | ${SITE_NAME}`)
     : '';
 
+  // When used for global JSON-LD only (e.g. GlobalSchema), avoid emitting duplicate/conflicting meta tags.
+  const schemaOnly = !hasTitle && !description && !canonicalPath && noIndex === undefined && !ogImagePath;
+
   const canonical = canonicalPath
     ? (canonicalPath === '/'
         ? `${SITE_ORIGIN}/`
@@ -44,37 +47,37 @@ export default function Seo({ title, description, canonicalPath, noIndex, jsonLd
     <Helmet>
       {hasTitle && <title>{fullTitle}</title>}
       {description && <meta name="description" content={description} />}
-      {!noIndex && hasTitle && <meta name="author" content={SITE_NAME} />}
-      {!noIndex && <meta httpEquiv="content-language" content="en-AU" />}
-      {!noIndex && canonical && <link rel="canonical" href={canonical} />}
-      {!noIndex && canonical && <link rel="alternate" hrefLang="en-au" href={canonical} />}
-      {!noIndex && canonical && <link rel="alternate" hrefLang="x-default" href={canonical} />}
-      {noIndex ? (
+      {!schemaOnly && !noIndex && hasTitle && <meta name="author" content={SITE_NAME} />}
+      {!schemaOnly && !noIndex && <meta httpEquiv="content-language" content="en-AU" />}
+      {!schemaOnly && !noIndex && canonical && <link rel="canonical" href={canonical} />}
+      {!schemaOnly && !noIndex && canonical && <link rel="alternate" hrefLang="en-au" href={canonical} />}
+      {!schemaOnly && !noIndex && canonical && <link rel="alternate" hrefLang="x-default" href={canonical} />}
+      {!schemaOnly && (noIndex ? (
         <meta name="robots" content="noindex, nofollow" />
       ) : (
         <meta
           name="robots"
           content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
         />
-      )}
+      ))}
 
       {/* OpenGraph / Twitter */}
-      {!noIndex && canonical && <meta property="og:url" content={canonical.replace(/\/+$/, '')} />}
-      <meta property="og:site_name" content={SITE_NAME} />
-      <meta property="og:locale" content="en_AU" />
-      <meta property="og:type" content={ogType} />
-      {hasTitle && <meta property="og:title" content={fullTitle} />}
-      {description && <meta property="og:description" content={description} />}
-      {ogImage && <meta property="og:image" content={ogImage} />}
-      {ogImage && <meta property="og:image:alt" content={hasTitle ? fullTitle : SITE_NAME} />}
-      {ogImageIsRaster && <meta property="og:image:width" content="1200" />}
-      {ogImageIsRaster && <meta property="og:image:height" content="630" />}
+      {!schemaOnly && !noIndex && canonical && <meta property="og:url" content={canonical.replace(/\/+$/, '')} />}
+      {!schemaOnly && <meta property="og:site_name" content={SITE_NAME} />}
+      {!schemaOnly && <meta property="og:locale" content="en_AU" />}
+      {!schemaOnly && <meta property="og:type" content={ogType} />}
+      {!schemaOnly && hasTitle && <meta property="og:title" content={fullTitle} />}
+      {!schemaOnly && description && <meta property="og:description" content={description} />}
+      {!schemaOnly && ogImage && <meta property="og:image" content={ogImage} />}
+      {!schemaOnly && ogImage && <meta property="og:image:alt" content={hasTitle ? fullTitle : SITE_NAME} />}
+      {!schemaOnly && ogImageIsRaster && <meta property="og:image:width" content="1200" />}
+      {!schemaOnly && ogImageIsRaster && <meta property="og:image:height" content="630" />}
 
-      <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
-      {hasTitle && <meta name="twitter:title" content={fullTitle} />}
-      {description && <meta name="twitter:description" content={description} />}
-      {ogImage && <meta name="twitter:image" content={ogImage} />}
-      {ogImage && <meta name="twitter:image:alt" content={hasTitle ? fullTitle : SITE_NAME} />}
+      {!schemaOnly && <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />}
+      {!schemaOnly && hasTitle && <meta name="twitter:title" content={fullTitle} />}
+      {!schemaOnly && description && <meta name="twitter:description" content={description} />}
+      {!schemaOnly && ogImage && <meta name="twitter:image" content={ogImage} />}
+      {!schemaOnly && ogImage && <meta name="twitter:image:alt" content={hasTitle ? fullTitle : SITE_NAME} />}
 
       {jsonLdArray.map((obj, i) => (
         <script key={i} type="application/ld+json">{JSON.stringify(obj)}</script>
