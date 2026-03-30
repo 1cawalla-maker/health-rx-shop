@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { mockAvailabilityService } from '@/services/availabilityService';
+import { mockAvailabilityService, supabaseAvailabilityService } from '@/services/availabilityService';
 import { mockBookingService } from '@/services/consultationService';
+import { consultationsSupabaseService } from '@/services/consultationsSupabaseService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
@@ -48,23 +49,44 @@ export default function BookConsultation() {
 
   // Load dates with availability on mount
   useEffect(() => {
-    const dates = mockAvailabilityService.getDatesWithAvailability(minDate, maxDate);
-    setDatesWithAvailability(new Set(dates));
+    const run = async () => {
+      try {
+        const dates = await supabaseAvailabilityService.getDatesWithAvailability(minDate, maxDate);
+        setDatesWithAvailability(new Set(dates));
+      } catch (e) {
+        console.error('Failed to load availability dates:', e);
+        // Fallback to mock so UI still works in dev
+        const dates = mockAvailabilityService.getDatesWithAvailability(minDate, maxDate);
+        setDatesWithAvailability(new Set(dates));
+      }
+    };
+    void run();
   }, []);
 
   // Load slots when date changes
   useEffect(() => {
-    if (selectedDate) {
-      setLoadingSlots(true);
-      setSelectedSlot(undefined);
-      
-      const dateStr = format(selectedDate, 'yyyy-MM-dd');
-      const slots = mockAvailabilityService.getAggregatedSlotsForDate(dateStr);
-      setAvailableSlots(slots);
-      setLoadingSlots(false);
-    } else {
-      setAvailableSlots([]);
-    }
+    const run = async () => {
+      if (selectedDate) {
+        setLoadingSlots(true);
+        setSelectedSlot(undefined);
+
+        const dateStr = format(selectedDate, 'yyyy-MM-dd');
+        try {
+          const slots = await supabaseAvailabilityService.getAggregatedSlotsForDate(dateStr);
+          setAvailableSlots(slots);
+        } catch (e) {
+          console.error('Failed to load slots:', e);
+          const slots = mockAvailabilityService.getAggregatedSlotsForDate(dateStr);
+          setAvailableSlots(slots);
+        } finally {
+          setLoadingSlots(false);
+        }
+      } else {
+        setAvailableSlots([]);
+      }
+    };
+
+    void run();
   }, [selectedDate]);
 
   // Group slots by hour for better display
@@ -123,6 +145,15 @@ export default function BookConsultation() {
           selectedSlot.displayTimezone,
           selectedSlot.doctorIds
         );
+
+        // Phase 2 wiring: persist a corresponding consultation to Supabase so doctors can see it.
+        // Keep doctor_id null (assigned after payment confirmation).
+        await consultationsSupabaseService.createRequested({
+          id: booking.id,
+          patientId: user.id,
+          scheduledAtIso: booking.utcTimestamp,
+          timezone: booking.displayTimezone,
+        });
 
         navigate(`/patient/booking/payment/${booking.id}`);
       }

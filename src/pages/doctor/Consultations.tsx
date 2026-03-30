@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { doctorPortalService } from '@/services/doctorPortalService';
+import { consultationsSupabaseService } from '@/services/consultationsSupabaseService';
+import type { Database } from '@/integrations/supabase/types';
 import { userPreferencesService } from '@/services/userPreferencesService';
 import { getTimezoneAbbr } from '@/lib/datetime';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,12 +43,61 @@ export default function DoctorConsultations() {
 
   const doctorTz = useMemo(() => user?.id ? userPreferencesService.getTimezone(user.id) : 'Australia/Brisbane', [user?.id]);
 
-  const refresh = () => {
+  type ConsultationRow = Database['public']['Tables']['consultations']['Row'];
+
+  const refresh = async () => {
     if (!user?.id) return;
-    setBookings(doctorPortalService.getDoctorBookings(user.id));
+
+    try {
+      // Phase 2: load from Supabase so bookings created by patients are visible.
+      const rows: ConsultationRow[] = await consultationsSupabaseService.listForDoctorQueue();
+
+      // Map to existing MockBooking shape used by the UI.
+      const mapped: MockBooking[] = rows.map((r) => {
+        const scheduled = new Date(r.scheduled_at);
+        const yyyy = scheduled.getFullYear();
+        const mm = String(scheduled.getMonth() + 1).padStart(2, '0');
+        const dd = String(scheduled.getDate()).padStart(2, '0');
+        const hh = String(scheduled.getHours()).padStart(2, '0');
+        const min = String(scheduled.getMinutes()).padStart(2, '0');
+
+        // Rough mapping: consultation_status -> booking_status-ish string for badges
+        const status = ((): any => {
+          if (r.status === 'cancelled') return 'cancelled';
+          if (r.status === 'completed') return 'completed';
+          if (r.status === 'confirmed') return 'booked';
+          if (r.status === 'called' || r.status === 'ready_for_call') return 'in_progress';
+          return 'pending_payment';
+        })();
+
+        return {
+          id: r.id,
+          patientId: r.patient_id,
+          doctorId: r.doctor_id,
+          doctorName: null,
+          scheduledDate: `${yyyy}-${mm}-${dd}`,
+          timeWindowStart: `${hh}:${min}`,
+          timeWindowEnd: `${hh}:${min}`,
+          utcTimestamp: r.scheduled_at,
+          displayTimezone: r.timezone || 'Australia/Brisbane',
+          status,
+          amountPaid: null,
+          paidAt: null,
+          createdAt: r.created_at,
+          updatedAt: r.updated_at,
+          reservationId: null,
+          callAttempts: [],
+        } as any;
+      });
+
+      setBookings(mapped);
+    } catch (err) {
+      console.error('Failed to load consultations from Supabase, falling back to mock:', err);
+      setBookings(doctorPortalService.getDoctorBookings(user.id));
+    }
   };
 
-  useEffect(() => { refresh(); }, [user?.id]);
+  useEffect(() => { void refresh(); }, [user?.id]);
 
   const rows = useMemo(() =>
     bookings.map((b) => ({

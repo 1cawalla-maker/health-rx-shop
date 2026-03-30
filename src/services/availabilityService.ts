@@ -476,6 +476,84 @@ export const doctorAvailabilityBlocksService = {
   },
 };
 
+export const supabaseAvailabilityService = {
+  async getDatesWithAvailability(minDate: Date, maxDate: Date): Promise<string[]> {
+    // Preload weekly recurring availability and then mark dates in range.
+    const { data, error } = await supabase
+      .from('doctor_availability')
+      .select('day_of_week,is_available');
+
+    if (error) throw error;
+
+    const availableDays = new Set<number>();
+    for (const row of data || []) {
+      if (row.is_available === false) continue;
+      availableDays.add(row.day_of_week);
+    }
+
+    const dates: string[] = [];
+    const d = new Date(minDate);
+    d.setHours(0, 0, 0, 0);
+    const end = new Date(maxDate);
+    end.setHours(0, 0, 0, 0);
+
+    while (d <= end) {
+      if (availableDays.has(d.getDay())) {
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        dates.push(`${yyyy}-${mm}-${dd}`);
+      }
+      d.setDate(d.getDate() + 1);
+    }
+
+    return dates;
+  },
+
+  async getAggregatedSlotsForDate(dateStr: string): Promise<FiveMinuteSlot[]> {
+    // dateStr: yyyy-MM-dd
+    const dateObj = new Date(`${dateStr}T00:00:00`);
+    const dayOfWeek = dateObj.getDay();
+
+    const { data, error } = await supabase
+      .from('doctor_availability')
+      .select('doctor_id,start_time,end_time,timezone,is_available,day_of_week')
+      .eq('day_of_week', dayOfWeek)
+      .neq('is_available', false);
+
+    if (error) throw error;
+
+    // Aggregate doctor slots by time.
+    const byTime = new Map<string, FiveMinuteSlot>();
+
+    for (const row of data || []) {
+      const slots = generateFiveMinuteSlots(
+        (row.start_time || '').slice(0, 5),
+        (row.end_time || '').slice(0, 5),
+        dateStr,
+        row.doctor_id,
+        row.timezone || DEFAULT_TIMEZONE,
+      );
+
+      for (const s of slots) {
+        const existing = byTime.get(s.time);
+        if (!existing) {
+          byTime.set(s.time, { ...s });
+        } else {
+          const set = new Set(existing.doctorIds);
+          for (const id of s.doctorIds) set.add(id);
+          existing.doctorIds = Array.from(set);
+          existing.isAvailable = existing.doctorIds.length > 0;
+        }
+      }
+    }
+
+    return Array.from(byTime.values())
+      .filter((s) => (s.doctorIds || []).length > 0)
+      .sort((a, b) => a.time.localeCompare(b.time));
+  },
+};
+
 export const availabilityService = {
   // Phase 2 (in progress): public availability slots are still mock-derived.
   // We are first wiring doctor availability CRUD to Supabase via doctorAvailabilityBlocksService.
