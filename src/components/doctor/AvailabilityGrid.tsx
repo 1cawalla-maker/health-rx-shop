@@ -160,6 +160,8 @@ export function AvailabilityGrid({
   const rafRef = useRef<number | null>(null);
   const isDraggingRef = useRef(false);
   const pointerYRef = useRef(0);
+  const activeColRef = useRef<HTMLElement | null>(null);
+  const activePointerIdRef = useRef<number | null>(null);
 
   /* ─── derived ─── */
   const blocksByDay = useMemo(() => {
@@ -228,8 +230,11 @@ export function AvailabilityGrid({
     if ((e.target as HTMLElement).closest('[data-block]') || (e.target as HTMLElement).closest('[data-booking]')) return;
     const colEl = e.currentTarget as HTMLElement;
     const minutes = getMinutesFromPointer(e.clientY, colEl);
+
+    activeColRef.current = colEl;
+    activePointerIdRef.current = e.pointerId;
+
     setDragState({ day, startMin: minutes, currentMin: minutes });
-    colEl.setPointerCapture(e.pointerId);
     pointerYRef.current = e.clientY;
     startAutoScroll();
   }, [getMinutesFromPointer, startAutoScroll]);
@@ -242,45 +247,70 @@ export function AvailabilityGrid({
     setDragState((prev) => prev ? { ...prev, currentMin: minutes } : null);
   }, [dragState, getMinutesFromPointer]);
 
-  const handlePointerUp = useCallback((e: React.PointerEvent) => {
-    stopAutoScroll();
-
-    // IMPORTANT: we use pointer capture during drag-create so the interaction doesn't break when
-    // the pointer leaves the column. We must release it on pointer up, otherwise future clicks
-    // (including inside popovers/selects) may not register correctly.
-    try {
-      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch {
-      // ignore
-    }
-
+  // Window-level pointer tracking so we don't need pointer capture (which can break Radix Select clicks)
+  useEffect(() => {
     if (!dragState) return;
-    const startMin = Math.min(dragState.startMin, dragState.currentMin);
-    const endMin = Math.max(dragState.startMin, dragState.currentMin);
 
-    if (endMin - startMin >= SNAP_MINUTES) {
-      const dayBlocks = blocksByDay[dragState.day] || [];
-      const dayBookingsList = bookingsByDay[dragState.day] || [];
+    const onMove = (e: PointerEvent) => {
+      if (activePointerIdRef.current !== e.pointerId) return;
+      const colEl = activeColRef.current;
+      if (!colEl) return;
+      const minutes = getMinutesFromPointer(e.clientY, colEl);
+      pointerYRef.current = e.clientY;
+      setDragState((prev) => prev ? { ...prev, currentMin: minutes } : null);
+    };
 
-      const hasBlockOverlap = dayBlocks.some((b) => {
-        const bStart = timeToMinutes(b.startTime);
-        const bEnd = timeToMinutes(b.endTime);
-        return rangesOverlap(startMin, endMin, bStart, bEnd);
+    const onUp = (e: PointerEvent) => {
+      if (activePointerIdRef.current !== e.pointerId) return;
+      activePointerIdRef.current = null;
+      activeColRef.current = null;
+      stopAutoScroll();
+
+      setDragState((prev) => {
+        if (!prev) return null;
+        const startMin = Math.min(prev.startMin, prev.currentMin);
+        const endMin = Math.max(prev.startMin, prev.currentMin);
+
+        if (endMin - startMin >= SNAP_MINUTES) {
+          const dayBlocks = blocksByDay[prev.day] || [];
+          const dayBookingsList = bookingsByDay[prev.day] || [];
+
+          const hasBlockOverlap = dayBlocks.some((b) => {
+            const bStart = timeToMinutes(b.startTime);
+            const bEnd = timeToMinutes(b.endTime);
+            return rangesOverlap(startMin, endMin, bStart, bEnd);
+          });
+          const hasBookingOverlap = dayBookingsList.some((bk) =>
+            rangesOverlap(startMin, endMin, bk.startMin, bk.endMin)
+          );
+
+          if (hasBookingOverlap) toast.error('Cannot overlap with a scheduled booking');
+          else if (hasBlockOverlap) toast.error('Block overlaps with existing availability');
+          else onAddBlock(prev.day, minutesToTime(startMin), minutesToTime(endMin));
+        }
+
+        return null;
       });
-      const hasBookingOverlap = dayBookingsList.some((bk) =>
-        rangesOverlap(startMin, endMin, bk.startMin, bk.endMin)
-      );
+    };
 
-      if (hasBookingOverlap) {
-        toast.error('Cannot overlap with a scheduled booking');
-      } else if (hasBlockOverlap) {
-        toast.error('Block overlaps with existing availability');
-      } else {
-        onAddBlock(dragState.day, minutesToTime(startMin), minutesToTime(endMin));
-      }
-    }
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+    };
+  }, [dragState, getMinutesFromPointer, stopAutoScroll, blocksByDay, bookingsByDay, onAddBlock]);
+
+  // Pointer up is handled at window-level while dragging; keep this as a no-op safety.
+  const handlePointerUp = useCallback(() => {
+    stopAutoScroll();
     setDragState(null);
-  }, [dragState, blocksByDay, bookingsByDay, onAddBlock, stopAutoScroll]);
+    activePointerIdRef.current = null;
+    activeColRef.current = null;
+  }, [stopAutoScroll]);
 
   /* ─── E4: keyboard delete ─── */
   useEffect(() => {
