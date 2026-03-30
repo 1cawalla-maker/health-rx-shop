@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Copy, Trash2, Clock, CalendarCheck, Pencil } from 'lucide-react';
@@ -328,6 +329,11 @@ export function AvailabilityGrid({
     setEditEnd(block.endTime);
   };
 
+  const editingBlock = useMemo(
+    () => (editingBlockId ? blocks.find((b) => b.id === editingBlockId) || null : null),
+    [editingBlockId, blocks]
+  );
+
   const handleSaveEdit = (block: MockAvailabilityBlock) => {
     const newStartMin = timeToMinutes(editStart);
     const newEndMin = timeToMinutes(editEnd);
@@ -400,6 +406,71 @@ export function AvailabilityGrid({
   /* ─── render ─── */
   return (
     <div className="space-y-4">
+      <Dialog
+        open={Boolean(editingBlock)}
+        onOpenChange={(open) => {
+          if (!open) setEditingBlockId(null);
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit times</DialogTitle>
+            <DialogDescription>Adjust the start and end times for this availability block.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <div>
+                <label className="text-xs text-muted-foreground">Start</label>
+                <Select value={editStart} onValueChange={setEditStart}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {TIME_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value} className="text-sm">
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-xs text-muted-foreground">End</label>
+                <Select value={editEnd} onValueChange={setEditEnd}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {TIME_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value} className="text-sm">
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditingBlockId(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (editingBlock) handleSaveEdit(editingBlock);
+              }}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {/* Action buttons */}
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm" className="gap-1.5" onClick={onCopyMondayToWeekdays}>
@@ -487,7 +558,6 @@ export function AvailabilityGrid({
                     const segments = splitBlockAroundBookings(bStartMin, bEndMin, b.id, dayBookings);
                     const isSelected = selectedBlockId === b.id;
                     const isMobileActive = mobilePopoverBlockId === b.id;
-                    const isEditing = editingBlockId === b.id;
 
                     return segments.map((seg, segIdx) => {
                       const top = minutesToPx(seg.startMin);
@@ -524,21 +594,15 @@ export function AvailabilityGrid({
                         </div>
                       );
 
-                      // Wrap first segment with popover for editing (desktop) or actions (mobile)
-                      if (isFirstSeg && (isEditing || isMobileActive)) {
+                      // Wrap first segment with popover for mobile actions only.
+                      // Desktop time editing is handled via a Dialog to avoid Radix portal/pointer issues.
+                      if (isFirstSeg && isMobileActive) {
                         return (
                           <Popover
                             key={`${b.id}-${segIdx}`}
-                            open={isEditing || isMobileActive}
+                            open={isMobileActive}
                             onOpenChange={(open) => {
                               if (!open) {
-                                // Radix Select renders its listbox in a portal; opening it can trigger
-                                // Popover "interact outside" and close the editor immediately.
-                                // If a listbox is currently present, ignore this close.
-                                if (typeof document !== 'undefined' && document.querySelector('[role="listbox"]')) {
-                                  return;
-                                }
-                                setEditingBlockId(null);
                                 setMobilePopoverBlockId(null);
                               }
                             }}
@@ -552,91 +616,35 @@ export function AvailabilityGrid({
                               side="right"
                               align="start"
                             >
-                              {isMobileActive && !isEditing ? (
-                                /* Mobile action sheet */
-                                <div className="space-y-2">
-                                  <p className="text-xs text-muted-foreground font-medium">
-                                    {formatTime(bStartMin)} – {formatTime(bEndMin)}
-                                  </p>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="w-full justify-start gap-2"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      openEditor(b);
-                                    }}
-                                  >
-                                    <Pencil className="h-3.5 w-3.5" />Edit times
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="w-full justify-start gap-2 text-destructive hover:text-destructive"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onRemoveBlock(b.id);
-                                      setMobilePopoverBlockId(null);
-                                      toast.success('Availability block deleted');
-                                    }}
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />Delete
-                                  </Button>
-                                </div>
-                              ) : (
-                                /* Inline time editor */
-                                <div className="space-y-3">
-                                  <p className="text-xs text-muted-foreground font-medium">Edit times</p>
-                                  <div className="space-y-2">
-                                    <div>
-                                      <label className="text-xs text-muted-foreground">Start</label>
-                                      <Select value={editStart} onValueChange={setEditStart}>
-                                        <SelectTrigger className="h-8 text-xs">
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent className="max-h-48">
-                                          {TIME_OPTIONS.map((opt) => (
-                                            <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                                              {opt.label}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                    <div>
-                                      <label className="text-xs text-muted-foreground">End</label>
-                                      <Select value={editEnd} onValueChange={setEditEnd}>
-                                        <SelectTrigger className="h-8 text-xs">
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent className="max-h-48">
-                                          {TIME_OPTIONS.map((opt) => (
-                                            <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                                              {opt.label}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                  </div>
-                                  <div className="flex gap-2">
-                                    <Button size="sm" className="flex-1 h-7 text-xs" onClick={() => handleSaveEdit(b)}>
-                                      Save
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="flex-1 h-7 text-xs"
-                                      onClick={() => {
-                                        setEditingBlockId(null);
-                                        setMobilePopoverBlockId(null);
-                                      }}
-                                    >
-                                      Cancel
-                                    </Button>
-                                  </div>
-                                </div>
-                              )}
+                              <div className="space-y-2">
+                                <p className="text-xs text-muted-foreground font-medium">
+                                  {formatTime(bStartMin)} – {formatTime(bEndMin)}
+                                </p>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full justify-start gap-2"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEditor(b);
+                                  }}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />Edit times
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full justify-start gap-2 text-destructive hover:text-destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onRemoveBlock(b.id);
+                                    setMobilePopoverBlockId(null);
+                                    toast.success('Availability block deleted');
+                                  }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />Delete
+                                </Button>
+                              </div>
                             </PopoverContent>
                           </Popover>
                         );
