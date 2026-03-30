@@ -5,7 +5,7 @@ import { doctorPortalService } from '@/services/doctorPortalService';
 import { consultationsSupabaseService } from '@/services/consultationsSupabaseService';
 import { shopPrescriptionService } from '@/services/shopPrescriptionService';
 import { userPreferencesService } from '@/services/userPreferencesService';
-import { userProfileService } from '@/services/userProfileService';
+import { supabase } from '@/integrations/supabase/client';
 import { getTimezoneAbbr } from '@/lib/datetime';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { EligibilityQuizCard } from '@/components/doctor/EligibilityQuizCard';
@@ -140,11 +140,41 @@ export default function DoctorConsultationView() {
   const hasAccess = Boolean(user?.id && booking && isDoctor && (booking.doctorId === user.id || booking.doctorId == null));
   const isTerminal = booking ? TERMINAL.includes(booking.status) : false;
 
-  // Patient profile
-  const patientProfile = useMemo(() => {
-    if (!booking) return null;
-    return userProfileService.getProfile(booking.patientId);
-  }, [booking]);
+  const [patientProfile, setPatientProfile] = useState<{
+    fullName: string | null;
+    phoneE164: string | null;
+    dateOfBirth: string | null;
+  } | null>(null);
+
+  // Patient profile (Supabase)
+  useEffect(() => {
+    const run = async () => {
+      if (!booking?.patientId) {
+        setPatientProfile(null);
+        return;
+      }
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('full_name, phone, date_of_birth')
+          .eq('user_id', booking.patientId)
+          .single();
+
+        if (error) throw error;
+
+        setPatientProfile({
+          fullName: (data as any)?.full_name ?? null,
+          phoneE164: (data as any)?.phone ?? null,
+          dateOfBirth: (data as any)?.date_of_birth ?? null,
+        });
+      } catch (err) {
+        console.error('Failed to load patient profile:', err);
+        setPatientProfile(null);
+      }
+    };
+
+    void run();
+  }, [booking?.patientId]);
 
   const scheduledAt = useMemo(() => {
     if (!booking) return null;
