@@ -68,7 +68,7 @@ export default function GuideZynAustralia() {
         title="Zyn in Australia: Is It Legal & How to Get It (2026 Guide)"
         description="Plain-English guidance on Zyns in Australia, including legality, prescriptions, consultation steps, costs, and what to do next."
         canonicalPath={PATH}
-        ogImagePath="/placeholder.svg"
+        ogImagePath="/og/zyn-australia.png"
         ogType="article"
         jsonLd={[
           webPageSchema({
