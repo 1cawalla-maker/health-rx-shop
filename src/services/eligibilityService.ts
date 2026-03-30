@@ -168,8 +168,16 @@ export async function getPatientEligibilityQuiz(userId: string): Promise<Eligibi
     if (error || !data?.additional_notes) return null;
 
     try {
-      const notes = JSON.parse(data.additional_notes);
-      return notes.eligibility_quiz || null;
+      const raw: any = data.additional_notes;
+      // additional_notes is stored as TEXT in our schema but be defensive in case it becomes JSON/JSONB.
+      const notes = typeof raw === 'string'
+        ? JSON.parse(raw)
+        : raw;
+
+      // Handle double-encoded JSON (rare but happens if older code stringified twice)
+      const maybeObj = typeof notes === 'string' ? JSON.parse(notes) : notes;
+
+      return maybeObj?.eligibility_quiz || null;
     } catch {
       return null;
     }
