@@ -465,36 +465,29 @@ export function AvailabilityGrid({
           </DialogHeader>
 
           <div className="space-y-3">
-            {/* Use native selects here to avoid any portal/pointer-event quirks from Radix Select inside a drag grid. */}
+            {/* Use <input type="time"> to avoid native select/portal interactions triggering grid drags. */}
             <div className="space-y-2">
               <div>
                 <label className="text-xs text-muted-foreground">Start</label>
-                <select
+                <input
+                  type="time"
+                  step={SNAP_MINUTES * 60}
                   className="mt-1 w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
                   value={editStart}
                   onChange={(e) => setEditStart(e.target.value)}
-                >
-                  {TIME_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">5-minute increments</p>
               </div>
 
               <div>
                 <label className="text-xs text-muted-foreground">End</label>
-                <select
+                <input
+                  type="time"
+                  step={SNAP_MINUTES * 60}
                   className="mt-1 w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
                   value={editEnd}
                   onChange={(e) => setEditEnd(e.target.value)}
-                >
-                  {TIME_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
             </div>
           </div>
