@@ -9,7 +9,7 @@ export default function Privacy() {
         title="Privacy Policy"
         description="NicoPatch privacy policy and how we handle personal information."
         canonicalPath="/privacy"
-        ogImagePath="/placeholder.svg"
+        ogImagePath="/og/privacy.png"
         ogType="website"
         jsonLd={[
           webPageSchema({

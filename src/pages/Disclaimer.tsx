@@ -10,7 +10,7 @@ export default function Disclaimer() {
         title="Medical & Telehealth Disclaimer"
         description="Medical and telehealth disclaimer for NicoPatch, including clinical suitability, consultation limits, and important safety information."
         canonicalPath="/disclaimer"
-        ogImagePath="/placeholder.svg"
+        ogImagePath="/og/disclaimer.png"
         ogType="website"
         jsonLd={[
           medicalWebPageSchema({
