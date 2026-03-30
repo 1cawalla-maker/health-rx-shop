@@ -1,8 +1,11 @@
 User-agent: *
 Allow: /
 
+Disallow: /patient
 Disallow: /patient/
+Disallow: /doctor
 Disallow: /doctor/
+Disallow: /admin
 Disallow: /admin/
 
 # Auth and tool pages should not appear in search results
