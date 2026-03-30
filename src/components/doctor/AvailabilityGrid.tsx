@@ -241,8 +241,18 @@ export function AvailabilityGrid({
     setDragState((prev) => prev ? { ...prev, currentMin: minutes } : null);
   }, [dragState, getMinutesFromPointer]);
 
-  const handlePointerUp = useCallback(() => {
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
     stopAutoScroll();
+
+    // IMPORTANT: we use pointer capture during drag-create so the interaction doesn't break when
+    // the pointer leaves the column. We must release it on pointer up, otherwise future clicks
+    // (including inside popovers/selects) may not register correctly.
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+
     if (!dragState) return;
     const startMin = Math.min(dragState.startMin, dragState.currentMin);
     const endMin = Math.max(dragState.startMin, dragState.currentMin);
