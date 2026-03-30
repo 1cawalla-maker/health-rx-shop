@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { doctorPortalService } from '@/services/doctorPortalService';
+import { consultationsSupabaseService } from '@/services/consultationsSupabaseService';
 import { shopPrescriptionService } from '@/services/shopPrescriptionService';
 import { userPreferencesService } from '@/services/userPreferencesService';
 import { userProfileService } from '@/services/userProfileService';
@@ -55,7 +56,7 @@ function formatPhoneDisplay(phoneE164: string): string {
 
 export default function DoctorConsultationView() {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
   const navigate = useNavigate();
 
   const [booking, setBooking] = useState<MockBooking | null>(null);
@@ -68,19 +69,75 @@ export default function DoctorConsultationView() {
 
   const doctorTz = useMemo(() => user?.id ? userPreferencesService.getTimezone(user.id) : 'Australia/Brisbane', [user?.id]);
 
-  const reload = () => {
+  const reload = async () => {
     if (!id) return;
-    setBooking(doctorPortalService.getBooking(id));
+
+    // Try local mock first (Phase 1)
+    const local = doctorPortalService.getBooking(id);
+    if (local) {
+      setBooking(local);
+      return;
+    }
+
+    // Phase 2: load from Supabase consultations
+    try {
+      const row = await consultationsSupabaseService.getById(id);
+      if (!row) {
+        setBooking(null);
+        return;
+      }
+
+      const scheduled = new Date(String(row.scheduled_at).includes('T') ? String(row.scheduled_at) : String(row.scheduled_at).replace(' ', 'T'));
+      const yyyy = scheduled.getFullYear();
+      const mm = String(scheduled.getMonth() + 1).padStart(2, '0');
+      const dd = String(scheduled.getDate()).padStart(2, '0');
+      const hh = String(scheduled.getHours()).padStart(2, '0');
+      const min = String(scheduled.getMinutes()).padStart(2, '0');
+
+      // Map consultation_status to BookingStatus-like string used by this page.
+      const status = ((): any => {
+        if (row.status === 'cancelled') return 'cancelled';
+        if (row.status === 'completed') return 'completed';
+        if (row.status === 'confirmed') return 'booked';
+        if (row.status === 'called' || row.status === 'ready_for_call') return 'in_progress';
+        return 'pending_payment';
+      })();
+
+      setBooking({
+        id: row.id,
+        patientId: row.patient_id,
+        doctorId: row.doctor_id,
+        doctorName: null,
+        scheduledDate: `${yyyy}-${mm}-${dd}`,
+        timeWindowStart: `${hh}:${min}`,
+        timeWindowEnd: `${hh}:${min}`,
+        utcTimestamp: scheduled.toISOString(),
+        displayTimezone: row.timezone || 'Australia/Brisbane',
+        status,
+        amountPaid: null,
+        paidAt: null,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        reservationId: null,
+        callAttempts: [],
+      } as any);
+    } catch (err) {
+      console.error('Failed to load consultation from Supabase:', err);
+      setBooking(null);
+    }
   };
 
-  useEffect(() => { reload(); }, [id]);
+  useEffect(() => { void reload(); }, [id]);
 
   // Load consult notes on mount
   useEffect(() => {
     if (id) setConsultNotes(doctorPortalService.getConsultNotes(id));
   }, [id]);
 
-  const hasAccess = !!(user?.id && booking?.doctorId === user.id);
+  // Phase 2: consultations may be unassigned (doctor_id null) until payment confirmation.
+  // Doctors should still be able to open the workspace for queue items.
+  const isDoctor = userRole?.role === 'doctor';
+  const hasAccess = Boolean(user?.id && booking && isDoctor && (booking.doctorId === user.id || booking.doctorId == null));
   const isTerminal = booking ? TERMINAL.includes(booking.status) : false;
 
   // Patient profile

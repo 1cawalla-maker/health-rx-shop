@@ -498,7 +498,7 @@ export function AvailabilityGrid({
                           onClick={(e) => handleBlockClick(e, b)}
                           title={`${formatTime(bStartMin)} – ${formatTime(bEndMin)}${!isMobile ? '\nClick time to edit • Select + Delete to remove' : ''}`}
                         >
-                          {isFirstSeg && height >= 24 && (
+                          {isFirstSeg && height >= 14 && (
                             <div
                               className="px-1 py-0.5 text-[10px] leading-tight text-primary font-medium truncate cursor-pointer hover:underline"
                               onClick={(e) => handleTimeClick(e, b)}
