@@ -42,7 +42,7 @@ export default function GuideNicotinePouchStrengthGuide() {
         title="3mg vs 6mg vs 9mg Nicotine Pouches: Strength Guide (Australia)"
         description="Strength guide for nicotine pouches in Australia (3mg vs 6mg vs 9mg): how clinicians choose what’s appropriate and how to step down over time."
         canonicalPath={PATH}
-        ogImagePath="/placeholder.svg"
+        ogImagePath="/og/nicotine-pouch-strength-3mg-6mg-9mg.png"
         ogType="article"
         jsonLd={[
           webPageSchema({

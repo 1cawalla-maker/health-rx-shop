@@ -42,7 +42,7 @@ export default function GuideAreNicotinePouchesLegalAustralia() {
         title="Are Nicotine Pouches Legal in Australia? (Plain‑English Answer)"
         description="A plain-English overview of nicotine pouch legality in Australia (including Zyn) and the safest next step: a doctor-supervised consultation pathway."
         canonicalPath={PATH}
-        ogImagePath="/placeholder.svg"
+        ogImagePath="/og/are-nicotine-pouches-legal-in-australia.png"
         ogType="article"
         jsonLd={[
           webPageSchema({
