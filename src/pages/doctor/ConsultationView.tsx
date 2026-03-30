@@ -61,6 +61,7 @@ export default function DoctorConsultationView() {
   const navigate = useNavigate();
 
   const [booking, setBooking] = useState<MockBooking | null>(null);
+  const [consultSource, setConsultSource] = useState<'mock' | 'supabase' | null>(null);
   const [callNote, setCallNote] = useState('');
   const [declineReason, setDeclineReason] = useState('');
   const [maxStrength, setMaxStrength] = useState<3 | 6 | 9>(6);
@@ -77,6 +78,7 @@ export default function DoctorConsultationView() {
     const local = doctorPortalService.getBooking(id);
     if (local) {
       setBooking(local);
+      setConsultSource('mock');
       return;
     }
 
@@ -85,6 +87,7 @@ export default function DoctorConsultationView() {
       const row = await consultationsSupabaseService.getById(id);
       if (!row) {
         setBooking(null);
+        setConsultSource(null);
         return;
       }
 
@@ -122,9 +125,11 @@ export default function DoctorConsultationView() {
         reservationId: null,
         callAttempts: [],
       } as any);
+      setConsultSource('supabase');
     } catch (err) {
       console.error('Failed to load consultation from Supabase:', err);
       setBooking(null);
+      setConsultSource(null);
     }
   };
 
@@ -190,7 +195,7 @@ export default function DoctorConsultationView() {
   const unansweredCount = (booking?.callAttempts || []).filter((a) => !a.answered).length;
   const canMarkNoShow = unansweredCount >= 3;
 
-  const isSupabaseConsult = useCallback(() => Boolean(id && !doctorPortalService.getBooking(id)), [id]);
+  const isSupabaseConsult = useCallback(() => consultSource === 'supabase', [consultSource]);
 
   const setConsultationStatus = useCallback(async (next: ConsultationStatus) => {
     if (!id) return;
@@ -206,7 +211,7 @@ export default function DoctorConsultationView() {
       console.error('Failed to update consultation status in Supabase:', err);
       toast.error(err?.message || 'Could not update status');
     }
-  }, [id, isSupabaseConsult]);
+  }, [id, isSupabaseConsult, reload]);
 
   const doStatus = async (status: BookingStatus) => {
     if (!id) return;
