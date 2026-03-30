@@ -329,6 +329,13 @@ export function AvailabilityGrid({
         e.preventDefault();
         onRemoveBlock(selectedBlockId);
         setSelectedBlockId(null);
+
+        // Safety: if we were mid-drag (or pointer state got stuck), reset drag state so user can create blocks again.
+        setDragState(null);
+        activePointerIdRef.current = null;
+        activeColRef.current = null;
+        stopAutoScroll();
+
         toast.success('Availability block deleted');
       }
       if (e.key === 'Escape') {
@@ -339,7 +346,7 @@ export function AvailabilityGrid({
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [selectedBlockId, onRemoveBlock]);
+  }, [selectedBlockId, onRemoveBlock, stopAutoScroll]);
 
   // Deselect on click-away
   useEffect(() => {
