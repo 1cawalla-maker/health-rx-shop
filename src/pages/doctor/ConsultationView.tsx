@@ -159,12 +159,38 @@ export default function DoctorConsultationView() {
   const unansweredCount = (booking?.callAttempts || []).filter((a) => !a.answered).length;
   const canMarkNoShow = unansweredCount >= 3;
 
-  const doStatus = (status: BookingStatus) => {
+  const doStatus = async (status: BookingStatus) => {
     if (!id) return;
+
+    // If this consultation exists only in Supabase, update there.
+    const local = doctorPortalService.getBooking(id);
+    if (!local) {
+      try {
+        // Map BookingStatus-like UI states to consultation_status enum.
+        const mapped = ((): any => {
+          if (status === 'cancelled') return 'cancelled';
+          if (status === 'completed') return 'completed';
+          if (status === 'in_progress') return 'called';
+          if (status === 'booked') return 'confirmed';
+          return 'requested';
+        })();
+
+        await consultationsSupabaseService.updateStatus(id, mapped);
+        toast.success(`Status → ${status.replace('_', ' ')}`);
+        await reload();
+        return;
+      } catch (err: any) {
+        console.error('Failed to update consultation status in Supabase:', err);
+        toast.error(err?.message || 'Could not update status');
+        return;
+      }
+    }
+
+    // Otherwise fallback to Phase 1 localStorage implementation.
     const updated = doctorPortalService.setBookingStatus(id, status);
     if (!updated) { toast.error('Could not update status'); return; }
     toast.success(`Status → ${status.replace('_', ' ')}`);
-    reload();
+    await reload();
   };
 
   const doAddAttempt = () => {
