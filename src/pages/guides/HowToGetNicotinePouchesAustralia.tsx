@@ -61,6 +61,7 @@ export default function GuideHowToGetNicotinePouchesAustralia() {
             description:
               'Step-by-step: how to get nicotine pouches in Australia (including Zyn) via a compliant, doctor-supervised telehealth pathway.',
             dateModified: '2026-03-30',
+            siteOrigin: SITE_ORIGIN,
           }),
           articleSchema({
             url: `${SITE_ORIGIN}${PATH}`,
@@ -68,6 +69,7 @@ export default function GuideHowToGetNicotinePouchesAustralia() {
             headline: 'How to get nicotine pouches in Australia (step-by-step)',
             description:
               'Step-by-step: how to get nicotine pouches in Australia (including Zyn) via a compliant, doctor-supervised telehealth pathway.',
+            datePublished: '2026-03-30',
             dateModified: '2026-03-30',
           }),
           breadcrumbSchema({
