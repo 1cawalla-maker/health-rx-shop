@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://nicopatch.com.au/</loc><lastmod>2026-03-30</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>
+<urlset
+  xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+>
+  <url>
+    <loc>https://nicopatch.com.au/</loc>
+    <lastmod>2026-03-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://nicopatch.com.au/og/home.png</image:loc>
+    </image:image>
+  </url>
   <url><loc>https://nicopatch.com.au/how-it-works</loc><lastmod>2026-03-30</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://nicopatch.com.au/pricing</loc><lastmod>2026-03-30</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://nicopatch.com.au/faq</loc><lastmod>2026-03-30</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
@@ -11,8 +22,24 @@
   <url><loc>https://nicopatch.com.au/disclaimer</loc><lastmod>2026-03-30</lastmod><changefreq>yearly</changefreq><priority>0.2</priority></url>
 
   <url><loc>https://nicopatch.com.au/guides</loc><lastmod>2026-03-30</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://nicopatch.com.au/guides/zyn-australia</loc><lastmod>2026-03-30</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://nicopatch.com.au/guides/nicotine-pouches-australia</loc><lastmod>2026-03-30</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url>
+    <loc>https://nicopatch.com.au/guides/zyn-australia</loc>
+    <lastmod>2026-03-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://nicopatch.com.au/og/zyn-australia.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://nicopatch.com.au/guides/nicotine-pouches-australia</loc>
+    <lastmod>2026-03-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://nicopatch.com.au/og/nicotine-pouches-australia.png</image:loc>
+    </image:image>
+  </url>
   <url><loc>https://nicopatch.com.au/guides/are-nicotine-pouches-legal-in-australia</loc><lastmod>2026-03-30</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://nicopatch.com.au/guides/how-to-get-nicotine-pouches-in-australia</loc><lastmod>2026-03-30</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://nicopatch.com.au/guides/personal-importation-scheme-nicotine-pouches</loc><lastmod>2026-03-30</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
