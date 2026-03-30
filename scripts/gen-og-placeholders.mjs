@@ -56,7 +56,14 @@ const outDir = new URL('../public/og/', import.meta.url);
 fs.mkdirSync(outDir, { recursive: true });
 
 const png = makePng({ width: WIDTH, height: HEIGHT });
-const names = ['home', 'zyn-australia', 'nicotine-pouches-australia'];
+const names = [
+  'home',
+  'pricing',
+  'faq',
+  'about',
+  'zyn-australia',
+  'nicotine-pouches-australia',
+];
 
 for (const name of names) {
   const outPath = new URL(`./${name}.png`, outDir);

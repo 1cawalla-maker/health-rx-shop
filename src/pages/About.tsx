@@ -56,7 +56,7 @@ export default function About() {
         title="About NicoPatch: Doctor‑Supervised Nicotine Pouches in Australia"
         description="NicoPatch is an Australian telehealth platform connecting patients with AHPRA‑registered doctors for nicotine pouch consultations and clinically guided next steps."
         canonicalPath="/about"
-        ogImagePath="/placeholder.svg"
+        ogImagePath="/og/about.png"
         ogType="website"
         jsonLd={[
           aboutPageSchema({
