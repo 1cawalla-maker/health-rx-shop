@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { mockAvailabilityService, supabaseAvailabilityService } from '@/services/availabilityService';
 import { mockBookingService } from '@/services/consultationService';
 import { consultationsSupabaseService } from '@/services/consultationsSupabaseService';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
@@ -164,6 +165,21 @@ export default function BookConsultation() {
           scheduledAtIso: booking.utcTimestamp,
           timezone: booking.displayTimezone,
         });
+
+        // Create a server-side 10 minute reservation/hold (source of truth for collision prevention).
+        // The payment page timer should reflect this expiry.
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+        const { error: reservationError } = await supabase
+          .from('consultation_reservations')
+          .insert({
+            consultation_id: booking.id,
+            patient_id: user.id,
+            scheduled_at: booking.utcTimestamp,
+            expires_at: expiresAt,
+            status: 'active',
+          });
+
+        if (reservationError) throw reservationError;
 
         navigate(`/patient/booking/payment/${booking.id}`);
       }

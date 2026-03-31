@@ -109,7 +109,8 @@ export default function BookingPayment() {
         navigate(`/patient/booking/confirmation/${bookingId}`);
       } catch (e) {
         console.error('Failed to confirm consultation in Supabase:', e);
-        toast.error('Payment succeeded, but we could not confirm your booking. Please try again.');
+        const msg = (e as any)?.message || (e as any)?.error_description || 'Payment succeeded, but we could not confirm your booking.';
+        toast.error(`${msg} Please try again.`);
         setProcessing(false);
       }
     } else {
