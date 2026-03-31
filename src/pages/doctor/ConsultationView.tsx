@@ -133,47 +133,6 @@ export default function DoctorConsultationView() {
     setBooking(null);
     setConsultSource(null);
     return;
-
-      const scheduled = new Date(String(row.scheduled_at).includes('T') ? String(row.scheduled_at) : String(row.scheduled_at).replace(' ', 'T'));
-      const yyyy = scheduled.getFullYear();
-      const mm = String(scheduled.getMonth() + 1).padStart(2, '0');
-      const dd = String(scheduled.getDate()).padStart(2, '0');
-      const hh = String(scheduled.getHours()).padStart(2, '0');
-      const min = String(scheduled.getMinutes()).padStart(2, '0');
-
-      // Map consultation_status to BookingStatus-like string used by this page.
-      const status = ((): any => {
-        if (row.status === 'cancelled') return 'cancelled';
-        if (row.status === 'completed') return 'completed';
-        if (row.status === 'confirmed') return 'booked';
-        if (row.status === 'called' || row.status === 'ready_for_call') return 'in_progress';
-        return 'pending_payment';
-      })();
-
-      setBooking({
-        id: row.id,
-        patientId: row.patient_id,
-        doctorId: row.doctor_id,
-        doctorName: null,
-        scheduledDate: `${yyyy}-${mm}-${dd}`,
-        timeWindowStart: `${hh}:${min}`,
-        timeWindowEnd: `${hh}:${min}`,
-        utcTimestamp: scheduled.toISOString(),
-        displayTimezone: row.timezone || 'Australia/Brisbane',
-        status,
-        amountPaid: null,
-        paidAt: null,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        reservationId: null,
-        callAttempts: [],
-      } as any);
-      setConsultSource('supabase');
-    } catch (err) {
-      console.error('Failed to load consultation from Supabase:', err);
-      setBooking(null);
-      setConsultSource(null);
-    }
   };
 
   useEffect(() => { void reload(); }, [id]);
