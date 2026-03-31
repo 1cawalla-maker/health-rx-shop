@@ -140,10 +140,9 @@ export default function DoctorConsultationView() {
     if (id) setConsultNotes(doctorPortalService.getConsultNotes(id));
   }, [id]);
 
-  // Phase 2: consultations may be unassigned (doctor_id null) until payment confirmation.
-  // Doctors should still be able to open the workspace for queue items.
+  // Doctors should only be able to open consultations assigned to them.
   const isDoctor = userRole?.role === 'doctor';
-  const hasAccess = Boolean(user?.id && booking && isDoctor && (booking.doctorId === user.id || booking.doctorId == null));
+  const hasAccess = Boolean(user?.id && booking && isDoctor && booking.doctorId === user.id);
   const isTerminal = booking ? TERMINAL.includes(booking.status) : false;
 
   const [patientProfile, setPatientProfile] = useState<{

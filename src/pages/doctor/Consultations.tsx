@@ -50,7 +50,7 @@ export default function DoctorConsultations() {
 
     try {
       // Phase 2: load from Supabase so bookings created by patients are visible.
-      const rows: ConsultationRow[] = await consultationsSupabaseService.listForDoctorQueue();
+      const rows: ConsultationRow[] = await consultationsSupabaseService.listForDoctorAssigned(user.id);
 
       // Map to existing MockBooking shape used by the UI.
       const mapped: MockBooking[] = rows.map((r) => {

@@ -17,11 +17,11 @@ export const consultationsSupabaseService = {
     return data || null;
   },
 
-  async listForDoctorQueue(): Promise<ConsultationRow[]> {
-    // RLS already limits access; doctor policy currently allows select for any doctor.
+  async listForDoctorAssigned(doctorId: string): Promise<ConsultationRow[]> {
     const { data, error } = await supabase
       .from('consultations')
       .select('*')
+      .eq('doctor_id', doctorId)
       .order('scheduled_at', { ascending: true });
 
     if (error) throw error;
