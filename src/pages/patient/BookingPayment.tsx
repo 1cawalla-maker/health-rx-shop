@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { mockBookingService } from '@/services/consultationService';
 import { mockAvailabilityService } from '@/services/availabilityService';
+import { supabase } from '@/integrations/supabase/client';
 import { userPreferencesService } from '@/services/userPreferencesService';
 import { getTimezoneAbbr } from '@/lib/datetime';
 import { Button } from '@/components/ui/button';
@@ -94,10 +95,23 @@ export default function BookingPayment() {
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     const confirmed = mockBookingService.confirmPayment(bookingId);
-    
+
     if (confirmed) {
-      toast.success('Payment successful!');
-      navigate(`/patient/booking/confirmation/${bookingId}`);
+      try {
+        // Phase 2: atomically assign doctor + confirm the consultation in Supabase.
+        const { data, error } = await supabase.rpc('confirm_paid_consultation', {
+          _consultation_id: bookingId,
+        });
+        if (error) throw error;
+
+        // If needed later, `data` contains the updated consultation row.
+        toast.success('Payment successful!');
+        navigate(`/patient/booking/confirmation/${bookingId}`);
+      } catch (e) {
+        console.error('Failed to confirm consultation in Supabase:', e);
+        toast.error('Payment succeeded, but we could not confirm your booking. Please try again.');
+        setProcessing(false);
+      }
     } else {
       toast.error('Payment failed. Please try again.');
       setProcessing(false);
