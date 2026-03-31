@@ -74,7 +74,55 @@ export default function DoctorConsultationView() {
   const reload = async () => {
     if (!id) return;
 
-    // Try local mock first (Phase 1)
+    // Phase 2: load from Supabase consultations first.
+    // IMPORTANT: The patient booking flow uses mockBookingService to generate an id that is also
+    // used as the Supabase consultation id. That means the same id may exist in localStorage,
+    // but with a mock doctorId (e.g. "mock-doc-1") which would incorrectly fail doctor access.
+    try {
+      const row = await consultationsSupabaseService.getById(id);
+      if (row) {
+        const scheduled = new Date(String(row.scheduled_at).includes('T') ? String(row.scheduled_at) : String(row.scheduled_at).replace(' ', 'T'));
+        const yyyy = scheduled.getFullYear();
+        const mm = String(scheduled.getMonth() + 1).padStart(2, '0');
+        const dd = String(scheduled.getDate()).padStart(2, '0');
+        const hh = String(scheduled.getHours()).padStart(2, '0');
+        const min = String(scheduled.getMinutes()).padStart(2, '0');
+
+        // Map consultation_status to BookingStatus-like string used by this page.
+        const status = ((): any => {
+          if (row.status === 'cancelled') return 'cancelled';
+          if (row.status === 'completed') return 'completed';
+          if (row.status === 'confirmed') return 'booked';
+          return 'pending_payment';
+        })();
+
+        setBooking({
+          id: row.id,
+          patientId: row.patient_id,
+          doctorId: row.doctor_id,
+          doctorName: null,
+          scheduledDate: `${yyyy}-${mm}-${dd}`,
+          timeWindowStart: `${hh}:${min}`,
+          timeWindowEnd: `${hh}:${min}`,
+          utcTimestamp: scheduled.toISOString(),
+          displayTimezone: row.timezone || 'Australia/Brisbane',
+          status,
+          amountPaid: null,
+          paidAt: null,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+          reservationId: null,
+          callAttempts: [],
+        } as any);
+        setConsultSource('supabase');
+        return;
+      }
+    } catch (err) {
+      console.error('Failed to load consultation from Supabase:', err);
+      // fall through to local
+    }
+
+    // Phase 1 fallback: local mock booking (only if no Supabase row exists)
     const local = doctorPortalService.getBooking(id);
     if (local) {
       setBooking(local);
@@ -82,14 +130,9 @@ export default function DoctorConsultationView() {
       return;
     }
 
-    // Phase 2: load from Supabase consultations
-    try {
-      const row = await consultationsSupabaseService.getById(id);
-      if (!row) {
-        setBooking(null);
-        setConsultSource(null);
-        return;
-      }
+    setBooking(null);
+    setConsultSource(null);
+    return;
 
       const scheduled = new Date(String(row.scheduled_at).includes('T') ? String(row.scheduled_at) : String(row.scheduled_at).replace(' ', 'T'));
       const yyyy = scheduled.getFullYear();
