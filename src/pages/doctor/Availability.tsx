@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { doctorAvailabilityBlocksService } from '@/services/availabilityService';
+import { doctorAvailabilityDateBlocksService } from '@/services/availabilityService';
 import { userPreferencesService } from '@/services/userPreferencesService';
 import { supabase } from '@/integrations/supabase/client';
 import { doctorPortalService } from '@/services/doctorPortalService';
 import { AvailabilityGrid, type GridBooking } from '@/components/doctor/AvailabilityGrid';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertTriangle, ChevronLeft, ChevronRight, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import type { MockAvailabilityBlock } from '@/types/telehealth';
+import { addDays, addWeeks, format, startOfWeek } from 'date-fns';
 
 function formatTime12h(time: string): string {
   const [hh, mm] = time.split(':');
@@ -26,6 +28,8 @@ export default function DoctorAvailability() {
   const { user } = useAuth();
   const [doctorRowId, setDoctorRowId] = useState<string | null>(null);
   const [blocks, setBlocks] = useState<MockAvailabilityBlock[]>([]);
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [nextWeekHasBlocks, setNextWeekHasBlocks] = useState<boolean>(false);
 
   const doctorTz = useMemo(
     () => (user?.id ? userPreferencesService.getTimezone(user.id) : 'Australia/Brisbane'),
@@ -56,10 +60,26 @@ export default function DoctorAvailability() {
     void loadDoctorRowId();
   }, [user?.id]);
 
+  const weekStart = useMemo(() => {
+    // ISO week start (Mon)
+    return startOfWeek(new Date(), { weekStartsOn: 1 });
+  }, []);
+
+  const activeWeekStart = useMemo(() => addWeeks(weekStart, weekOffset), [weekStart, weekOffset]);
+  const activeWeekEnd = useMemo(() => addDays(activeWeekStart, 6), [activeWeekStart]);
+
+  const maxWeekOffset = 3; // 4 weeks in advance inclusive: 0,1,2,3
+
   const refresh = async () => {
     if (!doctorRowId) return;
     try {
-      const data = await doctorAvailabilityBlocksService.getDoctorBlocks(doctorRowId);
+      const startStr = format(activeWeekStart, 'yyyy-MM-dd');
+      const endStr = format(activeWeekEnd, 'yyyy-MM-dd');
+      const data = await doctorAvailabilityDateBlocksService.listForDoctorInRange({
+        doctorRowId,
+        startDate: startStr,
+        endDate: endStr,
+      });
       setBlocks(data);
     } catch (err: any) {
       console.error('Failed to load availability blocks:', err);
@@ -69,7 +89,26 @@ export default function DoctorAvailability() {
 
   useEffect(() => {
     void refresh();
-  }, [doctorRowId]);
+  }, [doctorRowId, weekOffset]);
+
+  useEffect(() => {
+    const run = async () => {
+      if (!doctorRowId) return;
+      try {
+        const nextStart = addWeeks(activeWeekStart, 1);
+        const nextEnd = addDays(nextStart, 6);
+        const data = await doctorAvailabilityDateBlocksService.listForDoctorInRange({
+          doctorRowId,
+          startDate: format(nextStart, 'yyyy-MM-dd'),
+          endDate: format(nextEnd, 'yyyy-MM-dd'),
+        });
+        setNextWeekHasBlocks(data.length > 0);
+      } catch {
+        setNextWeekHasBlocks(false);
+      }
+    };
+    void run();
+  }, [doctorRowId, activeWeekStart]);
 
   const byDay = useMemo(() => {
     const map: Record<number, MockAvailabilityBlock[]> = {};
@@ -113,14 +152,19 @@ export default function DoctorAvailability() {
       );
       return;
     }
+
+    // Convert dayOfWeek column into a concrete date within the active week.
+    // Our grid keys: 1=Mon..6=Sat,0=Sun. date-fns weekStartsOn:1 gives Mon start.
+    const idx = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const dateStr = format(addDays(activeWeekStart, idx), 'yyyy-MM-dd');
+
     try {
-      await doctorAvailabilityBlocksService.addDoctorBlock(doctorRowId, {
-        dayOfWeek,
-        specificDate: null,
+      await doctorAvailabilityDateBlocksService.addBlock({
+        doctorRowId,
+        date: dateStr,
         startTime,
         endTime,
         timezone: doctorTz,
-        isRecurring: true,
       });
       toast.success('Block added');
       await refresh();
@@ -133,7 +177,7 @@ export default function DoctorAvailability() {
   const handleRemoveBlock = async (blockId: string) => {
     if (!doctorRowId) return;
     try {
-      await doctorAvailabilityBlocksService.removeDoctorBlock(doctorRowId, blockId);
+      await doctorAvailabilityDateBlocksService.removeBlock({ doctorRowId, blockId });
       await refresh();
     } catch (err: any) {
       console.error('Failed to remove block:', err);
@@ -144,14 +188,18 @@ export default function DoctorAvailability() {
   const handleEditBlock = async (blockId: string, dayOfWeek: number, startTime: string, endTime: string) => {
     if (!doctorRowId) return;
     try {
-      await doctorAvailabilityBlocksService.removeDoctorBlock(doctorRowId, blockId);
-      await doctorAvailabilityBlocksService.addDoctorBlock(doctorRowId, {
-        dayOfWeek,
-        specificDate: null,
+      // Preserve the original date (specificDate) if available; otherwise map by day into active week.
+      const existingBlock = blocks.find((b) => b.id === blockId);
+      const idx = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      const dateStr = existingBlock?.specificDate || format(addDays(activeWeekStart, idx), 'yyyy-MM-dd');
+
+      await doctorAvailabilityDateBlocksService.removeBlock({ doctorRowId, blockId });
+      await doctorAvailabilityDateBlocksService.addBlock({
+        doctorRowId,
+        date: dateStr,
         startTime,
         endTime,
         timezone: doctorTz,
-        isRecurring: true,
       });
       await refresh();
     } catch (err: any) {
@@ -160,43 +208,50 @@ export default function DoctorAvailability() {
     }
   };
 
-  const handleCopyMondayToWeekdays = async () => {
+  const handleCopyWeekToNextWeek = async () => {
     if (!doctorRowId) return;
-    const monBlocks = byDay[1] || [];
-    if (monBlocks.length === 0) {
-      toast.error('No Monday blocks to copy');
+    if (weekOffset >= maxWeekOffset) {
+      toast.error('You can only set availability up to 4 weeks in advance');
       return;
     }
 
     try {
-      let copied = 0;
-      for (const targetDay of [2, 3, 4, 5]) {
-        const existing = byDay[targetDay] || [];
-        for (const block of monBlocks) {
-          const isDuplicate = existing.some(
-            (eb) => eb.startTime === block.startTime && eb.endTime === block.endTime
-          );
-          if (isDuplicate) continue;
-          const overlapping = existing.find((eb) => blocksOverlap(block, eb));
-          if (overlapping) continue;
+      const nextStart = addWeeks(activeWeekStart, 1);
+      const nextEnd = addDays(nextStart, 6);
 
-          await doctorAvailabilityBlocksService.addDoctorBlock(doctorRowId, {
-            dayOfWeek: targetDay,
-            specificDate: null,
-            startTime: block.startTime,
-            endTime: block.endTime,
-            timezone: doctorTz,
-            isRecurring: true,
-          });
-          copied++;
-        }
+      // Load next week blocks so we avoid creating exact duplicates.
+      const nextBlocks = await doctorAvailabilityDateBlocksService.listForDoctorInRange({
+        doctorRowId,
+        startDate: format(nextStart, 'yyyy-MM-dd'),
+        endDate: format(nextEnd, 'yyyy-MM-dd'),
+      });
+
+      const existingKey = new Set(nextBlocks.map((b) => `${b.specificDate}|${b.startTime}|${b.endTime}`));
+
+      let copied = 0;
+      for (const b of blocks) {
+        if (!b.specificDate) continue;
+        const srcDate = new Date(`${b.specificDate}T00:00:00`);
+        const dstDate = format(addDays(srcDate, 7), 'yyyy-MM-dd');
+        const key = `${dstDate}|${b.startTime}|${b.endTime}`;
+        if (existingKey.has(key)) continue;
+
+        await doctorAvailabilityDateBlocksService.addBlock({
+          doctorRowId,
+          date: dstDate,
+          startTime: b.startTime,
+          endTime: b.endTime,
+          timezone: doctorTz,
+        });
+        copied++;
       }
 
-      toast.success(`Copied ${copied} block(s) to Tue–Fri`);
-      await refresh();
+      toast.success(`Copied ${copied} block(s) to next week`);
+      // Optional: jump to next week automatically
+      setWeekOffset((w) => Math.min(w + 1, maxWeekOffset));
     } catch (err: any) {
-      console.error('Failed to copy blocks:', err);
-      toast.error(err?.message || 'Failed to copy blocks');
+      console.error('Failed to copy week:', err);
+      toast.error(err?.message || 'Failed to copy week');
     }
   };
 
@@ -204,9 +259,9 @@ export default function DoctorAvailability() {
     if (!doctorRowId) return;
     try {
       for (const b of blocks) {
-        await doctorAvailabilityBlocksService.removeDoctorBlock(doctorRowId, b.id);
+        await doctorAvailabilityDateBlocksService.removeBlock({ doctorRowId, blockId: b.id });
       }
-      toast.success('All blocks cleared');
+      toast.success('This week cleared');
       await refresh();
     } catch (err: any) {
       console.error('Failed to clear week:', err);
@@ -218,22 +273,23 @@ export default function DoctorAvailability() {
     if (!doctorRowId) return;
 
     try {
-      // Clear existing weekday blocks
+      // Clear existing blocks in this week (Mon-Fri)
       for (const b of blocks) {
         if (b.dayOfWeek !== null && b.dayOfWeek >= 1 && b.dayOfWeek <= 5) {
-          await doctorAvailabilityBlocksService.removeDoctorBlock(doctorRowId, b.id);
+          await doctorAvailabilityDateBlocksService.removeBlock({ doctorRowId, blockId: b.id });
         }
       }
 
-      // Add preset
+      // Add preset (Mon-Fri 09:00-17:00)
       for (const day of [1, 2, 3, 4, 5]) {
-        await doctorAvailabilityBlocksService.addDoctorBlock(doctorRowId, {
-          dayOfWeek: day,
-          specificDate: null,
+        const idx = day === 0 ? 6 : day - 1;
+        const dateStr = format(addDays(activeWeekStart, idx), 'yyyy-MM-dd');
+        await doctorAvailabilityDateBlocksService.addBlock({
+          doctorRowId,
+          date: dateStr,
           startTime: '09:00',
           endTime: '17:00',
           timezone: doctorTz,
-          isRecurring: true,
         });
       }
 
@@ -247,9 +303,44 @@ export default function DoctorAvailability() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-3xl font-bold">Availability</h1>
-        <p className="text-muted-foreground mt-1">Set your weekly recurring availability</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-bold">Availability</h1>
+          <p className="text-muted-foreground mt-1">Set your availability up to 4 weeks in advance</p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="text-sm text-muted-foreground mr-2">
+            Week of <strong className="text-foreground">{format(activeWeekStart, 'd MMM')}</strong> –{' '}
+            <strong className="text-foreground">{format(activeWeekEnd, 'd MMM')}</strong>
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setWeekOffset((w) => Math.max(0, w - 1))}
+            disabled={weekOffset === 0}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setWeekOffset((w) => Math.min(maxWeekOffset, w + 1))}
+            disabled={weekOffset >= maxWeekOffset}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+
+          <Button
+            size="sm"
+            variant={nextWeekHasBlocks ? 'outline' : 'default'}
+            onClick={() => setWeekOffset((w) => Math.min(maxWeekOffset, w + 1))}
+            disabled={weekOffset >= maxWeekOffset}
+          >
+            {nextWeekHasBlocks ? 'View next week availability' : 'Set next week availability'}
+          </Button>
+        </div>
       </div>
 
       <Alert className="border-blue-500/50 bg-blue-500/10">
@@ -268,7 +359,7 @@ export default function DoctorAvailability() {
         onAddBlock={handleAddBlock}
         onRemoveBlock={handleRemoveBlock}
         onEditBlock={handleEditBlock}
-        onCopyMondayToWeekdays={handleCopyMondayToWeekdays}
+        onCopyMondayToWeekdays={handleCopyWeekToNextWeek}
         onClearWeek={handleClearWeek}
         onSetWeekdayPreset={handleSetWeekdayPreset}
       />

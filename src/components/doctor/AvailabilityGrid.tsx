@@ -527,7 +527,7 @@ export function AvailabilityGrid({
       {/* Action buttons */}
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm" className="gap-1.5" onClick={onCopyMondayToWeekdays}>
-          <Copy className="h-3.5 w-3.5" />Copy Mon → Weekdays
+          <Copy className="h-3.5 w-3.5" />Copy Week → Next Week
         </Button>
         <Button variant="outline" size="sm" className="gap-1.5" onClick={onSetWeekdayPreset}>
           <Clock className="h-3.5 w-3.5" />Set 9–5 Weekdays
@@ -538,7 +538,7 @@ export function AvailabilityGrid({
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Click and drag to create blocks. {isMobile ? 'Tap' : 'Click'} a block to {isMobile ? 'edit or delete' : 'select'}. {!isMobile && 'Press Backspace to delete.'} All times in <strong>{timezone}</strong>.
+        Click and drag to create blocks. {isMobile ? 'Tap' : 'Click'} a block to {isMobile ? 'edit or delete' : 'select'}. {!isMobile && 'Press Backspace to delete.'} No blocks means unavailable. All times in <strong>{timezone}</strong>.
       </p>
 
       {/* Grid with scroll container */}

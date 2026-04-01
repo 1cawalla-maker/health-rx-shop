@@ -400,126 +400,114 @@ export const mockAvailabilityService = {
   },
 };
 
-// NOTE: The live Supabase schema uses `doctor_availability` (weekly recurring), not `doctor_availability_blocks`.
-// We keep the UI contract as "blocks" and map to the DB table.
-export const doctorAvailabilityBlocksService = {
-  async getDoctorBlocks(doctorId: string): Promise<MockAvailabilityBlock[]> {
-    const { data, error } = await supabase
-      .from('doctor_availability')
+// NOTE: We now support explicit per-date availability via `doctor_availability_blocks`.
+// A doctor is unavailable by default unless they add one or more blocks for a date.
+export const doctorAvailabilityDateBlocksService = {
+  async listForDoctorInRange(params: {
+    doctorRowId: string;
+    startDate: string; // yyyy-MM-dd
+    endDate: string;   // yyyy-MM-dd (inclusive)
+  }): Promise<MockAvailabilityBlock[]> {
+    const { data, error } = await (supabase as any)
+      .from('doctor_availability_blocks')
       .select('*')
-      .eq('doctor_id', doctorId)
-      .order('day_of_week', { ascending: true })
+      .eq('doctor_id', params.doctorRowId)
+      .gte('date', params.startDate)
+      .lte('date', params.endDate)
+      .order('date', { ascending: true })
       .order('start_time', { ascending: true });
 
     if (error) throw error;
 
-    return (data || []).map((r: any) => ({
-      id: r.id,
-      doctorId: r.doctor_id,
-      doctorName: '',
-      dayOfWeek: r.day_of_week,
-      specificDate: null,
-      startTime: (r.start_time || '').slice(0, 5),
-      endTime: (r.end_time || '').slice(0, 5),
-      timezone: r.timezone,
-      isRecurring: true,
-      isActive: r.is_available ?? true,
-    }));
+    return (data || []).map((r: any) => {
+      const dateStr = String(r.date);
+      // dateStr is yyyy-MM-dd, safe to new Date(...) at midnight local; we only need day column mapping.
+      const dayOfWeek = new Date(`${dateStr}T00:00:00`).getDay();
+      return {
+        id: r.id,
+        doctorId: r.doctor_id,
+        doctorName: '',
+        dayOfWeek,
+        specificDate: dateStr,
+        startTime: (r.start_time || '').slice(0, 5),
+        endTime: (r.end_time || '').slice(0, 5),
+        timezone: r.timezone,
+        isRecurring: false,
+        isActive: true,
+      } as any;
+    });
   },
 
-  async addDoctorBlock(
-    doctorId: string,
-    block: Omit<MockAvailabilityBlock, 'id' | 'doctorId' | 'doctorName' | 'isActive'>
-  ): Promise<MockAvailabilityBlock> {
-    if (block.specificDate) {
-      console.warn('[doctorAvailabilityBlocksService] specificDate is not supported by doctor_availability; ignoring');
-    }
-
-    const { data, error } = await supabase
-      .from('doctor_availability')
+  async addBlock(params: {
+    doctorRowId: string;
+    date: string; // yyyy-MM-dd
+    startTime: string; // HH:mm
+    endTime: string; // HH:mm
+    timezone: string;
+  }): Promise<void> {
+    const { error } = await (supabase as any)
+      .from('doctor_availability_blocks')
       .insert({
-        doctor_id: doctorId,
-        day_of_week: block.dayOfWeek ?? 0,
-        start_time: block.startTime,
-        end_time: block.endTime,
-        timezone: block.timezone,
-        is_available: true,
-      })
-      .select('*')
-      .single();
+        doctor_id: params.doctorRowId,
+        date: params.date,
+        start_time: params.startTime,
+        end_time: params.endTime,
+        timezone: params.timezone,
+      });
 
     if (error) throw error;
-
-    return {
-      id: data.id,
-      doctorId: data.doctor_id,
-      doctorName: '',
-      dayOfWeek: data.day_of_week,
-      specificDate: null,
-      startTime: (data.start_time || '').slice(0, 5),
-      endTime: (data.end_time || '').slice(0, 5),
-      timezone: data.timezone,
-      isRecurring: true,
-      isActive: data.is_available ?? true,
-    };
   },
 
-  async removeDoctorBlock(doctorId: string, blockId: string): Promise<boolean> {
-    const { error, count } = await supabase
-      .from('doctor_availability')
-      .delete({ count: 'exact' })
-      .eq('id', blockId)
-      .eq('doctor_id', doctorId);
+  async removeBlock(params: { doctorRowId: string; blockId: string }): Promise<void> {
+    const { error } = await (supabase as any)
+      .from('doctor_availability_blocks')
+      .delete()
+      .eq('id', params.blockId)
+      .eq('doctor_id', params.doctorRowId);
 
     if (error) throw error;
-    return (count || 0) > 0;
   },
 };
 
 export const supabaseAvailabilityService = {
   async getDatesWithAvailability(minDate: Date, maxDate: Date): Promise<string[]> {
-    // Preload weekly recurring availability and then mark dates in range.
-    const { data, error } = await supabase
-      .from('doctor_availability')
-      .select('day_of_week,is_available');
-
-    if (error) throw error;
-
-    const availableDays = new Set<number>();
-    for (const row of data || []) {
-      if (row.is_available === false) continue;
-      availableDays.add(row.day_of_week);
-    }
-
-    const dates: string[] = [];
-    const d = new Date(minDate);
-    d.setHours(0, 0, 0, 0);
+    // Explicit per-date availability: return all distinct dates that have >=1 availability block.
+    const start = new Date(minDate);
+    start.setHours(0, 0, 0, 0);
     const end = new Date(maxDate);
     end.setHours(0, 0, 0, 0);
 
-    while (d <= end) {
-      if (availableDays.has(d.getDay())) {
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        dates.push(`${yyyy}-${mm}-${dd}`);
-      }
-      d.setDate(d.getDate() + 1);
+    const yyyy1 = start.getFullYear();
+    const mm1 = String(start.getMonth() + 1).padStart(2, '0');
+    const dd1 = String(start.getDate()).padStart(2, '0');
+    const startStr = `${yyyy1}-${mm1}-${dd1}`;
+
+    const yyyy2 = end.getFullYear();
+    const mm2 = String(end.getMonth() + 1).padStart(2, '0');
+    const dd2 = String(end.getDate()).padStart(2, '0');
+    const endStr = `${yyyy2}-${mm2}-${dd2}`;
+
+    const { data, error } = await supabase
+      .from('doctor_availability_blocks')
+      .select('date')
+      .gte('date', startStr)
+      .lte('date', endStr);
+
+    if (error) throw error;
+
+    const set = new Set<string>();
+    for (const row of data || []) {
+      if (row?.date) set.add(String(row.date));
     }
 
-    return dates;
+    return Array.from(set).sort();
   },
 
   async getAggregatedSlotsForDate(dateStr: string): Promise<FiveMinuteSlot[]> {
-    // dateStr: yyyy-MM-dd
-    const dateObj = new Date(`${dateStr}T00:00:00`);
-    const dayOfWeek = dateObj.getDay();
-
     const { data, error } = await supabase
-      .from('doctor_availability')
-      .select('doctor_id,start_time,end_time,timezone,is_available,day_of_week')
-      .eq('day_of_week', dayOfWeek)
-      .neq('is_available', false);
+      .from('doctor_availability_blocks')
+      .select('doctor_id,start_time,end_time,timezone,date')
+      .eq('date', dateStr);
 
     if (error) throw error;
 
@@ -552,8 +540,7 @@ export const supabaseAvailabilityService = {
       .filter((s) => (s.doctorIds || []).length > 0)
       .sort((a, b) => a.time.localeCompare(b.time));
 
-    // Subtract server-side holds (consultation_reservations) so the patient UI never shows
-    // times that will fail at booking/confirmation.
+    // Subtract server-side holds (consultation_reservations)
     try {
       if (slots.length) {
         const utcTimes = slots.map((s) => new Date(s.utcTimestamp).getTime()).sort((a, b) => a - b);
@@ -589,7 +576,7 @@ export const supabaseAvailabilityService = {
             const block = byUtc.get(key);
             if (!block) return s;
 
-            // If we don't know the reserved doctor (doctor_id missing), be conservative and block the whole time.
+            // If we don't know reserved doctor, be conservative and block the whole time.
             if (block.doctorIds.some((d) => !d)) {
               return { ...s, doctorIds: [], isAvailable: false };
             }
@@ -602,7 +589,6 @@ export const supabaseAvailabilityService = {
       }
     } catch (e) {
       console.error('Failed to subtract reservations from availability:', e);
-      // If we fail to load reservations, we keep the raw weekly availability.
     }
 
     return slots;
