@@ -184,7 +184,10 @@ export default function BookConsultation() {
             scheduled_at: booking.utcTimestamp,
             expires_at: expiresAt,
             status: 'active',
-          });
+            // IMPORTANT: capture the held doctor so other patients won't see/select this time.
+            // If the column doesn't exist yet, add it via SQL: ALTER TABLE public.consultation_reservations ADD COLUMN doctor_id uuid;
+            doctor_id: booking.doctorId,
+          } as any);
 
         if (reservationError) throw reservationError;
 

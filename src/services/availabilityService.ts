@@ -548,9 +548,64 @@ export const supabaseAvailabilityService = {
       }
     }
 
-    return Array.from(byTime.values())
+    let slots = Array.from(byTime.values())
       .filter((s) => (s.doctorIds || []).length > 0)
       .sort((a, b) => a.time.localeCompare(b.time));
+
+    // Subtract server-side holds (consultation_reservations) so the patient UI never shows
+    // times that will fail at booking/confirmation.
+    try {
+      if (slots.length) {
+        const utcTimes = slots.map((s) => new Date(s.utcTimestamp).getTime()).sort((a, b) => a - b);
+        const startIso = new Date(utcTimes[0]).toISOString();
+        const endIso = new Date(utcTimes[utcTimes.length - 1] + 5 * 60 * 1000).toISOString();
+
+        const { data: reservations, error: resErr } = await supabase
+          .from('consultation_reservations')
+          .select('scheduled_at, doctor_id, expires_at, status')
+          .gte('scheduled_at', startIso)
+          .lt('scheduled_at', endIso)
+          .in('status', ['active', 'confirmed']);
+
+        if (resErr) throw resErr;
+
+        const now = Date.now();
+        const blocking = (reservations || []).filter((r: any) => {
+          if (r.status === 'confirmed') return true;
+          return new Date(r.expires_at).getTime() > now;
+        });
+
+        const byUtc = new Map<string, { doctorIds: (string | null)[] }>();
+        for (const r of blocking) {
+          const key = new Date(r.scheduled_at).toISOString();
+          const arr = byUtc.get(key) || { doctorIds: [] as (string | null)[] };
+          arr.doctorIds.push((r as any).doctor_id ?? null);
+          byUtc.set(key, arr);
+        }
+
+        slots = slots
+          .map((s) => {
+            const key = new Date(s.utcTimestamp).toISOString();
+            const block = byUtc.get(key);
+            if (!block) return s;
+
+            // If we don't know the reserved doctor (doctor_id missing), be conservative and block the whole time.
+            if (block.doctorIds.some((d) => !d)) {
+              return { ...s, doctorIds: [], isAvailable: false };
+            }
+
+            const reservedSet = new Set(block.doctorIds.filter(Boolean) as string[]);
+            const remaining = (s.doctorIds || []).filter((d) => !reservedSet.has(d));
+            return { ...s, doctorIds: remaining, isAvailable: remaining.length > 0 };
+          })
+          .filter((s) => (s.doctorIds || []).length > 0);
+      }
+    } catch (e) {
+      console.error('Failed to subtract reservations from availability:', e);
+      // If we fail to load reservations, we keep the raw weekly availability.
+    }
+
+    return slots;
   },
 };
 
