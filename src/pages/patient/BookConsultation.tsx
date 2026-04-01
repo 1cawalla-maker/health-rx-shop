@@ -119,6 +119,13 @@ export default function BookConsultation() {
       return;
     }
 
+    // Guard: slot must still be available (defensive against stale UI)
+    if (!selectedSlot.isAvailable || (selectedSlot.doctorIds || []).length === 0) {
+      toast.error('That time slot is no longer available. Please select another time.');
+      setSelectedSlot(undefined);
+      return;
+    }
+
     // Validate reschedule params
     if (isReschedule && !rescheduleParamsValid) {
       toast.error('Invalid reschedule request. Please try again from your dashboard.');
@@ -277,7 +284,13 @@ export default function BookConsultation() {
                 available: (date) => dateHasAvailability(date) && !isBefore(date, startOfDay(minDate)) && date <= maxDate,
               }}
               modifiersStyles={{
-                available: { fontWeight: 'bold' },
+                // Visually emphasise dates with availability (still only selectable if not disabled)
+                available: {
+                  fontWeight: 'bold',
+                  backgroundColor: 'hsl(var(--foreground))',
+                  color: 'hsl(var(--background))',
+                  borderRadius: '6px',
+                },
               }}
             />
             {datesWithAvailability.size === 0 && (
@@ -324,17 +337,22 @@ export default function BookConsultation() {
                       {hour}:00 - {hour}:59
                     </p>
                     <div className="grid grid-cols-4 gap-1.5">
-                      {slots.map((slot) => (
-                        <Button
-                          key={slot.time}
-                          variant={selectedSlot?.time === slot.time ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setSelectedSlot(slot)}
-                          className="text-xs h-8"
-                        >
-                          {slot.time}
-                        </Button>
-                      ))}
+                      {slots.map((slot) => {
+                        const isDisabled = !slot.isAvailable || (slot.doctorIds || []).length === 0;
+                        return (
+                          <Button
+                            key={slot.time}
+                            variant={selectedSlot?.time === slot.time ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setSelectedSlot(slot)}
+                            className="text-xs h-8"
+                            disabled={isDisabled}
+                            title={isDisabled ? 'No doctors available at this time' : undefined}
+                          >
+                            {slot.time}
+                          </Button>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
