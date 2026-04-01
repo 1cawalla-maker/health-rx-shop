@@ -155,19 +155,24 @@ export default function DoctorConsultationView() {
     dateOfBirth: string | null;
   } | null>(null);
 
-  // Patient profile (Supabase)
+  const [intakePhone, setIntakePhone] = useState<string | null>(null);
+
+  // Patient identity + phone (Supabase)
   useEffect(() => {
     const run = async () => {
       if (!booking?.patientId) {
         setPatientProfile(null);
+        setIntakePhone(null);
         return;
       }
+
+      // 1) Core identity from profiles (name/phone/dob)
       try {
         const { data, error } = await supabase
           .from('profiles')
           .select('full_name, phone, date_of_birth')
           .eq('user_id', booking.patientId)
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
 
@@ -180,10 +185,26 @@ export default function DoctorConsultationView() {
         console.error('Failed to load patient profile:', err);
         setPatientProfile(null);
       }
+
+      // 2) Fallback phone from intake (often captured earlier than profile phone)
+      try {
+        if (!id) { setIntakePhone(null); return; }
+        const { data, error } = await supabase
+          .from('intake_forms')
+          .select('phone_number')
+          .eq('booking_id', id)
+          .maybeSingle();
+
+        if (error) throw error;
+        setIntakePhone((data as any)?.phone_number ?? null);
+      } catch (err) {
+        console.error('Failed to load intake phone:', err);
+        setIntakePhone(null);
+      }
     };
 
     void run();
-  }, [booking?.patientId]);
+  }, [booking?.patientId, id]);
 
   const scheduledAt = useMemo(() => {
     if (!booking) return null;
@@ -292,10 +313,10 @@ export default function DoctorConsultationView() {
   }, [id, consultNotes]);
 
   const handleCopyPhone = useCallback(() => {
-    const phone = patientProfile?.phoneE164;
+    const phone = patientProfile?.phoneE164 || intakePhone;
     if (!phone) return;
     navigator.clipboard.writeText(phone).then(() => toast.success('Phone number copied'));
-  }, [patientProfile]);
+  }, [patientProfile, intakePhone]);
 
   if (!booking || !hasAccess) {
     return (
@@ -351,9 +372,9 @@ export default function DoctorConsultationView() {
               <p className="text-xs text-muted-foreground mb-1">Phone Number</p>
               <div className="flex items-center gap-2">
                 <p className="text-xl font-bold tracking-wide text-primary">
-                  {patientProfile?.phoneE164 ? formatPhoneDisplay(patientProfile.phoneE164) : 'Not provided'}
+                  {(patientProfile?.phoneE164 || intakePhone) ? formatPhoneDisplay((patientProfile?.phoneE164 || intakePhone) as string) : 'Not provided'}
                 </p>
-                {patientProfile?.phoneE164 && (
+                {(patientProfile?.phoneE164 || intakePhone) && (
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopyPhone}>
                     <Copy className="h-4 w-4" />
                   </Button>
