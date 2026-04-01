@@ -287,12 +287,12 @@ export default function BookConsultation() {
                 available: (date) => dateHasAvailability(date) && !isBefore(date, startOfDay(minDate)) && date <= maxDate,
               }}
               modifiersStyles={{
-                // Visually emphasise dates with availability (still only selectable if not disabled)
+                // Soft highlight for dates with availability (on-brand, easier on the eyes)
                 available: {
-                  fontWeight: 'bold',
-                  backgroundColor: 'hsl(var(--foreground))',
-                  color: 'hsl(var(--background))',
-                  borderRadius: '6px',
+                  fontWeight: 600,
+                  backgroundColor: 'hsl(var(--primary) / 0.12)',
+                  color: 'hsl(var(--primary))',
+                  borderRadius: '10px',
                 },
               }}
             />
