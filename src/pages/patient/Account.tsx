@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { userPreferencesService } from '@/services/userPreferencesService';
 import { userProfileService } from '@/services/userProfileService';
+import { supabase } from '@/integrations/supabase/client';
 import { AU_TIMEZONE_OPTIONS } from '@/lib/timezones';
 import { validateDob, formatDobForStorage, parseDobFromStorage, validateAuPhone, stripAuPrefix } from '@/lib/validation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -81,6 +82,7 @@ export default function PatientAccount() {
     const phoneE164 = `+61${phone}`;
     const dateOfBirth = (dobDay && dobMonth && dobYear) ? formatDobForStorage(dobDay, dobMonth, dobYear) : null;
 
+    // Phase 1 local profile (kept for UI responsiveness)
     userProfileService.upsertProfile(user.id, {
       contactEmail,
       fullName,
@@ -88,6 +90,27 @@ export default function PatientAccount() {
       phoneE164,
       timezone,
     });
+
+    // Phase 2: persist into Supabase profiles so doctors can see patient details.
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .upsert(
+          {
+            user_id: user.id,
+            full_name: fullName || null,
+            phone: phoneE164 || null,
+            date_of_birth: dateOfBirth,
+          } as any,
+          { onConflict: 'user_id' }
+        );
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Failed to save profile to Supabase:', err);
+      // Keep local save, but surface a hint.
+      toast.error('Saved locally, but could not sync profile to server');
+    }
 
     userPreferencesService.setTimezone(user.id, timezone);
 
