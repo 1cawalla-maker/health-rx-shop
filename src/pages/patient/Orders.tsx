@@ -276,9 +276,20 @@ export default function PatientOrders() {
                   </div>
 
                   {/* Shipping Address */}
-                  <div className="pt-4 border-t">
+                  <div className="pt-4 border-t space-y-1">
                     <p className="text-sm text-muted-foreground">
-                      <strong>Shipping to:</strong> {order.shippingAddress.fullName}, {order.shippingAddress.suburb}, {order.shippingAddress.state} {order.shippingAddress.postcode}
+                      <strong>Shipping to:</strong> {order.shippingAddress.fullName}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {order.shippingAddress.addressLine1}
+                    </p>
+                    {order.shippingAddress.addressLine2 && (
+                      <p className="text-sm text-muted-foreground">
+                        {order.shippingAddress.addressLine2}
+                      </p>
+                    )}
+                    <p className="text-sm text-muted-foreground">
+                      {order.shippingAddress.suburb}, {order.shippingAddress.state} {order.shippingAddress.postcode}
                     </p>
                   </div>
                 </div>
