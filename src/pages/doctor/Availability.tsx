@@ -30,6 +30,7 @@ export default function DoctorAvailability() {
   const [blocks, setBlocks] = useState<MockAvailabilityBlock[]>([]);
   const [weekOffset, setWeekOffset] = useState(0);
   const [nextWeekHasBlocks, setNextWeekHasBlocks] = useState<boolean>(false);
+  const [slideDirection, setSlideDirection] = useState<'prev' | 'next' | null>(null);
 
   const doctorTz = useMemo(
     () => (user?.id ? userPreferencesService.getTimezone(user.id) : 'Australia/Brisbane'),
@@ -342,7 +343,10 @@ export default function DoctorAvailability() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setWeekOffset((w) => Math.max(0, w - 1))}
+            onClick={() => {
+              setSlideDirection('prev');
+              setWeekOffset((w) => Math.max(0, w - 1));
+            }}
             disabled={weekOffset === 0}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -350,7 +354,10 @@ export default function DoctorAvailability() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setWeekOffset((w) => Math.min(maxWeekOffset, w + 1))}
+            onClick={() => {
+              setSlideDirection('next');
+              setWeekOffset((w) => Math.min(maxWeekOffset, w + 1));
+            }}
             disabled={weekOffset >= maxWeekOffset}
           >
             <ChevronRight className="h-4 w-4" />
@@ -359,7 +366,10 @@ export default function DoctorAvailability() {
           <Button
             size="sm"
             variant={nextWeekHasBlocks ? 'outline' : 'default'}
-            onClick={() => setWeekOffset((w) => Math.min(maxWeekOffset, w + 1))}
+            onClick={() => {
+              setSlideDirection('next');
+              setWeekOffset((w) => Math.min(maxWeekOffset, w + 1));
+            }}
             disabled={weekOffset >= maxWeekOffset}
           >
             {nextWeekHasBlocks ? 'View next week availability' : 'Set next week availability'}
@@ -379,6 +389,8 @@ export default function DoctorAvailability() {
       <AvailabilityGrid
         blocks={blocks}
         timezone={doctorTz}
+        weekStartDate={activeWeekStart}
+        slideDirection={slideDirection}
         bookings={gridBookings}
         onAddBlock={handleAddBlock}
         onRemoveBlock={handleRemoveBlock}

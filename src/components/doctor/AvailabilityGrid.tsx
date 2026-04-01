@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Copy, Trash2, Clock, CalendarCheck, Pencil } from 'lucide-react';
+import { addDays, format } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { MockAvailabilityBlock } from '@/types/telehealth';
 
@@ -86,6 +87,8 @@ export interface GridBooking {
 interface AvailabilityGridProps {
   blocks: MockAvailabilityBlock[];
   timezone: string;
+  weekStartDate?: Date; // Monday of the currently viewed week
+  slideDirection?: 'prev' | 'next' | null;
   bookings?: GridBooking[];
   onAddBlock: (dayOfWeek: number, startTime: string, endTime: string) => void;
   onRemoveBlock: (blockId: string) => void;
@@ -131,6 +134,8 @@ function splitBlockAroundBookings(
 export function AvailabilityGrid({
   blocks,
   timezone,
+  weekStartDate,
+  slideDirection = null,
   bookings = [],
   onAddBlock,
   onRemoveBlock,
@@ -174,6 +179,20 @@ export function AvailabilityGrid({
     return map;
   }, [blocks]);
 
+  const dayHeaderDates = useMemo(() => {
+    if (!weekStartDate) return null;
+    const map: Record<number, string> = {};
+    // weekStartDate is Monday. Grid keys: 1=Mon..6=Sat,0=Sun.
+    map[1] = format(addDays(weekStartDate, 0), 'd MMM');
+    map[2] = format(addDays(weekStartDate, 1), 'd MMM');
+    map[3] = format(addDays(weekStartDate, 2), 'd MMM');
+    map[4] = format(addDays(weekStartDate, 3), 'd MMM');
+    map[5] = format(addDays(weekStartDate, 4), 'd MMM');
+    map[6] = format(addDays(weekStartDate, 5), 'd MMM');
+    map[0] = format(addDays(weekStartDate, 6), 'd MMM');
+    return map;
+  }, [weekStartDate]);
+
   const bookingsByDay = useMemo(() => {
     const map: Record<number, GridBooking[]> = {};
     for (const b of bookings) {
@@ -184,6 +203,9 @@ export function AvailabilityGrid({
   }, [bookings]);
 
   const totalHeight = TOTAL_HOURS * PX_PER_HOUR;
+
+  // Key used to re-trigger the week slide animation
+  const slideKey = useMemo(() => (weekStartDate ? format(weekStartDate, 'yyyy-MM-dd') : 'no-week'), [weekStartDate]);
 
   /* ─── E3: auto-scroll during drag ─── */
   const autoScrollLoop = useCallback(() => {
@@ -456,7 +478,15 @@ export function AvailabilityGrid({
 
   /* ─── render ─── */
   return (
-    <div className="space-y-4">
+    <div
+      key={slideKey}
+      className={cn(
+        'space-y-4',
+        slideDirection ? 'animate-in duration-200' : '',
+        slideDirection === 'next' ? 'slide-in-from-right-2' : '',
+        slideDirection === 'prev' ? 'slide-in-from-left-2' : ''
+      )}
+    >
       <Dialog
         open={Boolean(editingBlock)}
         onOpenChange={(open) => {
@@ -553,7 +583,7 @@ export function AvailabilityGrid({
         <div ref={gridRef} className="flex min-w-[700px]">
           {/* Time axis */}
           <div className="w-16 shrink-0 border-r border-border sticky left-0 bg-background z-10">
-            <div className="h-8 border-b border-border sticky top-0 bg-background z-20" />
+            <div className="h-10 border-b border-border sticky top-0 bg-background z-20" />
             <div className="relative" style={{ height: totalHeight }}>
               {hourMarkers.map((h) => (
                 <div
@@ -575,11 +605,16 @@ export function AvailabilityGrid({
             return (
               <div key={day} className="flex-1 min-w-[85px] border-r border-border last:border-r-0">
                 {/* Day header */}
-                <div className="h-8 flex items-center justify-center border-b border-border sticky top-0 bg-background z-20">
-                  <span className="text-xs font-medium text-muted-foreground">{label}</span>
-                  {dayBlocks.length > 0 && (
-                    <span className="ml-1 text-[10px] text-primary font-medium">({dayBlocks.length})</span>
-                  )}
+                <div className="h-10 flex flex-col items-center justify-center border-b border-border sticky top-0 bg-background z-20">
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs font-medium text-muted-foreground">{label}</span>
+                    {dayHeaderDates && (
+                      <span className="text-xs font-semibold text-foreground">{dayHeaderDates[day]}</span>
+                    )}
+                    {dayBlocks.length > 0 && (
+                      <span className="text-[10px] text-primary font-medium">({dayBlocks.length})</span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Time column */}
