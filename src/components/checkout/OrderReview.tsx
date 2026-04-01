@@ -2,8 +2,6 @@ import { Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import type { Cart, ShippingAddress, ShippingMethod } from '@/types/shop';
 
@@ -15,8 +13,6 @@ interface OrderReviewProps {
   shippingMethod: ShippingMethod;
   prescriptionRef?: string;
   maxContainers?: number;
-  agreedToTerms: boolean;
-  onAgreeChange: (agreed: boolean) => void;
   onEditShipping: () => void;
   onProceedToPayment: () => void;
 }
@@ -29,8 +25,6 @@ export function OrderReview({
   shippingMethod,
   prescriptionRef,
   maxContainers,
-  agreedToTerms,
-  onAgreeChange,
   onEditShipping,
   onProceedToPayment,
 }: OrderReviewProps) {
@@ -128,29 +122,11 @@ export function OrderReview({
         </AlertDescription>
       </Alert>
 
-      {/* Terms Agreement */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-start gap-3">
-            <Checkbox
-              id="terms"
-              checked={agreedToTerms}
-              onCheckedChange={(checked) => onAgreeChange(checked === true)}
-            />
-            <Label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
-              I understand that my order is based on my active prescription and that orders are final. 
-              I confirm that all items in this order comply with my prescription limits.
-            </Label>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Continue Button */}
       <Button
         className="w-full"
         size="lg"
         onClick={onProceedToPayment}
-        disabled={!agreedToTerms}
       >
         Continue to Payment
       </Button>
