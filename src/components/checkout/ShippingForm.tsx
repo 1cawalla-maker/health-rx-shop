@@ -1,4 +1,4 @@
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm, useWatch, Controller } from 'react-hook-form';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,8 @@ import { AUSTRALIAN_STATES } from '@/types/shop';
 import { shippingFormService } from '@/services/shippingFormService';
 import { getAvailableShippingQuotes } from '@/services/shippingService';
 import { ShippingMethodSelector } from '@/components/checkout/ShippingMethodSelector';
+import { AddressAutocompleteInput } from '@/components/checkout/AddressAutocompleteInput';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ShippingFormProps {
   userId?: string;
@@ -41,7 +43,44 @@ export function ShippingForm({ userId, initialData, onSubmit, totalCans, selecte
 
   const selectedState = useWatch({ control, name: 'state' });
 
-  // Load saved draft on mount (if no initialData provided)
+  // Prefill from Supabase profile (if no initialData provided)
+  useEffect(() => {
+    const run = async () => {
+      if (!userId || initialData) return;
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('full_name, phone, shipping_address_line1, shipping_address_line2, shipping_suburb, shipping_state, shipping_postcode, shipping_country, shipping_place_id')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        const current = getValues();
+        const setIfEmpty = (k: keyof ShippingAddress, v: any) => {
+          const cur = (current as any)[k];
+          if (cur) return;
+          if (v === null || v === undefined || v === '') return;
+          setValue(k, v, { shouldValidate: false });
+        };
+
+        setIfEmpty('fullName', (data as any)?.full_name ?? '');
+        setIfEmpty('phone', (data as any)?.phone ?? '');
+        setIfEmpty('addressLine1', (data as any)?.shipping_address_line1 ?? '');
+        setIfEmpty('addressLine2', (data as any)?.shipping_address_line2 ?? '');
+        setIfEmpty('suburb', (data as any)?.shipping_suburb ?? '');
+        setIfEmpty('state', (data as any)?.shipping_state ?? '');
+        setIfEmpty('postcode', (data as any)?.shipping_postcode ?? '');
+      } catch (e) {
+        // Don't block checkout if profile prefill fails
+        console.error('Failed to prefill shipping details from profile:', e);
+      }
+    };
+
+    void run();
+  }, [userId, initialData, setValue, getValues]);
+
+  // Load saved draft on mount (if no initialData provided). Draft should win over profile prefill.
   useEffect(() => {
     if (userId && !initialData) {
       const savedDraft = shippingFormService.getDraft(userId);
@@ -71,10 +110,43 @@ export function ShippingForm({ userId, initialData, onSubmit, totalCans, selecte
   };
 
   // Clear draft on successful submit
-  const handleFormSubmit = (data: ShippingAddress) => {
+  const normalizeAuMobileToE164 = (input: string): string => {
+    const cleaned = (input || '').replace(/\s+/g, '');
+    if (cleaned.startsWith('+')) return cleaned;
+    if (cleaned.startsWith('04') && cleaned.length === 10) return `+61${cleaned.slice(1)}`;
+    if (cleaned.startsWith('614') && cleaned.length === 11) return `+${cleaned}`;
+    return cleaned;
+  };
+
+  const handleFormSubmit = async (data: ShippingAddress) => {
     if (userId) {
       shippingFormService.clearDraft(userId);
+
+      // Persist to Supabase profiles for future prefill
+      try {
+        const phoneE164 = normalizeAuMobileToE164(data.phone);
+        const { error } = await supabase
+          .from('profiles')
+          .upsert(
+            {
+              user_id: userId,
+              full_name: data.fullName || null,
+              phone: phoneE164 || null,
+              shipping_address_line1: data.addressLine1 || null,
+              shipping_address_line2: data.addressLine2 || null,
+              shipping_suburb: data.suburb || null,
+              shipping_state: data.state || null,
+              shipping_postcode: data.postcode || null,
+              shipping_country: 'AU',
+            } as any,
+            { onConflict: 'user_id' }
+          );
+        if (error) throw error;
+      } catch (e) {
+        console.error('Failed to save shipping details to profile:', e);
+      }
     }
+
     onSubmit(data);
   };
 
@@ -127,13 +199,35 @@ export function ShippingForm({ userId, initialData, onSubmit, totalCans, selecte
 
         <div className="sm:col-span-2">
           <Label htmlFor="addressLine1">Address Line 1 *</Label>
-          <Input
-            id="addressLine1"
-            {...register('addressLine1', { required: 'Address is required' })}
-            placeholder="123 Main Street"
-            className={errors.addressLine1 ? 'border-destructive' : ''}
-            onBlur={handleFieldBlur}
+
+          <Controller
+            control={control}
+            name="addressLine1"
+            rules={{ required: 'Address is required' }}
+            render={({ field }) => (
+              <AddressAutocompleteInput
+                id="addressLine1"
+                value={field.value || ''}
+                onChange={(v) => {
+                  field.onChange(v);
+                }}
+                onBlur={() => {
+                  field.onBlur();
+                  handleFieldBlur();
+                }}
+                placeholder="Start typing your address"
+                className={errors.addressLine1 ? 'border-destructive' : ''}
+                onSelectPlace={(result) => {
+                  // Autofill the rest, but still allow manual edits.
+                  setValue('suburb', result.suburb || '', { shouldValidate: true });
+                  setValue('state', result.state || '', { shouldValidate: true });
+                  setValue('postcode', result.postcode || '', { shouldValidate: true });
+                  handleFieldBlur();
+                }}
+              />
+            )}
           />
+
           {errors.addressLine1 && (
             <p className="text-sm text-destructive mt-1">{errors.addressLine1.message}</p>
           )}
