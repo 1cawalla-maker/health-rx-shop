@@ -106,9 +106,11 @@ export default function DoctorAccount() {
     }
   }, [user?.id]);
 
-  const saveProfile = () => {
+  const saveProfile = async () => {
     if (!user?.id) return;
     setProfileSaving(true);
+
+    // Save locally for instant UX
     doctorProfileService.upsertProfile(user.id, {
       fullName,
       ahpraNumber: ahpra,
@@ -116,8 +118,37 @@ export default function DoctorAccount() {
       phone,
       practiceLocation,
     });
-    setProfileSaving(false);
-    toast.success('Profile details saved');
+
+    // Persist to Supabase so it is available across devices and to other flows.
+    try {
+      const { error } = await supabase
+        .from('doctors')
+        .update({
+          ahpra_number: ahpra || null,
+          provider_number: providerNum || null,
+          phone: phone || null,
+          practice_location: practiceLocation || null,
+        } as any)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      const { error: profileErr } = await supabase
+        .from('profiles')
+        .upsert({
+          user_id: user.id,
+          full_name: fullName || null,
+        } as any, { onConflict: 'user_id' });
+
+      if (profileErr) throw profileErr;
+
+      toast.success('Profile details saved');
+    } catch (err: any) {
+      console.error('Failed to save doctor profile to Supabase:', err);
+      toast.error(err?.message || 'Saved locally, but could not sync profile to server');
+    } finally {
+      setProfileSaving(false);
+    }
   };
 
   const start = (e: React.PointerEvent) => {
