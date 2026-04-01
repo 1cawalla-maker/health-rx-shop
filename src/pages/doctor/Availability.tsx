@@ -91,6 +91,30 @@ export default function DoctorAvailability() {
     void refresh();
   }, [doctorRowId, weekOffset]);
 
+  // Used for the header CTA (Set/View next week)
+  useEffect(() => {
+    const run = async () => {
+      if (!doctorRowId) {
+        setNextWeekHasBlocks(false);
+        return;
+      }
+      try {
+        const nextStart = addWeeks(activeWeekStart, 1);
+        const nextEnd = addDays(nextStart, 6);
+        const next = await doctorAvailabilityDateBlocksService.listForDoctorInRange({
+          doctorRowId,
+          startDate: format(nextStart, 'yyyy-MM-dd'),
+          endDate: format(nextEnd, 'yyyy-MM-dd'),
+        });
+        setNextWeekHasBlocks(next.length > 0);
+      } catch {
+        setNextWeekHasBlocks(false);
+      }
+    };
+
+    void run();
+  }, [doctorRowId, activeWeekStart]);
+
   useEffect(() => {
     const run = async () => {
       if (!doctorRowId) return;

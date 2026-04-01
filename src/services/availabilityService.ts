@@ -487,7 +487,7 @@ export const supabaseAvailabilityService = {
     const dd2 = String(end.getDate()).padStart(2, '0');
     const endStr = `${yyyy2}-${mm2}-${dd2}`;
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('doctor_availability_blocks')
       .select('date')
       .gte('date', startStr)
@@ -504,7 +504,7 @@ export const supabaseAvailabilityService = {
   },
 
   async getAggregatedSlotsForDate(dateStr: string): Promise<FiveMinuteSlot[]> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('doctor_availability_blocks')
       .select('doctor_id,start_time,end_time,timezone,date')
       .eq('date', dateStr);

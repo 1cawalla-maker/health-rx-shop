@@ -1,4 +1,4 @@
--- Explicit per-date doctor availability blocks (advanced: multiple blocks per day)
+-- Explicit per-date availability blocks (doctors are unavailable unless blocks exist)
 
 CREATE TABLE IF NOT EXISTS public.doctor_availability_blocks (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -23,6 +23,7 @@ CREATE INDEX IF NOT EXISTS doctor_availability_blocks_doctor_date
 CREATE INDEX IF NOT EXISTS doctor_availability_blocks_date
   ON public.doctor_availability_blocks (date);
 
+-- RLS
 ALTER TABLE public.doctor_availability_blocks ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Doctors can manage own availability blocks" ON public.doctor_availability_blocks;
@@ -32,17 +33,19 @@ ON public.doctor_availability_blocks
 FOR ALL
 TO authenticated
 USING (
-  public.has_role(auth.uid(), 'doctor')
+  public.has_role(auth.uid(), 'doctor'::app_role)
   AND EXISTS (
-    SELECT 1 FROM public.doctors d
+    SELECT 1
+    FROM public.doctors d
     WHERE d.id = doctor_availability_blocks.doctor_id
       AND d.user_id = auth.uid()
   )
 )
 WITH CHECK (
-  public.has_role(auth.uid(), 'doctor')
+  public.has_role(auth.uid(), 'doctor'::app_role)
   AND EXISTS (
-    SELECT 1 FROM public.doctors d
+    SELECT 1
+    FROM public.doctors d
     WHERE d.id = doctor_availability_blocks.doctor_id
       AND d.user_id = auth.uid()
   )
