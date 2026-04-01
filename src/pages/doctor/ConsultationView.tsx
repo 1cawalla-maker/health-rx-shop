@@ -142,9 +142,11 @@ export default function DoctorConsultationView() {
     if (id) setConsultNotes(doctorPortalService.getConsultNotes(id));
   }, [id]);
 
-  // Doctors should only be able to open consultations assigned to them.
+  // Access rules:
+  // - If a consultation is already assigned (doctorId set), only that doctor can open it.
+  // - If it's unassigned (doctorId null), allow any authenticated doctor to open it (queue triage).
   const isDoctor = userRole?.role === 'doctor';
-  const hasAccess = Boolean(user?.id && booking && isDoctor && booking.doctorId === user.id);
+  const hasAccess = Boolean(user?.id && booking && isDoctor && (!booking.doctorId || booking.doctorId === user.id));
   const isTerminal = booking ? TERMINAL.includes(booking.status) : false;
 
   const [patientProfile, setPatientProfile] = useState<{
