@@ -334,7 +334,9 @@ export default function BookConsultation() {
               </div>
             ) : (
               <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                {Object.entries(slotsByHour).map(([hour, slots]) => (
+                {Object.entries(slotsByHour)
+                  .sort(([a], [b]) => parseInt(a, 10) - parseInt(b, 10))
+                  .map(([hour, slots]) => (
                   <div key={hour}>
                     <p className="text-xs text-muted-foreground font-medium mb-2 uppercase tracking-wide">
                       {hour}:00 - {hour}:59
