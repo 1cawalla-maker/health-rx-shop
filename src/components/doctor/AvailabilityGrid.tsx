@@ -292,14 +292,6 @@ export function AvailabilityGrid({
     if (editingBlockId) return;
     if (activePointerIdRef.current !== pointerId) return;
 
-    // TEMP debug: confirm pointerup is firing in prod.
-    // Remove once stable.
-    try {
-      toast.message('Drag end', { duration: 1500 });
-    } catch {
-      // ignore
-    }
-
     // Release pointer capture (if we took it)
     const capturedEl = activeColRef.current;
     if (capturedEl) {
@@ -319,12 +311,6 @@ export function AvailabilityGrid({
       const startMin = Math.min(prev.startMin, prev.currentMin);
       const endMin = Math.max(prev.startMin, prev.currentMin);
 
-      try {
-        toast.message(`Drag mins: ${startMin} → ${endMin} (Δ${endMin - startMin})`, { duration: 2000 });
-      } catch {
-        // ignore
-      }
-
       if (endMin - startMin >= SNAP_MINUTES) {
         const dayBlocks = blocksByDay[prev.day] || [];
         const dayBookingsList = bookingsByDay[prev.day] || [];
@@ -339,11 +325,6 @@ export function AvailabilityGrid({
         if (hasBookingOverlap) toast.error('Cannot overlap with a scheduled booking');
         else if (hasBlockOverlap) toast.error('Block overlaps with existing availability');
         else {
-          try {
-            toast.message(`Calling add: ${minutesToTime(startMin)}–${minutesToTime(endMin)}`, { duration: 2000 });
-          } catch {
-            // ignore
-          }
           onAddBlock(prev.day, minutesToTime(startMin), minutesToTime(endMin));
         }
       }

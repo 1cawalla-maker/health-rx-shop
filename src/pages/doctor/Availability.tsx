@@ -168,7 +168,10 @@ export default function DoctorAvailability() {
   }, [user?.id, blocks]); // re-derive when blocks change (proxy for refresh)
 
   const handleAddBlock = async (dayOfWeek: number, startTime: string, endTime: string) => {
-    if (!doctorRowId) return;
+    if (!doctorRowId) {
+      toast.error('Your doctor profile is not fully set up yet. Please log out/in, then try again. If it still fails, contact support.');
+      return;
+    }
     const existing = byDay[dayOfWeek] || [];
     const overlapping = existing.find((b) => blocksOverlap({ startTime, endTime }, b));
     if (overlapping) {

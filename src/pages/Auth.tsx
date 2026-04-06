@@ -241,6 +241,9 @@ export default function Auth() {
 
         if (doctorError) {
           console.error('Error saving doctor details:', doctorError);
+          toast.error('Could not finish doctor registration (database policy). Please contact support.');
+          setIsSubmitting(false);
+          return;
         }
 
         const { error: profileError } = await supabase
@@ -253,6 +256,9 @@ export default function Auth() {
 
         if (profileError) {
           console.error('Error saving doctor profile:', profileError);
+          toast.error('Could not finish doctor registration profile. Please contact support.');
+          setIsSubmitting(false);
+          return;
         }
 
         await supabase
