@@ -292,6 +292,14 @@ export function AvailabilityGrid({
     if (editingBlockId) return;
     if (activePointerIdRef.current !== pointerId) return;
 
+    // TEMP debug: confirm pointerup is firing in prod.
+    // Remove once stable.
+    try {
+      toast.message('Drag end', { duration: 1500 });
+    } catch {
+      // ignore
+    }
+
     // Release pointer capture (if we took it)
     const capturedEl = activeColRef.current;
     if (capturedEl) {
