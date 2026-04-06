@@ -43,12 +43,54 @@ export function getTimezoneAbbr(date: Date, timezone: string): string {
   }
 }
 
-// Convert local time to UTC ISO string
+// Convert a "wall clock" local datetime (yyyy-MM-ddTHH:mm:ss) in a specific IANA timezone into a UTC ISO string.
+// Note: JS Date parsing does NOT respect the provided timezone, so we must compute the offset using Intl.
+function getZonedParts(date: Date, timeZone: string) {
+  const dtf = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  const parts = dtf.formatToParts(date);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value;
+  return {
+    year: Number(get('year')),
+    month: Number(get('month')),
+    day: Number(get('day')),
+    hour: Number(get('hour')),
+    minute: Number(get('minute')),
+    second: Number(get('second')),
+  };
+}
+
 export function convertToUTC(localDateTime: string, timezone: string): string {
   try {
-    // Create a date object and format it properly
-    const date = new Date(localDateTime);
-    return date.toISOString();
+    // localDateTime expected: yyyy-MM-ddTHH:mm:ss
+    const [datePart, timePartRaw] = localDateTime.split('T');
+    const [y, m, d] = datePart.split('-').map(Number);
+    const [hh, mm, ss = '0'] = timePartRaw.split(':');
+    const H = Number(hh);
+    const M = Number(mm);
+    const S = Number(ss);
+
+    // Start with a UTC guess using the same wall-clock components.
+    const utcGuess = Date.UTC(y, m - 1, d, H, M, S);
+
+    // Figure out what local time that UTC guess corresponds to in the target timezone.
+    const zoned = getZonedParts(new Date(utcGuess), timezone);
+    const zonedAsUTC = Date.UTC(zoned.year, zoned.month - 1, zoned.day, zoned.hour, zoned.minute, zoned.second);
+
+    // The difference is the timezone offset at that instant.
+    const offsetMs = zonedAsUTC - utcGuess;
+
+    // Correct the guess so that the target timezone's wall-clock time matches the input.
+    const correctedUtc = utcGuess - offsetMs;
+    return new Date(correctedUtc).toISOString();
   } catch {
     return new Date().toISOString();
   }

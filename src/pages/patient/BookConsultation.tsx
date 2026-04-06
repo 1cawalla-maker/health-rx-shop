@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { mockAvailabilityService, supabaseAvailabilityService } from '@/services/availabilityService';
+import { mockAvailabilityService, supabaseAvailabilityService, getTimezoneAbbr } from '@/services/availabilityService';
+import { userPreferencesService } from '@/services/userPreferencesService';
 import { mockBookingService } from '@/services/consultationService';
 import { consultationsSupabaseService } from '@/services/consultationsSupabaseService';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,6 +29,22 @@ export default function BookConsultation() {
 
   const minDate = addDays(new Date(), 1);
   const maxDate = addDays(new Date(), 30);
+
+  const patientTz = useMemo(
+    () => (user?.id ? userPreferencesService.getTimezone(user.id) : 'Australia/Brisbane'),
+    [user?.id]
+  );
+
+  const formatHHmmInTz = (utcIso: string, tz: string): string => {
+    const dtf = new Intl.DateTimeFormat('en-GB', {
+      timeZone: tz,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    // en-GB gives HH:mm
+    return dtf.format(new Date(utcIso));
+  };
 
   // Reschedule mode detection and validation
   const isReschedule = searchParams.get('reschedule') === 'true';
@@ -79,7 +96,22 @@ export default function BookConsultation() {
         const dateStr = format(selectedDate, 'yyyy-MM-dd');
         try {
           const slots = await supabaseAvailabilityService.getAggregatedSlotsForDate(dateStr);
-          setAvailableSlots(slots);
+          // Display times in the patient's timezone (MVP expectation)
+          const display = (slots || [])
+            .map((s) => {
+              const utcIso = s.utcTimestamp;
+              const displayTime = utcIso ? formatHHmmInTz(utcIso, patientTz) : s.time;
+              const tzAbbr = utcIso ? getTimezoneAbbr(new Date(utcIso), patientTz) : s.timezoneAbbr;
+              return {
+                ...s,
+                time: displayTime,
+                displayTimezone: patientTz,
+                timezoneAbbr: tzAbbr,
+              };
+            })
+            // Keep stable ordering
+            .sort((a, b) => (a.utcTimestamp || '').localeCompare(b.utcTimestamp || '') || a.time.localeCompare(b.time));
+          setAvailableSlots(display);
         } catch (e) {
           console.error('Failed to load slots:', e);
           if (import.meta.env.DEV) {
