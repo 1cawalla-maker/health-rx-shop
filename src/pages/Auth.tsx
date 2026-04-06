@@ -241,7 +241,9 @@ export default function Auth() {
 
         if (doctorError) {
           console.error('Error saving doctor details:', doctorError);
-          toast.error(doctorError.message || 'Could not finish doctor registration (doctors table write failed).');
+          toast.error(
+            `Doctor registration failed: ${doctorError.message || 'doctors table write failed'}${(doctorError as any).code ? ` (code ${(doctorError as any).code})` : ''}`
+          );
           setIsSubmitting(false);
           return;
         }
