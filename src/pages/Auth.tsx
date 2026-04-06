@@ -208,7 +208,7 @@ export default function Auth() {
 
     setIsSubmitting(true);
     
-    const { error } = await signUp(email, password, fullName, selectedRole);
+    const { error, userId } = await signUp(email, password, fullName, selectedRole);
 
     if (error) {
       setIsSubmitting(false);
@@ -222,14 +222,14 @@ export default function Auth() {
 
     // If doctor, save additional info
     if (selectedRole === 'doctor') {
-      const { data: { user: newUser } } = await supabase.auth.getUser();
       const doctorPhoneE164 = `+61${doctorPhone}`;
+      const effectiveUserId = userId;
       
-      if (newUser) {
+      if (effectiveUserId) {
         const { error: doctorError } = await supabase
           .from('doctors')
           .upsert({
-            user_id: newUser.id,
+            user_id: effectiveUserId,
             ahpra_number: ahpraNumber,
             provider_number: providerNumber,
             practice_location: practiceLocation,
@@ -251,7 +251,7 @@ export default function Auth() {
         const { error: profileError } = await supabase
           .from('doctor_profiles')
           .upsert({
-            user_id: newUser.id,
+            user_id: effectiveUserId,
             specialty: specialty,
             ahpra_number: ahpraNumber
           }, { onConflict: 'user_id' });
@@ -266,10 +266,10 @@ export default function Auth() {
         await supabase
           .from('profiles')
           .update({ phone: doctorPhoneE164 })
-          .eq('user_id', newUser.id);
+          .eq('user_id', effectiveUserId);
 
         try {
-          userPreferencesService.setTimezone(newUser.id, doctorTimezone);
+          userPreferencesService.setTimezone(effectiveUserId, doctorTimezone);
         } catch (e) {
           console.warn('Failed to persist timezone preference:', e);
         }

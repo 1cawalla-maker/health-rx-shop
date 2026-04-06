@@ -18,7 +18,12 @@ interface AuthContextType {
   session: Session | null;
   userRole: UserRole | null;
   loading: boolean;
-  signUp: (email: string, password: string, fullName: string, role: AppRole) => Promise<{ error: Error | null }>;
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string,
+    role: AppRole
+  ) => Promise<{ error: Error | null; userId?: string }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
@@ -150,6 +155,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error };
       }
 
+      const createdUserId = data.user?.id;
+
       if (data.user) {
         // TODO(phase2): restore approval gate — set doctor status to 'pending_approval' and is_active to false
         const status: UserStatus = 'approved';
@@ -219,7 +226,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUserRole({ role, status });
       }
 
-      return { error: null };
+      return { error: null, userId: createdUserId };
     } catch (err) {
       if (import.meta.env.DEV) {
         console.error('Signup exception:', err);
