@@ -319,6 +319,12 @@ export function AvailabilityGrid({
       const startMin = Math.min(prev.startMin, prev.currentMin);
       const endMin = Math.max(prev.startMin, prev.currentMin);
 
+      try {
+        toast.message(`Drag mins: ${startMin} → ${endMin} (Δ${endMin - startMin})`, { duration: 2000 });
+      } catch {
+        // ignore
+      }
+
       if (endMin - startMin >= SNAP_MINUTES) {
         const dayBlocks = blocksByDay[prev.day] || [];
         const dayBookingsList = bookingsByDay[prev.day] || [];
@@ -332,7 +338,14 @@ export function AvailabilityGrid({
 
         if (hasBookingOverlap) toast.error('Cannot overlap with a scheduled booking');
         else if (hasBlockOverlap) toast.error('Block overlaps with existing availability');
-        else onAddBlock(prev.day, minutesToTime(startMin), minutesToTime(endMin));
+        else {
+          try {
+            toast.message(`Calling add: ${minutesToTime(startMin)}–${minutesToTime(endMin)}`, { duration: 2000 });
+          } catch {
+            // ignore
+          }
+          onAddBlock(prev.day, minutesToTime(startMin), minutesToTime(endMin));
+        }
       }
 
       return null;
