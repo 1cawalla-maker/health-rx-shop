@@ -258,6 +258,18 @@ export function AvailabilityGrid({
 
     if ((e.target as HTMLElement).closest('[data-block]') || (e.target as HTMLElement).closest('[data-booking]')) return;
     const colEl = e.currentTarget as HTMLElement;
+
+    // Prevent text selection / native drag behaviours from interfering with pointerup.
+    e.preventDefault();
+
+    // Capture pointer so we reliably receive pointerup even if the pointer leaves the column
+    // (this fixes the “drag preview disappears but block never persists” symptom).
+    try {
+      colEl.setPointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+
     const minutes = getMinutesFromPointer(e.clientY, colEl);
 
     activeColRef.current = colEl;
@@ -293,6 +305,16 @@ export function AvailabilityGrid({
     const onUp = (e: PointerEvent) => {
       if (editingBlockId) return;
       if (activePointerIdRef.current !== e.pointerId) return;
+      // Release pointer capture (if we took it)
+      const capturedEl = activeColRef.current;
+      if (capturedEl) {
+        try {
+          capturedEl.releasePointerCapture(e.pointerId);
+        } catch {
+          // ignore
+        }
+      }
+
       activePointerIdRef.current = null;
       activeColRef.current = null;
       stopAutoScroll();
