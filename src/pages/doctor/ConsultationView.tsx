@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { doctorPortalService } from '@/services/doctorPortalService';
 import { consultationsSupabaseService } from '@/services/consultationsSupabaseService';
+import { callAttemptsSupabaseService } from '@/services/callAttemptsSupabaseService';
 import { shopPrescriptionService } from '@/services/shopPrescriptionService';
 import { userPreferencesService } from '@/services/userPreferencesService';
 import { supabase } from '@/integrations/supabase/client';
@@ -93,8 +94,25 @@ export default function DoctorConsultationView() {
           if (row.status === 'cancelled') return 'cancelled';
           if (row.status === 'completed') return 'completed';
           if (row.status === 'confirmed') return 'booked';
+          if (row.status === 'called') return 'in_progress';
           return 'pending_payment';
         })();
+
+        // Load call attempts (Supabase)
+        let callAttempts: any[] = [];
+        try {
+          const attempts = await callAttemptsSupabaseService.listForConsultation(row.id);
+          callAttempts = (attempts || []).map((a) => ({
+            id: a.id,
+            attemptNumber: a.attempt_number,
+            attemptedAt: a.attempted_at,
+            answered: Boolean(a.answered),
+            notes: a.notes ?? undefined,
+          }));
+        } catch (e) {
+          console.error('Failed to load call attempts from Supabase:', e);
+          callAttempts = [];
+        }
 
         setBooking({
           id: row.id,
@@ -112,7 +130,7 @@ export default function DoctorConsultationView() {
           createdAt: row.created_at,
           updatedAt: row.updated_at,
           reservationId: null,
-          callAttempts: [],
+          callAttempts,
         } as any);
         setConsultSource('supabase');
         return;
@@ -258,18 +276,49 @@ export default function DoctorConsultationView() {
     await reload();
   };
 
-  const doAddAttempt = () => {
+  const doAddAttempt = async () => {
     if (!id) return;
-    const updated = doctorPortalService.addCallAttempt(id, { notes: callNote.trim() || undefined });
-    setCallNote('');
-    if (!updated) toast.error('Could not log attempt');
-    else { toast.success('Call attempt logged'); reload(); }
+
+    try {
+      if (consultSource === 'supabase') {
+        if (!user?.id) throw new Error('Not authenticated');
+        await callAttemptsSupabaseService.addAttempt({
+          consultationId: id,
+          doctorUserId: user.id,
+          notes: callNote.trim() || undefined,
+        });
+        setCallNote('');
+        toast.success('Call attempt logged');
+        await reload();
+        return;
+      }
+
+      const updated = doctorPortalService.addCallAttempt(id, { notes: callNote.trim() || undefined });
+      setCallNote('');
+      if (!updated) toast.error('Could not log attempt');
+      else { toast.success('Call attempt logged'); reload(); }
+    } catch (err: any) {
+      console.error('Failed to log call attempt:', err);
+      toast.error(err?.message || 'Could not log call attempt');
+    }
   };
 
-  const doToggleAnswered = (attemptId: string, answered: boolean) => {
+  const doToggleAnswered = async (attemptId: string, answered: boolean) => {
     if (!id) return;
-    doctorPortalService.markCallAnswered(id, attemptId, answered);
-    reload();
+
+    try {
+      if (consultSource === 'supabase') {
+        await callAttemptsSupabaseService.setAnswered({ attemptId, answered });
+        await reload();
+        return;
+      }
+
+      doctorPortalService.markCallAnswered(id, attemptId, answered);
+      reload();
+    } catch (err: any) {
+      console.error('Failed to update call attempt answered:', err);
+      toast.error(err?.message || 'Could not update call attempt');
+    }
   };
 
   const doIssue = () => {
@@ -428,7 +477,7 @@ export default function DoctorConsultationView() {
                     <Label htmlFor="callNote">Notes (optional)</Label>
                     <Textarea id="callNote" value={callNote} onChange={(e) => setCallNote(e.target.value)} placeholder="e.g. Left voicemail" />
                   </div>
-                  <Button onClick={doAddAttempt} variant="outline" size="sm">Log Attempt</Button>
+                  <Button onClick={() => void doAddAttempt()} variant="outline" size="sm">Log Attempt</Button>
                 </>
               )}
 
