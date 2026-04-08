@@ -234,9 +234,21 @@ export default function BookConsultation() {
     }
   };
 
+  const formatYyyyMmDdInTz = (date: Date, tz: string): string => {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(date);
+
+    const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
+    return `${get('year')}-${get('month')}-${get('day')}`;
+  };
+
   // Check if a date has availability
   const dateHasAvailability = (date: Date): boolean => {
-    const dateStr = format(date, 'yyyy-MM-dd');
+    const dateStr = formatYyyyMmDdInTz(date, patientTz);
     return datesWithAvailability.has(dateStr);
   };
 
