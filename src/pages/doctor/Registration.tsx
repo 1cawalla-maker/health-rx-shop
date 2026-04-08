@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { doctorSignatureService } from '@/services/doctorSignatureService';
+import { doctorOnboardingSupabaseService } from '@/services/doctorOnboardingSupabaseService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -15,9 +15,24 @@ export default function DoctorRegistration() {
   const [signature, setSignature] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user?.id) return;
-    const sig = doctorSignatureService.getSignature(user.id);
-    setSignature(sig?.signatureDataUrl || null);
+    const run = async () => {
+      if (!user?.id) return;
+      try {
+        const doctorId = await doctorOnboardingSupabaseService.getDoctorRowIdForUser(user.id);
+        const sigRow = await doctorOnboardingSupabaseService.getSignatureRowForDoctor(doctorId);
+        if (sigRow?.storage_path) {
+          const url = await doctorOnboardingSupabaseService.getSignatureSignedUrl(sigRow.storage_path);
+          setSignature(url);
+        } else {
+          setSignature(null);
+        }
+      } catch (e) {
+        console.error('Failed to load signature:', e);
+        setSignature(null);
+      }
+    };
+
+    void run();
   }, [user?.id]);
 
   const start = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -76,7 +91,7 @@ export default function DoctorRegistration() {
     setDrawing(false);
   };
 
-  const save = () => {
+  const save = async () => {
     if (!user?.id) {
       toast.error('Please sign in');
       return;
@@ -84,17 +99,33 @@ export default function DoctorRegistration() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const dataUrl = canvas.toDataURL('image/png');
-    doctorSignatureService.saveSignature(user.id, dataUrl);
-    setSignature(dataUrl);
-    toast.success('Signature saved');
+
+    try {
+      await doctorOnboardingSupabaseService.saveSignatureForCurrentDoctor({
+        userId: user.id,
+        signatureDataUrl: dataUrl,
+      });
+      const url = await doctorOnboardingSupabaseService.getSignatureSignedUrl(`${user.id}/signature.png`);
+      setSignature(url);
+      toast.success('Signature saved');
+    } catch (e: any) {
+      console.error('Failed to save signature:', e);
+      toast.error(e?.message || 'Could not save signature');
+    }
   };
 
-  const remove = () => {
+  const remove = async () => {
     if (!user?.id) return;
-    doctorSignatureService.clearSignature(user.id);
-    setSignature(null);
-    clear();
-    toast.success('Signature removed');
+
+    try {
+      await doctorOnboardingSupabaseService.removeSignatureForCurrentDoctor({ userId: user.id });
+      setSignature(null);
+      clear();
+      toast.success('Signature removed');
+    } catch (e: any) {
+      console.error('Failed to remove signature:', e);
+      toast.error(e?.message || 'Could not remove signature');
+    }
   };
 
   return (
@@ -127,8 +158,8 @@ export default function DoctorRegistration() {
             </div>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={clear}>Clear</Button>
-              <Button onClick={save}>Save Signature</Button>
-              <Button variant="outline" onClick={remove} className="gap-2">
+              <Button onClick={() => void save()}>Save Signature</Button>
+              <Button variant="outline" onClick={() => void remove()} className="gap-2">
                 <Trash2 className="h-4 w-4" />
                 Remove
               </Button>

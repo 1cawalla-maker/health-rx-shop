@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { doctorSignatureService } from '@/services/doctorSignatureService';
+import { doctorOnboardingSupabaseService } from '@/services/doctorOnboardingSupabaseService';
 import { doctorPayoutProfileService, type DoctorPayoutProfile } from '@/services/doctorPayoutProfileService';
 import { doctorProfileService } from '@/services/doctorProfileService';
 import { userPreferencesService } from '@/services/userPreferencesService';
@@ -49,10 +49,29 @@ export default function DoctorAccount() {
   const [pAccountName, setPAccountName] = useState('');
   const [payoutErrors, setPayoutErrors] = useState<Record<string, string>>({});
 
-  const loadPayout = (uid: string) => {
-    const profile = doctorPayoutProfileService.getProfile(uid);
-    setPayoutProfile(profile);
-    if (profile) {
+  const loadPayout = async (uid: string) => {
+    try {
+      const doctorId = await doctorOnboardingSupabaseService.getDoctorRowIdForUser(uid);
+      const payout = await doctorOnboardingSupabaseService.getPayoutProfileForDoctor(doctorId);
+
+      if (!payout) {
+        setPayoutProfile(null);
+        return;
+      }
+
+      const profile: DoctorPayoutProfile = {
+        abn: payout.abn,
+        entityName: payout.entity_name,
+        gstRegistered: Boolean((payout as any).gst_registered),
+        remittanceEmail: payout.remittance_email,
+        bsb: payout.bsb,
+        accountNumber: payout.account_number,
+        accountName: payout.account_name,
+        createdAtUtc: payout.created_at,
+        updatedAtUtc: payout.updated_at,
+      };
+
+      setPayoutProfile(profile);
       setPAbn(profile.abn);
       setPEntityName(profile.entityName);
       setPGst(profile.gstRegistered);
@@ -60,18 +79,38 @@ export default function DoctorAccount() {
       setPBsb(profile.bsb);
       setPAccountNumber(profile.accountNumber);
       setPAccountName(profile.accountName);
+    } catch (e) {
+      console.error('Failed to load payout profile:', e);
+      setPayoutProfile(null);
     }
   };
 
   useEffect(() => {
-    if (!user?.id) return;
-    const sig = doctorSignatureService.getSignature(user.id);
-    setSignature(sig?.signatureDataUrl || null);
-    const { timezone: tz, wasReset } = userPreferencesService.getTimezoneWithMeta(user.id);
-    setTimezone(tz);
-    if (wasReset) toast.info('Your timezone preference was reset to the default (Australia/Brisbane) because the stored value was invalid.');
+    const run = async () => {
+      if (!user?.id) return;
 
-    loadPayout(user.id);
+      try {
+        const doctorId = await doctorOnboardingSupabaseService.getDoctorRowIdForUser(user.id);
+        const sigRow = await doctorOnboardingSupabaseService.getSignatureRowForDoctor(doctorId);
+        if (sigRow?.storage_path) {
+          const url = await doctorOnboardingSupabaseService.getSignatureSignedUrl(sigRow.storage_path);
+          setSignature(url);
+        } else {
+          setSignature(null);
+        }
+      } catch (e) {
+        console.error('Failed to load signature:', e);
+        setSignature(null);
+      }
+
+      const { timezone: tz, wasReset } = userPreferencesService.getTimezoneWithMeta(user.id);
+      setTimezone(tz);
+      if (wasReset) toast.info('Your timezone preference was reset to the default (Australia/Brisbane) because the stored value was invalid.');
+
+      await loadPayout(user.id);
+    };
+
+    void run();
 
     // Load identity from local service first
     const localProfile = doctorProfileService.getProfile(user.id);
@@ -178,16 +217,36 @@ export default function DoctorAccount() {
     if (ctx) ctx.clearRect(0, 0, c.width, c.height);
   };
 
-  const saveSig = () => {
+  const saveSig = async () => {
     if (!user?.id) { toast.error('Please sign in'); return; }
     const canvas = canvasRef.current; if (!canvas) return;
     const dataUrl = canvas.toDataURL('image/png');
-    doctorSignatureService.saveSignature(user.id, dataUrl);
-    setSignature(dataUrl); toast.success('Signature saved');
+
+    try {
+      await doctorOnboardingSupabaseService.saveSignatureForCurrentDoctor({
+        userId: user.id,
+        signatureDataUrl: dataUrl,
+      });
+      const url = await doctorOnboardingSupabaseService.getSignatureSignedUrl(`${user.id}/signature.png`);
+      setSignature(url);
+      toast.success('Signature saved');
+    } catch (e: any) {
+      console.error('Failed to save signature:', e);
+      toast.error(e?.message || 'Could not save signature');
+    }
   };
-  const removeSig = () => {
+  const removeSig = async () => {
     if (!user?.id) return;
-    doctorSignatureService.clearSignature(user.id); setSignature(null); clear(); toast.success('Signature removed');
+
+    try {
+      await doctorOnboardingSupabaseService.removeSignatureForCurrentDoctor({ userId: user.id });
+      setSignature(null);
+      clear();
+      toast.success('Signature removed');
+    } catch (e: any) {
+      console.error('Failed to remove signature:', e);
+      toast.error(e?.message || 'Could not remove signature');
+    }
   };
 
   const saveTz = () => {
@@ -213,7 +272,7 @@ export default function DoctorAccount() {
 
   const cancelPayoutEdit = () => { setPayoutEditing(false); setPayoutErrors({}); };
 
-  const savePayoutEdit = () => {
+  const savePayoutEdit = async () => {
     if (!user?.id) return;
     const errors = doctorPayoutProfileService.validateProfile({
       abn: pAbn, entityName: pEntityName, gstRegistered: pGst, remittanceEmail: pEmail,
@@ -222,13 +281,24 @@ export default function DoctorAccount() {
     setPayoutErrors(errors);
     if (Object.keys(errors).length > 0) { toast.error('Please fix the errors'); return; }
 
-    doctorPayoutProfileService.upsertProfile(user.id, {
-      abn: pAbn, entityName: pEntityName, gstRegistered: pGst, remittanceEmail: pEmail,
-      bsb: pBsb, accountNumber: pAccountNumber, accountName: pAccountName,
-    });
-    loadPayout(user.id);
-    setPayoutEditing(false);
-    toast.success('Payout details updated');
+    try {
+      await doctorOnboardingSupabaseService.upsertPayoutProfileForCurrentDoctor({
+        userId: user.id,
+        abn: pAbn,
+        entityName: pEntityName,
+        gstRegistered: pGst,
+        remittanceEmail: pEmail,
+        bsb: pBsb,
+        accountNumber: pAccountNumber,
+        accountName: pAccountName,
+      });
+      await loadPayout(user.id);
+      setPayoutEditing(false);
+      toast.success('Payout details updated');
+    } catch (e: any) {
+      console.error('Failed to save payout details:', e);
+      toast.error(e?.message || 'Could not save payout details');
+    }
   };
 
   return (
@@ -332,7 +402,7 @@ export default function DoctorAccount() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button onClick={savePayoutEdit}>Save</Button>
+                <Button onClick={() => void savePayoutEdit()}>Save</Button>
                 <Button variant="outline" onClick={cancelPayoutEdit} className="gap-1"><X className="h-3 w-3" />Cancel</Button>
               </div>
             </div>
@@ -386,8 +456,8 @@ export default function DoctorAccount() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={clear}>Clear</Button>
-            <Button onClick={saveSig}>Save Signature</Button>
-            <Button variant="outline" onClick={removeSig} className="gap-2"><Trash2 className="h-4 w-4" />Remove</Button>
+            <Button onClick={() => void saveSig()}>Save Signature</Button>
+            <Button variant="outline" onClick={() => void removeSig()} className="gap-2"><Trash2 className="h-4 w-4" />Remove</Button>
           </div>
           {signature && (
             <div className="border rounded-lg p-4">

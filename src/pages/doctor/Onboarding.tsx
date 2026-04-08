@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { doctorSignatureService } from '@/services/doctorSignatureService';
+import { doctorOnboardingSupabaseService } from '@/services/doctorOnboardingSupabaseService';
 import { doctorPayoutProfileService } from '@/services/doctorPayoutProfileService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,23 +32,41 @@ export default function DoctorOnboarding() {
   const [payoutSaved, setPayoutSaved] = useState(false);
   const [payoutErrors, setPayoutErrors] = useState<Record<string, string>>({});
 
-  // Load existing data
+  // Load existing data (Supabase)
   useEffect(() => {
-    if (!user?.id) return;
-    const sig = doctorSignatureService.getSignature(user.id);
-    setSignature(sig?.signatureDataUrl || null);
+    const run = async () => {
+      if (!user?.id) return;
 
-    const profile = doctorPayoutProfileService.getProfile(user.id);
-    if (profile) {
-      setAbn(profile.abn);
-      setEntityName(profile.entityName);
-      setGstRegistered(profile.gstRegistered);
-      setRemittanceEmail(profile.remittanceEmail);
-      setBsb(profile.bsb);
-      setAccountNumber(profile.accountNumber);
-      setAccountName(profile.accountName);
-      setPayoutSaved(doctorPayoutProfileService.isComplete(user.id));
-    }
+      try {
+        const doctorId = await doctorOnboardingSupabaseService.getDoctorRowIdForUser(user.id);
+
+        const sigRow = await doctorOnboardingSupabaseService.getSignatureRowForDoctor(doctorId);
+        if (sigRow?.storage_path) {
+          const url = await doctorOnboardingSupabaseService.getSignatureSignedUrl(sigRow.storage_path);
+          setSignature(url);
+        } else {
+          setSignature(null);
+        }
+
+        const payout = await doctorOnboardingSupabaseService.getPayoutProfileForDoctor(doctorId);
+        if (payout) {
+          setAbn(payout.abn);
+          setEntityName(payout.entity_name);
+          setGstRegistered(Boolean((payout as any).gst_registered));
+          setRemittanceEmail(payout.remittance_email);
+          setBsb(payout.bsb);
+          setAccountNumber(payout.account_number);
+          setAccountName(payout.account_name);
+          setPayoutSaved(true);
+        }
+      } catch (e) {
+        console.error('Failed to load onboarding data:', e);
+        setSignature(null);
+        setPayoutSaved(false);
+      }
+    };
+
+    void run();
   }, [user?.id]);
 
   // Canvas drawing — acquire ctx inline so it works on first stroke
@@ -87,26 +105,44 @@ export default function DoctorOnboarding() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   };
 
-  const saveSignature = () => {
+  const saveSignature = async () => {
     if (!user?.id) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const dataUrl = canvas.toDataURL('image/png');
-    doctorSignatureService.saveSignature(user.id, dataUrl);
-    setSignature(dataUrl);
-    toast.success('Signature saved');
+
+    try {
+      await doctorOnboardingSupabaseService.saveSignatureForCurrentDoctor({
+        userId: user.id,
+        signatureDataUrl: dataUrl,
+      });
+
+      // Show preview via signed URL (more realistic than keeping a data URL)
+      const url = await doctorOnboardingSupabaseService.getSignatureSignedUrl(`${user.id}/signature.png`);
+      setSignature(url);
+      toast.success('Signature saved');
+    } catch (e: any) {
+      console.error('Failed to save signature:', e);
+      toast.error(e?.message || 'Could not save signature');
+    }
   };
 
-  const removeSignature = () => {
+  const removeSignature = async () => {
     if (!user?.id) return;
-    doctorSignatureService.clearSignature(user.id);
-    setSignature(null);
-    clear();
-    toast.success('Signature removed');
+
+    try {
+      await doctorOnboardingSupabaseService.removeSignatureForCurrentDoctor({ userId: user.id });
+      setSignature(null);
+      clear();
+      toast.success('Signature removed');
+    } catch (e: any) {
+      console.error('Failed to remove signature:', e);
+      toast.error(e?.message || 'Could not remove signature');
+    }
   };
 
   // Payout profile save
-  const savePayout = () => {
+  const savePayout = async () => {
     if (!user?.id) return;
 
     const errors = doctorPayoutProfileService.validateProfile({
@@ -119,11 +155,23 @@ export default function DoctorOnboarding() {
       return;
     }
 
-    doctorPayoutProfileService.upsertProfile(user.id, {
-      abn, entityName, gstRegistered, remittanceEmail, bsb, accountNumber, accountName,
-    });
-    setPayoutSaved(true);
-    toast.success('Payout profile saved');
+    try {
+      await doctorOnboardingSupabaseService.upsertPayoutProfileForCurrentDoctor({
+        userId: user.id,
+        abn,
+        entityName,
+        gstRegistered,
+        remittanceEmail,
+        bsb,
+        accountNumber,
+        accountName,
+      });
+      setPayoutSaved(true);
+      toast.success('Payout profile saved');
+    } catch (e: any) {
+      console.error('Failed to save payout profile:', e);
+      toast.error(e?.message || 'Could not save payout profile');
+    }
   };
 
   const clearPayoutError = (field: string) => {
@@ -173,9 +221,9 @@ export default function DoctorOnboarding() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={clear}>Clear</Button>
-            <Button onClick={saveSignature}>Save Signature</Button>
+            <Button onClick={() => void saveSignature()}>Save Signature</Button>
             {signature && (
-              <Button variant="outline" onClick={removeSignature} className="gap-2">
+              <Button variant="outline" onClick={() => void removeSignature()} className="gap-2">
                 <Trash2 className="h-4 w-4" />Remove
               </Button>
             )}
@@ -280,7 +328,7 @@ export default function DoctorOnboarding() {
             </div>
           </div>
 
-          <Button onClick={savePayout} variant="outline">
+          <Button onClick={() => void savePayout()} variant="outline">
             Save Payout Details
           </Button>
         </CardContent>
