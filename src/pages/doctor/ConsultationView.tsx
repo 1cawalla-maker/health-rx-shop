@@ -6,6 +6,9 @@ import { consultationsSupabaseService } from '@/services/consultationsSupabaseSe
 import { callAttemptsSupabaseService } from '@/services/callAttemptsSupabaseService';
 import { shopPrescriptionService } from '@/services/shopPrescriptionService';
 import { userPreferencesService } from '@/services/userPreferencesService';
+import { consultationNotesSupabaseService } from '@/services/consultationNotesSupabaseService';
+import { issuedPrescriptionsSupabaseService } from '@/services/issuedPrescriptionsSupabaseService';
+import { doctorOnboardingSupabaseService } from '@/services/doctorOnboardingSupabaseService';
 import { supabase } from '@/integrations/supabase/client';
 import { getTimezoneAbbr } from '@/lib/datetime';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -157,8 +160,33 @@ export default function DoctorConsultationView() {
 
   // Load consult notes on mount
   useEffect(() => {
-    if (id) setConsultNotes(doctorPortalService.getConsultNotes(id));
-  }, [id]);
+    const run = async () => {
+      if (!id) return;
+
+      // If Supabase consultation exists, load latest internal note from Supabase.
+      if (consultSource === 'supabase' && user?.id) {
+        try {
+          const doctorRowId = await doctorOnboardingSupabaseService.getDoctorRowIdForUser(user.id);
+          const note = await consultationNotesSupabaseService.getLatestInternalNote({
+            consultationId: id,
+            doctorRowId,
+          });
+          if (note?.notes != null) {
+            setConsultNotes(String(note.notes));
+            return;
+          }
+        } catch (e) {
+          console.error('Failed to load consultation notes from Supabase:', e);
+          // fall through to local
+        }
+      }
+
+      // Fallback: localStorage
+      setConsultNotes(doctorPortalService.getConsultNotes(id));
+    };
+
+    void run();
+  }, [id, consultSource, user?.id]);
 
   // Access rules:
   // - If a consultation is already assigned (doctorId set), only that doctor can open it.
@@ -321,16 +349,41 @@ export default function DoctorConsultationView() {
     }
   };
 
-  const doIssue = () => {
+  const doIssue = async () => {
     if (!booking || !id) return;
-    // Save notes before issuing
-    doctorPortalService.setConsultNotes(id, consultNotes);
-    doctorPortalService.issuePrescription({ doctorId: booking.doctorId, patientId: booking.patientId, maxStrengthMg: maxStrength });
-    toast.success(`Prescription issued (max ${maxStrength}mg)`);
 
-    // Don't auto-complete the consultation.
-    // Completing is an explicit action after issuing to avoid accidental lock-outs.
-    setPrescriptionIssued(true);
+    try {
+      if (consultSource === 'supabase') {
+        if (!user?.id) throw new Error('Not authenticated');
+        const doctorRowId = await doctorOnboardingSupabaseService.getDoctorRowIdForUser(user.id);
+
+        // Persist notes + issued prescription record to Supabase (audit trail)
+        await consultationNotesSupabaseService.upsertInternalNote({
+          consultationId: id,
+          doctorRowId,
+          notes: consultNotes,
+        });
+        await issuedPrescriptionsSupabaseService.issue({
+          consultationId: id,
+          doctorRowId,
+          patientId: booking.patientId,
+          maxStrengthMg: maxStrength,
+        });
+
+        toast.success(`Prescription issued (max ${maxStrength}mg)`);
+        setPrescriptionIssued(true);
+        return;
+      }
+
+      // Phase 1 localStorage fallback
+      doctorPortalService.setConsultNotes(id, consultNotes);
+      doctorPortalService.issuePrescription({ doctorId: booking.doctorId, patientId: booking.patientId, maxStrengthMg: maxStrength });
+      toast.success(`Prescription issued (max ${maxStrength}mg)`);
+      setPrescriptionIssued(true);
+    } catch (err: any) {
+      console.error('Failed to issue prescription:', err);
+      toast.error(err?.message || 'Could not issue prescription');
+    }
   };
 
   const doCompleteConsultation = async () => {
@@ -339,20 +392,68 @@ export default function DoctorConsultationView() {
     navigate('/doctor/consultations');
   };
 
-  const doDecline = () => {
+  const doDecline = async () => {
     if (!id || !declineReason.trim()) { toast.error('Please provide a reason'); return; }
-    // Save notes before declining
-    doctorPortalService.setConsultNotes(id, consultNotes);
-    doctorPortalService.declinePrescription(id, declineReason);
-    toast.success('Completed without prescription');
-    navigate('/doctor/consultations');
+
+    try {
+      if (consultSource === 'supabase') {
+        if (!user?.id) throw new Error('Not authenticated');
+        const doctorRowId = await doctorOnboardingSupabaseService.getDoctorRowIdForUser(user.id);
+
+        // Persist notes + decline reason as internal notes
+        await consultationNotesSupabaseService.upsertInternalNote({
+          consultationId: id,
+          doctorRowId,
+          notes: consultNotes,
+        });
+        await consultationNotesSupabaseService.addInternalEventNote({
+          consultationId: id,
+          doctorRowId,
+          notes: `Declined prescription: ${declineReason.trim()}`,
+        });
+
+        toast.success('Completed without prescription');
+        navigate('/doctor/consultations');
+        return;
+      }
+
+      // Phase 1 localStorage fallback
+      doctorPortalService.setConsultNotes(id, consultNotes);
+      doctorPortalService.declinePrescription(id, declineReason);
+      toast.success('Completed without prescription');
+      navigate('/doctor/consultations');
+    } catch (err: any) {
+      console.error('Failed to decline prescription:', err);
+      toast.error(err?.message || 'Could not complete without prescription');
+    }
   };
 
-  const doCancel = () => {
+  const doCancel = async () => {
     if (!id || !cancelReason.trim()) { toast.error('Please provide a reason'); return; }
-    const result = doctorPortalService.cancelBooking(id, cancelReason);
-    if (result) { toast.success('Consultation cancelled'); setCancelOpen(false); reload(); }
-    else toast.error('Could not cancel');
+
+    try {
+      if (consultSource === 'supabase') {
+        if (!user?.id) throw new Error('Not authenticated');
+        const doctorRowId = await doctorOnboardingSupabaseService.getDoctorRowIdForUser(user.id);
+        await consultationNotesSupabaseService.addInternalEventNote({
+          consultationId: id,
+          doctorRowId,
+          notes: `Cancelled consultation: ${cancelReason.trim()}`,
+        });
+        await doStatus('cancelled');
+        toast.success('Consultation cancelled');
+        setCancelOpen(false);
+        await reload();
+        return;
+      }
+
+      const result = doctorPortalService.cancelBooking(id, cancelReason);
+      if (result) { toast.success('Consultation cancelled'); setCancelOpen(false); reload(); }
+      else toast.error('Could not cancel');
+    } catch (err: any) {
+      console.error('Failed to cancel consultation:', err);
+      toast.error(err?.message || 'Could not cancel');
+    }
   };
 
   const handleSaveNotes = useCallback(() => {
@@ -559,7 +660,7 @@ export default function DoctorConsultationView() {
                   <p className="text-xs text-muted-foreground">Patient may step down but not exceed this strength.</p>
                 </div>
                 <div className="flex items-end">
-                  <Button onClick={doIssue} className="w-full" disabled={isTerminal || prescriptionIssued}>
+                  <Button onClick={() => void doIssue()} className="w-full" disabled={isTerminal || prescriptionIssued}>
                     <CheckCircle className="h-4 w-4 mr-2" />{prescriptionIssued ? 'Prescription Issued' : 'Issue Prescription'}
                   </Button>
                 </div>
@@ -576,7 +677,7 @@ export default function DoctorConsultationView() {
               <div className="border-t pt-4 space-y-2">
                 <Label>Decline reason</Label>
                 <Textarea value={declineReason} onChange={(e) => setDeclineReason(e.target.value)} placeholder="Reason for not issuing" />
-                <Button variant="outline" onClick={doDecline} disabled={isTerminal}>
+                <Button variant="outline" onClick={() => void doDecline()} disabled={isTerminal}>
                   <XCircle className="h-4 w-4 mr-2" />Complete Without Prescription
                 </Button>
               </div>

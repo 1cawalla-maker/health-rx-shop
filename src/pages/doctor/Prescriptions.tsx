@@ -2,17 +2,28 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText } from 'lucide-react';
-import { issuedPrescriptionService, type IssuedPrescriptionRecord } from '@/services/issuedPrescriptionService';
 import { doctorOnboardingSupabaseService } from '@/services/doctorOnboardingSupabaseService';
+import { issuedPrescriptionsSupabaseService, type IssuedPrescriptionRow } from '@/services/issuedPrescriptionsSupabaseService';
 
 export default function DoctorPrescriptions() {
   const { user } = useAuth();
-  const [rows, setRows] = useState<IssuedPrescriptionRecord[]>([]);
+  const [rows, setRows] = useState<IssuedPrescriptionRow[]>([]);
   const [hasSignatureOnFile, setHasSignatureOnFile] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (!user?.id) return;
-    setRows(issuedPrescriptionService.listByDoctor(user.id));
+    const run = async () => {
+      if (!user?.id) return;
+      try {
+        const doctorRowId = await doctorOnboardingSupabaseService.getDoctorRowIdForUser(user.id);
+        const list = await issuedPrescriptionsSupabaseService.listForDoctor({ doctorRowId });
+        setRows(list);
+      } catch (e) {
+        console.error('Failed to load issued prescriptions from Supabase:', e);
+        setRows([]);
+      }
+    };
+
+    void run();
   }, [user?.id]);
 
   useEffect(() => {
@@ -31,7 +42,7 @@ export default function DoctorPrescriptions() {
     void run();
   }, [user?.id]);
 
-  const sorted = useMemo(() => [...rows].sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [rows]);
+  const sorted = useMemo(() => [...rows].sort((a, b) => b.issued_at.localeCompare(a.issued_at)), [rows]);
 
   return (
     <div className="space-y-8">
@@ -57,7 +68,7 @@ export default function DoctorPrescriptions() {
                   <div>
                     <CardTitle className="text-lg flex items-center gap-2">
                       <FileText className="h-5 w-5 text-primary" />
-                      Patient: {rx.patientId}
+                      Patient: {rx.patient_id}
                     </CardTitle>
                     <CardDescription>Issued ID: {rx.id}</CardDescription>
                   </div>
@@ -66,11 +77,11 @@ export default function DoctorPrescriptions() {
               <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wide">Max strength</p>
-                  <p className="font-medium">{rx.maxStrengthMg}mg</p>
+                  <p className="font-medium">{rx.max_strength_mg}mg</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wide">Issued</p>
-                  <p className="font-medium">{new Date(rx.createdAt).toLocaleDateString('en-AU')}</p>
+                  <p className="font-medium">{new Date(rx.issued_at).toLocaleDateString('en-AU')}</p>
                 </div>
                 <div className="md:col-span-2">
                   <p className="text-xs text-muted-foreground uppercase tracking-wide">Signature</p>
