@@ -487,15 +487,23 @@ export const doctorAvailabilityDateBlocksService = {
     endTime: string; // HH:mm
     timezone: string;
   }): Promise<void> {
+    // Avoid noisy unique-constraint toasts when a doctor re-saves the exact same block.
+    // DB unique index: (doctor_id, date, start_time, end_time)
     const { error } = await (supabase as any)
       .from('doctor_availability_blocks')
-      .insert({
-        doctor_id: params.doctorRowId,
-        date: params.date,
-        start_time: params.startTime,
-        end_time: params.endTime,
-        timezone: params.timezone,
-      });
+      .upsert(
+        {
+          doctor_id: params.doctorRowId,
+          date: params.date,
+          start_time: params.startTime,
+          end_time: params.endTime,
+          timezone: params.timezone,
+        },
+        {
+          onConflict: 'doctor_id,date,start_time,end_time',
+          ignoreDuplicates: true,
+        }
+      );
 
     if (error) throw error;
   },
