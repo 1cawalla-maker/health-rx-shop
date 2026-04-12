@@ -3,14 +3,32 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText } from 'lucide-react';
 import { issuedPrescriptionService, type IssuedPrescriptionRecord } from '@/services/issuedPrescriptionService';
+import { doctorOnboardingSupabaseService } from '@/services/doctorOnboardingSupabaseService';
 
 export default function DoctorPrescriptions() {
   const { user } = useAuth();
   const [rows, setRows] = useState<IssuedPrescriptionRecord[]>([]);
+  const [hasSignatureOnFile, setHasSignatureOnFile] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!user?.id) return;
     setRows(issuedPrescriptionService.listByDoctor(user.id));
+  }, [user?.id]);
+
+  useEffect(() => {
+    const run = async () => {
+      if (!user?.id) return;
+      try {
+        const doctorId = await doctorOnboardingSupabaseService.getDoctorRowIdForUser(user.id);
+        const sig = await doctorOnboardingSupabaseService.getSignatureRowForDoctor(doctorId);
+        setHasSignatureOnFile(Boolean(sig?.storage_path));
+      } catch (e) {
+        console.error('Failed to load doctor signature status:', e);
+        setHasSignatureOnFile(false);
+      }
+    };
+
+    void run();
   }, [user?.id]);
 
   const sorted = useMemo(() => [...rows].sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [rows]);
@@ -56,7 +74,13 @@ export default function DoctorPrescriptions() {
                 </div>
                 <div className="md:col-span-2">
                   <p className="text-xs text-muted-foreground uppercase tracking-wide">Signature</p>
-                  <p className="font-medium">{rx.signatureDataUrl ? 'On file' : 'Missing (add in Registration)'}</p>
+                  <p className="font-medium">
+                    {hasSignatureOnFile === null
+                      ? 'Checking…'
+                      : hasSignatureOnFile
+                        ? 'On file'
+                        : 'Missing (add in Onboarding)'}
+                  </p>
                 </div>
               </CardContent>
             </Card>
