@@ -12,10 +12,19 @@ import { doctorOnboardingSupabaseService } from '@/services/doctorOnboardingSupa
  */
 export function useDoctorReadiness(): { ready: boolean; loading: boolean } {
   const { user, loading } = useAuth();
+
+  // IMPORTANT: default to "loading" until we've performed at least one readiness check.
+  // Otherwise DoctorLayout can redirect to /doctor/onboarding on the first render after login
+  // (before useEffect has a chance to set `checking=true`).
   const [ready, setReady] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [hasChecked, setHasChecked] = useState(false);
 
   useEffect(() => {
+    // Reset when auth user changes
+    setHasChecked(false);
+    setReady(false);
+
     const run = async () => {
       if (loading || !user?.id) return;
       setChecking(true);
@@ -29,14 +38,18 @@ export function useDoctorReadiness(): { ready: boolean; loading: boolean } {
         setReady(false);
       } finally {
         setChecking(false);
+        setHasChecked(true);
       }
     };
 
     void run();
-  }, [user?.id, loading]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
-  if (loading || checking || !user?.id) {
-    return { ready: false, loading: loading || checking };
+  const isLoading = loading || checking || !user?.id || !hasChecked;
+
+  if (isLoading) {
+    return { ready: false, loading: true };
   }
 
   return { ready, loading: false };
