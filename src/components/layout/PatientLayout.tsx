@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { shopPrescriptionService } from '@/services/shopPrescriptionService';
+import { patientIssuedPrescriptionsSupabaseService } from '@/services/patientIssuedPrescriptionsSupabaseService';
 import {
   Stethoscope,
   LayoutDashboard,
@@ -44,6 +45,19 @@ export function PatientLayout() {
 
   const checkActivePrescription = async () => {
     if (!user) return;
+
+    try {
+      const latest = await patientIssuedPrescriptionsSupabaseService.getLatestForPatient(user.id);
+      if (latest) {
+        setHasActivePrescription(true);
+        setHasPendingPrescription(false);
+        return;
+      }
+    } catch (e) {
+      console.error('Failed to check Supabase prescription status:', e);
+      // fall back to mock/local
+    }
+
     const active = shopPrescriptionService.getActivePrescription(user.id);
     setHasActivePrescription(!!active);
     setHasPendingPrescription(false);

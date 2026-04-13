@@ -1,9 +1,10 @@
 // usePrescriptionStatus hook
-// Uses shopPrescriptionService for prescription status
+// Phase 2: derives prescription status from Supabase-issued prescriptions (and falls back to mock localStorage).
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { shopPrescriptionService } from '@/services/shopPrescriptionService';
+import { patientIssuedPrescriptionsSupabaseService } from '@/services/patientIssuedPrescriptionsSupabaseService';
 import type { PrescriptionStatus } from '@/types/shop';
 
 interface ExtendedPrescriptionStatus extends PrescriptionStatus {
@@ -27,35 +28,76 @@ export function usePrescriptionStatus() {
       return;
     }
 
-    const prescription = shopPrescriptionService.getActivePrescription(user.id);
+    try {
+      // Primary source of truth: Supabase-issued prescriptions.
+      const latest = await patientIssuedPrescriptionsSupabaseService.getLatestForPatient(user.id);
 
-    if (prescription) {
-      const allowance = await shopPrescriptionService.getRemainingAllowance(user.id);
-      setStatus({
-        hasActivePrescription: true,
-        isExpired: false,
-        allowedStrengthMg: prescription.maxStrengthMg,
-        prescriptionId: prescription.id,
-        expiresAt: prescription.expiresAt ? new Date(prescription.expiresAt) : undefined,
-        totalCansAllowed: prescription.totalCansAllowed,
-        remainingCans: allowance.remainingCans,
-        referenceId: prescription.id,
-      });
-    } else {
-      const { prescription: latest, isExpired } = 
-        shopPrescriptionService.getLatestPrescription(user.id);
-      
-      setStatus({
-        hasActivePrescription: false,
-        isExpired,
-        expiredAt: isExpired && latest?.expiresAt 
-          ? new Date(latest.expiresAt) 
-          : undefined,
-        latestPrescriptionId: latest?.id,
-      });
+      if (latest) {
+        // MVP rule: any issued prescription unlocks shop; allowance is always 60 cans.
+        const totalCansAllowed = 60;
+        const allowance = await shopPrescriptionService.getRemainingAllowance(user.id);
+
+        setStatus({
+          hasActivePrescription: true,
+          isExpired: false,
+          allowedStrengthMg: latest.maxStrengthMg,
+          prescriptionId: latest.id,
+          expiresAt: undefined,
+          totalCansAllowed,
+          remainingCans: allowance.remainingCans,
+          referenceId: latest.id,
+        });
+
+        setIsLoading(false);
+        return;
+      }
+
+      // No Supabase prescription: fall back to mock/local history (helps in dev).
+      const mock = shopPrescriptionService.getActivePrescription(user.id);
+      if (mock) {
+        const allowance = await shopPrescriptionService.getRemainingAllowance(user.id);
+        setStatus({
+          hasActivePrescription: true,
+          isExpired: false,
+          allowedStrengthMg: mock.maxStrengthMg,
+          prescriptionId: mock.id,
+          expiresAt: mock.expiresAt ? new Date(mock.expiresAt) : undefined,
+          totalCansAllowed: mock.totalCansAllowed,
+          remainingCans: allowance.remainingCans,
+          referenceId: mock.id,
+        });
+      } else {
+        const { prescription: latestMock, isExpired } = shopPrescriptionService.getLatestPrescription(user.id);
+        setStatus({
+          hasActivePrescription: false,
+          isExpired,
+          expiredAt: isExpired && latestMock?.expiresAt ? new Date(latestMock.expiresAt) : undefined,
+          latestPrescriptionId: latestMock?.id,
+        });
+      }
+
+      setIsLoading(false);
+    } catch (e) {
+      console.error('Failed to load prescription status from Supabase:', e);
+      // On any Supabase error, fall back to mock/local.
+      const mock = shopPrescriptionService.getActivePrescription(user.id);
+      if (mock) {
+        const allowance = await shopPrescriptionService.getRemainingAllowance(user.id);
+        setStatus({
+          hasActivePrescription: true,
+          isExpired: false,
+          allowedStrengthMg: mock.maxStrengthMg,
+          prescriptionId: mock.id,
+          expiresAt: mock.expiresAt ? new Date(mock.expiresAt) : undefined,
+          totalCansAllowed: mock.totalCansAllowed,
+          remainingCans: allowance.remainingCans,
+          referenceId: mock.id,
+        });
+      } else {
+        setStatus({ hasActivePrescription: false, isExpired: false });
+      }
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   }, [user]);
 
   useEffect(() => {
