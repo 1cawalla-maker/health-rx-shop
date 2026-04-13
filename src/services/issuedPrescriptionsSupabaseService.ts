@@ -21,6 +21,17 @@ class IssuedPrescriptionsSupabaseService {
     return (data || []) as any;
   }
 
+  async listForPatient(params: { patientId: string }): Promise<IssuedPrescriptionRow[]> {
+    const { data, error } = await supabase
+      .from('issued_prescriptions')
+      .select('*')
+      .eq('patient_id', params.patientId)
+      .order('issued_at', { ascending: false });
+
+    if (error) throw error;
+    return (data || []) as any;
+  }
+
   async issue(params: {
     consultationId: string;
     doctorRowId: string;

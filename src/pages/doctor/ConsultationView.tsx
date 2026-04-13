@@ -58,6 +58,67 @@ function formatPhoneDisplay(phoneE164: string): string {
   return phoneE164;
 }
 
+function PatientHistoryCard({ patientId }: { patientId: string }) {
+  const { user } = useAuth();
+  const [rows, setRows] = useState<{ id: string; issuedAt: string; maxStrengthMg: number }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const run = async () => {
+      if (!patientId || !user?.id) { setRows([]); setLoading(false); return; }
+      try {
+        setLoading(true);
+        const data = await issuedPrescriptionsSupabaseService.listForPatient({ patientId });
+        setRows(
+          (data || []).map((r) => ({
+            id: r.id,
+            issuedAt: r.issued_at,
+            maxStrengthMg: r.max_strength_mg as any,
+          }))
+        );
+      } catch (e) {
+        console.error('Failed to load patient issued prescriptions:', e);
+        setRows([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void run();
+  }, [patientId, user?.id]);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Patient History</CardTitle>
+        <CardDescription>Previous prescriptions for this patient</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        ) : rows.length ? (
+          <div className="space-y-3">
+            {rows.slice(0, 5).map((r) => (
+              <div key={r.id} className="flex items-center justify-between gap-4 border rounded-lg p-3">
+                <div>
+                  <p className="text-sm font-medium">Max strength: {r.maxStrengthMg}mg</p>
+                  <p className="text-xs text-muted-foreground">Issued {format(new Date(r.issuedAt), 'MMM d, yyyy')}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">No prior issued prescriptions found.</p>
+        )}
+
+        <p className="mt-3 text-xs text-muted-foreground">
+          Order history ("last ordered") will appear here once orders are persisted.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function DoctorConsultationView() {
   const { id } = useParams<{ id: string }>();
   const { user, userRole } = useAuth();
@@ -689,14 +750,7 @@ export default function DoctorConsultationView() {
         <div className="space-y-6">
           <EligibilityQuizCard patientId={booking.patientId} />
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Patient History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">Past consultations and prescriptions for this patient will appear here.</p>
-            </CardContent>
-          </Card>
+          <PatientHistoryCard patientId={booking.patientId} />
 
           <MedicationGuideCard />
         </div>
