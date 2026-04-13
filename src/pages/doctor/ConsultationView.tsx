@@ -126,6 +126,7 @@ export default function DoctorConsultationView() {
 
   const [booking, setBooking] = useState<MockBooking | null>(null);
   const [consultSource, setConsultSource] = useState<'mock' | 'supabase' | null>(null);
+  const [isLoadingConsultation, setIsLoadingConsultation] = useState(true);
   const [callNote, setCallNote] = useState('');
   const [declineReason, setDeclineReason] = useState('');
   const [maxStrength, setMaxStrength] = useState<3 | 6 | 9>(6);
@@ -138,6 +139,8 @@ export default function DoctorConsultationView() {
 
   const reload = async () => {
     if (!id) return;
+
+    setIsLoadingConsultation(true);
 
     // Phase 2: load from Supabase consultations first.
     // IMPORTANT: The patient booking flow uses mockBookingService to generate an id that is also
@@ -197,6 +200,7 @@ export default function DoctorConsultationView() {
           callAttempts,
         } as any);
         setConsultSource('supabase');
+        setIsLoadingConsultation(false);
         return;
       }
     } catch (err) {
@@ -209,11 +213,13 @@ export default function DoctorConsultationView() {
     if (local) {
       setBooking(local);
       setConsultSource('mock');
+      setIsLoadingConsultation(false);
       return;
     }
 
     setBooking(null);
     setConsultSource(null);
+    setIsLoadingConsultation(false);
     return;
   };
 
@@ -528,6 +534,16 @@ export default function DoctorConsultationView() {
     if (!phone) return;
     navigator.clipboard.writeText(phone).then(() => toast.success('Phone number copied'));
   }, [patientProfile, intakePhone]);
+
+  if (isLoadingConsultation) {
+    return (
+      <Card>
+        <CardContent className="pt-6 text-center">
+          <p className="text-sm text-muted-foreground">Loading consultation…</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!booking || !hasAccess) {
     return (
