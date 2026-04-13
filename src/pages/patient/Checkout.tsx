@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePrescriptionStatus } from '@/hooks/usePrescriptionStatus';
 import { orderService } from '@/services/orderService';
 import { allowanceUtils } from '@/lib/allowanceUtils';
+import { shopifyCheckoutService } from '@/services/shopifyCheckoutService';
 import { ShippingForm } from '@/components/checkout/ShippingForm';
 import { OrderReview } from '@/components/checkout/OrderReview';
 import { PaymentPlaceholder } from '@/components/checkout/PaymentPlaceholder';
@@ -28,7 +29,7 @@ const steps: { id: CheckoutStep; label: string; icon: React.ElementType }[] = [
 export default function PatientCheckout() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { cart, clearCart } = useCart();
+  const { cart } = useCart();
   const { prescriptionId, referenceId } = usePrescriptionStatus();
 
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('shipping');
@@ -109,28 +110,18 @@ export default function PatientCheckout() {
     setIsProcessing(true);
 
     try {
-      // FRESH RECOMPUTE: derive shipping cost immediately before placing order
-      const freshShippingCents = getShippingCostCents(cart.totalCans, shippingMethod);
+      // Shopify is the system-of-record for checkout + shipping address capture.
+      // We keep our shipping form UI for now, but we do not persist the address in Supabase in MVP.
+      // (Later: we can optionally persist a draft, or mirror Shopify order addresses post-webhook.)
 
-      // ATOMIC: Order persists first
-      const order = await orderService.placeOrder({
-        userId: user.id,
-        cart,
-        shippingAddress,
-        shippingCents: freshShippingCents,
-        prescriptionId,
-        shippingMethod,
-      });
+      const { checkoutUrl } = await shopifyCheckoutService.createCheckoutUrlFromCartItems(cart.items);
 
-      // ONLY clear cart after successful order persistence
-      await clearCart();
-      setOrderConfirmed(true);
-      navigate(`/patient/order-success?orderId=${order.id}`);
+      // Do NOT clear cart yet — if the customer abandons payment, they should be able to try again.
+      // We can clear cart after a successful paid webhook sync in a future refinement.
+      window.location.assign(checkoutUrl);
     } catch (error) {
-      console.error('Error creating order:', error);
-      // Cart remains unchanged on failure
-      toast.error('Failed to place order. Your cart has not been modified.');
-    } finally {
+      console.error('Error creating Shopify checkout:', error);
+      toast.error('Failed to start checkout. Please try again.');
       setIsProcessing(false);
     }
   };

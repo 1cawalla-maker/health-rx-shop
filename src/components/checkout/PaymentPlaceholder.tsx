@@ -111,7 +111,7 @@ export function PaymentPlaceholder({
           ) : (
             <>
               <Lock className="h-4 w-4 mr-2" />
-              Place Order (${totalFormatted})
+              Continue to Shopify (${totalFormatted})
             </>
           )}
         </Button>
