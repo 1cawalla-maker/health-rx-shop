@@ -30,7 +30,7 @@ export default function PatientCheckout() {
   const { user } = useAuth();
   const { cart, clearCart } = useCart();
   const { prescriptionId, referenceId } = usePrescriptionStatus();
-  
+
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('shipping');
   const [shippingAddress, setShippingAddress] = useState<ShippingAddress | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -94,10 +94,8 @@ export default function PatientCheckout() {
       return;
     }
 
-    if (!agreedToTerms) {
-      toast.error('Please agree to the terms before placing your order');
-      return;
-    }
+    // Note: We do not enforce "agree to terms" here. Any legal/policy acknowledgement should be handled
+    // by Shopify checkout or a later policy decision.
 
     // RECALC FROM SCRATCH at submit using allowanceUtils
     const freshCansOrdered = await orderService.getTotalCansOrdered(user.id);
@@ -137,7 +135,7 @@ export default function PatientCheckout() {
     }
   };
 
-  const currentStepIndex = steps.findIndex(s => s.id === currentStep);
+  const currentStepIndex = steps.findIndex((s) => s.id === currentStep);
   const methodLabel = shippingMethod === 'express' ? 'Express' : 'Standard';
 
   return (
@@ -170,8 +168,8 @@ export default function PatientCheckout() {
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            Your cart ({cart.totalCans} cans) exceeds your remaining allowance ({remainingCans} cans). 
-            Please remove items before proceeding.
+            Your cart ({cart.totalCans} cans) exceeds your remaining allowance ({remainingCans} cans). Please remove
+            items before proceeding.
           </AlertDescription>
         </Alert>
       )}
@@ -191,26 +189,18 @@ export default function PatientCheckout() {
                     isCompleted
                       ? 'bg-primary border-primary text-primary-foreground'
                       : isCurrent
-                      ? 'border-primary text-primary'
-                      : 'border-muted text-muted-foreground'
+                        ? 'border-primary text-primary'
+                        : 'border-muted text-muted-foreground'
                   }`}
                 >
                   {isCompleted ? <Check className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
                 </div>
-                <span
-                  className={`text-xs mt-2 ${
-                    isCurrent ? 'text-foreground font-medium' : 'text-muted-foreground'
-                  }`}
-                >
+                <span className={`text-xs mt-2 ${isCurrent ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
                   {step.label}
                 </span>
               </div>
               {index < steps.length - 1 && (
-                <div
-                  className={`w-16 sm:w-24 h-0.5 mx-2 ${
-                    index < currentStepIndex ? 'bg-primary' : 'bg-muted'
-                  }`}
-                />
+                <div className={`w-16 sm:w-24 h-0.5 mx-2 ${index < currentStepIndex ? 'bg-primary' : 'bg-muted'}`} />
               )}
             </div>
           );
@@ -271,7 +261,9 @@ export default function PatientCheckout() {
           <Card className="sticky top-6">
             <CardHeader>
               <CardTitle className="text-lg">Order Summary</CardTitle>
-              <CardDescription>{cart.totalCans} {cart.totalCans === 1 ? 'can' : 'cans'}</CardDescription>
+              <CardDescription>
+                {cart.totalCans} {cart.totalCans === 1 ? 'can' : 'cans'}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {cart.items.map((item) => (
@@ -284,8 +276,11 @@ export default function PatientCheckout() {
                       ? `$${((item.priceCents * item.qtyCans) / 100).toFixed(2)}`
                       : (() => {
                           console.warn('Checkout sidebar: item has invalid priceCents:', {
-                            id: item.id, name: item.name, flavor: item.flavor,
-                            strengthMg: item.strengthMg, priceCents: item.priceCents,
+                            id: item.id,
+                            name: item.name,
+                            flavor: item.flavor,
+                            strengthMg: item.strengthMg,
+                            priceCents: item.priceCents,
                             normalizationAttempted: true,
                           });
                           return '—';
@@ -293,7 +288,7 @@ export default function PatientCheckout() {
                   </span>
                 </div>
               ))}
-              
+
               <div className="border-t pt-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal</span>
@@ -309,9 +304,7 @@ export default function PatientCheckout() {
                 </div>
               </div>
 
-              <p className="text-xs text-muted-foreground">
-                Order exactly 60 cans for free Express shipping
-              </p>
+              <p className="text-xs text-muted-foreground">Order exactly 60 cans for free Express shipping</p>
             </CardContent>
           </Card>
         </div>
