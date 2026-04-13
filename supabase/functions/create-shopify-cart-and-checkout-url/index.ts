@@ -22,14 +22,17 @@ async function shopifyStorefrontFetch<T>(query: string, variables: Record<string
   const token = Deno.env.get("SHOPIFY_STOREFRONT_ACCESS_TOKEN");
 
   if (!domain) throw new Error("SHOPIFY_STORE_DOMAIN is not set");
-  if (!token) throw new Error("SHOPIFY_STOREFRONT_ACCESS_TOKEN is not set");
 
-  const res = await fetch(`https://${domain}/api/2025-01/graphql.json`, {
+  // Token is optional: Shopify Storefront API supports tokenless access for core features.
+  // We only include the header when a token is provided.
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (token) headers["X-Shopify-Storefront-Access-Token"] = token;
+
+  const res = await fetch(`https://${domain}/api/2026-04/graphql.json`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Shopify-Storefront-Access-Token": token,
-    },
+    headers,
     body: JSON.stringify({ query, variables }),
   });
 
@@ -104,13 +107,17 @@ serve(async (req) => {
       throw new Error("Invalid allowed max strength derived from issued_prescriptions");
     }
 
-    // 2) Validate strength per variant via variant metafield nicopatch.strength_mg
-    const variantStrengthQuery = `
-      query VariantStrength($ids: [ID!]!) {
+    // 2) Validate strength per variant.
+    // Best-case: read metafield nicopatch.strength_mg (requires token-based Storefront API access).
+    // Fallback (tokenless): parse mg from the variant selected option value (e.g. "3mg").
+    const variantQuery = `
+      query Variants($ids: [ID!]!) {
         nodes(ids: $ids) {
           __typename
           ... on ProductVariant {
             id
+            title
+            selectedOptions { name value }
             metafield(namespace: "nicopatch", key: "strength_mg") { value }
           }
         }
@@ -118,20 +125,34 @@ serve(async (req) => {
     `;
 
     const ids = lineItems.map((li) => li.merchandiseId);
-    const strengthData = await shopifyStorefrontFetch<{ nodes: Array<any> }>(variantStrengthQuery, { ids });
+    const variantData = await shopifyStorefrontFetch<{ nodes: Array<any> }>(variantQuery, { ids });
 
     const strengthById = new Map<string, number>();
-    for (const node of strengthData.nodes ?? []) {
+    for (const node of variantData.nodes ?? []) {
       if (node?.__typename !== "ProductVariant" || !node?.id) continue;
-      const mg = node?.metafield?.value ? Number(node.metafield.value) : NaN;
-      strengthById.set(node.id, mg);
+
+      // Prefer metafield if present
+      const meta = node?.metafield?.value ? Number(node.metafield.value) : NaN;
+      if (Number.isFinite(meta) && meta > 0) {
+        strengthById.set(node.id, meta);
+        continue;
+      }
+
+      // Fallback: find Strength option, else parse from title
+      const strengthOpt = (node?.selectedOptions ?? []).find((o: any) =>
+        String(o?.name ?? "").toLowerCase() === "strength"
+      );
+      const raw = String(strengthOpt?.value ?? node?.title ?? "");
+      const m = raw.match(/(\d+)\s*mg/i);
+      const parsed = m ? Number(m[1]) : NaN;
+      strengthById.set(node.id, parsed);
     }
 
     for (const li of lineItems) {
       const mg = strengthById.get(li.merchandiseId);
       if (!mg || !Number.isFinite(mg)) {
         throw new Error(
-          `Missing/invalid nicopatch.strength_mg metafield for variant ${li.merchandiseId}. Ensure the metafield is set on every variant.`,
+          `Unable to determine strength for variant ${li.merchandiseId}. Expected nicopatch.strength_mg metafield or a Strength option like "3mg".`,
         );
       }
       if (mg > allowedMaxStrength) {
