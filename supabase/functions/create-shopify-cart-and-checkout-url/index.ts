@@ -128,13 +128,25 @@ serve(async (req) => {
     const variantData = await shopifyStorefrontFetch<{ nodes: Array<any> }>(variantQuery, { ids });
 
     const strengthById = new Map<string, number>();
-    for (const node of variantData.nodes ?? []) {
+
+    // Note: Shopify Storefront GraphQL may return `node.id` in a different encoding than the input IDs.
+    // To avoid mismatches, we store strength by BOTH the returned node.id and the requested id we sent.
+    const nodes: any[] = variantData.nodes ?? [];
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i];
+      const requestedId = ids[i];
+
       if (node?.__typename !== "ProductVariant" || !node?.id) continue;
+
+      const setStrength = (mg: number) => {
+        if (requestedId) strengthById.set(requestedId, mg);
+        strengthById.set(node.id, mg);
+      };
 
       // Prefer metafield if present
       const meta = node?.metafield?.value ? Number(node.metafield.value) : NaN;
       if (Number.isFinite(meta) && meta > 0) {
-        strengthById.set(node.id, meta);
+        setStrength(meta);
         continue;
       }
 
@@ -145,7 +157,7 @@ serve(async (req) => {
       const raw = String(strengthOpt?.value ?? node?.title ?? "");
       const m = raw.match(/(\d+)\s*mg/i);
       const parsed = m ? Number(m[1]) : NaN;
-      strengthById.set(node.id, parsed);
+      setStrength(parsed);
     }
 
     for (const li of lineItems) {
