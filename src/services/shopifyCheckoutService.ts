@@ -4,6 +4,8 @@ import type { CartItem } from '@/types/shop';
 export type ShopifyLineItemInput = {
   merchandiseId: string;
   quantity: number;
+  /** Strength in mg (server-side gate) */
+  strengthMg: number;
 };
 
 // Phase 2 note:
@@ -59,6 +61,7 @@ class ShopifyCheckoutService {
     const lineItems: ShopifyLineItemInput[] = items.map((it) => ({
       merchandiseId: localVariantIdToMerchandiseGid(it.variantId),
       quantity: it.qtyCans,
+      strengthMg: it.strengthMg,
     }));
 
     return this.createCheckoutUrl(lineItems);
