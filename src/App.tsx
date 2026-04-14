@@ -38,7 +38,7 @@ import PatientShop from "./pages/patient/Shop";
 import PatientProductDetail from "./pages/patient/ProductDetail";
 import PatientIntake from "./pages/patient/Intake";
 import PatientAccount from "./pages/patient/Account";
-import PatientCheckout from "./pages/patient/Checkout";
+// Checkout is handled by Shopify (no in-app checkout page).
 import PatientOrders from "./pages/patient/Orders";
 import PatientOrderSuccess from "./pages/patient/OrderSuccess";
 
@@ -134,7 +134,7 @@ const App = () => (
                 <Route path="prescriptions" element={<PatientPrescriptions />} />
                 <Route path="shop" element={<PatientShop />} />
                 <Route path="shop/:productId" element={<PatientProductDetail />} />
-                <Route path="checkout" element={<PatientCheckout />} />
+                {/* Checkout is handled by Shopify (no in-app checkout route). */}
                 <Route path="orders" element={<PatientOrders />} />
                 <Route path="order-success" element={<PatientOrderSuccess />} />
                 <Route path="account" element={<PatientAccount />} />
