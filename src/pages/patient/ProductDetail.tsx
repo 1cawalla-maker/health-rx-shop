@@ -11,7 +11,7 @@ import { ShopExpiredOverlay } from '@/components/shop/ShopExpiredOverlay';
 import { ShopLockedOverlay } from '@/components/shop/ShopLockedOverlay';
 import { ShopPendingOverlay } from '@/components/shop/ShopPendingOverlay';
 import { catalogService } from '@/services/catalogService';
-import { orderService } from '@/services/orderService';
+import { shopifyOrderMirrorService } from '@/services/shopifyOrderMirrorService';
 import { allowanceUtils } from '@/lib/allowanceUtils';
 import { useCart } from '@/contexts/CartContext';
 import { usePrescriptionStatus } from '@/hooks/usePrescriptionStatus';
@@ -92,7 +92,7 @@ export default function PatientProductDetail() {
   useEffect(() => {
     const loadCansOrdered = async () => {
       if (!user) return;
-      const total = await orderService.getTotalCansOrdered(user.id);
+      const total = await shopifyOrderMirrorService.getPaidCansOrdered(user.id);
       setCansOrdered(total);
     };
     loadCansOrdered();
@@ -145,7 +145,7 @@ export default function PatientProductDetail() {
     // Recalc allowance fresh before mutation
     setAdding(true);
     try {
-      const freshCansOrdered = await orderService.getTotalCansOrdered(user.id);
+      const freshCansOrdered = await shopifyOrderMirrorService.getPaidCansOrdered(user.id);
       const freshRemaining = allowanceUtils.remainingForAddToCart(freshCansOrdered, cart.totalCans);
       if (freshRemaining <= 0) {
         toast.error('No remaining allowance - you have used your full prescription');

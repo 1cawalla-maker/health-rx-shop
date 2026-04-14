@@ -4,7 +4,7 @@
 
 import type { MockPrescription } from '@/types/shop';
 import { STORAGE_KEYS } from '@/lib/storageKeys';
-import { orderService } from './orderService';
+import { shopifyOrderMirrorService } from './shopifyOrderMirrorService';
 
 class ShopPrescriptionService {
   // Private: Read all prescriptions from localStorage
@@ -102,7 +102,7 @@ class ShopPrescriptionService {
       return { totalCansAllowed: 0, cansUsed: 0, remainingCans: 0 };
     }
 
-    const cansUsed = await orderService.getTotalCansOrdered(userId);
+    const cansUsed = await shopifyOrderMirrorService.getPaidCansOrdered(userId);
     const remainingCans = Math.max(0, prescription.totalCansAllowed - cansUsed);
 
     return {

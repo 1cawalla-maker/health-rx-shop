@@ -11,7 +11,7 @@ import { useCart } from '@/contexts/CartContext';
 import { usePrescriptionStatus } from '@/hooks/usePrescriptionStatus';
 
 import { catalogService } from '@/services/catalogService';
-import { orderService } from '@/services/orderService';
+import { shopifyOrderMirrorService } from '@/services/shopifyOrderMirrorService';
 
 import { allowanceUtils } from '@/lib/allowanceUtils';
 
@@ -74,7 +74,7 @@ export default function PatientShop() {
     const loadCansOrdered = async () => {
       if (!user) return;
       try {
-        const totalCans = await orderService.getTotalCansOrdered(user.id);
+        const totalCans = await shopifyOrderMirrorService.getPaidCansOrdered(user.id);
         setCansOrdered(totalCans);
       } catch (error) {
         console.error('Error loading cans ordered:', error);
