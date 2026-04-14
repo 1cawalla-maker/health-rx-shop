@@ -1,5 +1,5 @@
 import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
@@ -7,6 +7,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { useCart } from '@/contexts/CartContext';
 import { PRESCRIPTION_TOTAL_CANS } from '@/types/shop';
+import { shopifyCheckoutService } from '@/services/shopifyCheckoutService';
+import { toast } from 'sonner';
 
 interface CartDrawerProps {
   remainingCans?: number;
@@ -15,11 +17,29 @@ interface CartDrawerProps {
 
 export function CartDrawer({ remainingCans, maxContainers }: CartDrawerProps) {
   const { cart, isCartOpen, setIsCartOpen, updateQuantity, removeFromCart } = useCart();
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   // Use remainingCans if provided, otherwise fall back to maxContainers for backwards compatibility
   const allowanceRemaining = remainingCans ?? (maxContainers ? maxContainers - cart.totalCans : undefined);
   const isOverLimit = allowanceRemaining !== undefined && allowanceRemaining < 0;
   const canCheckout = !isOverLimit && cart.items.length > 0;
+
+  const handleProceedToCheckout = async () => {
+    if (!canCheckout || isCheckingOut) return;
+
+    setIsCheckingOut(true);
+
+    try {
+      const { checkoutUrl } = await shopifyCheckoutService.createCheckoutUrlFromCartItems(cart.items);
+      // Close drawer before redirect.
+      setIsCartOpen(false);
+      window.location.assign(checkoutUrl);
+    } catch (error) {
+      console.error('CartDrawer: Failed to start Shopify checkout', error);
+      toast.error('Failed to start secure checkout. Please try again.');
+      setIsCheckingOut(false);
+    }
+  };
 
   return (
     <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
@@ -137,18 +157,12 @@ export function CartDrawer({ remainingCans, maxContainers }: CartDrawerProps) {
               </div>
 
               <Button
-                asChild={canCheckout}
                 className="w-full"
                 size="lg"
-                disabled={!canCheckout}
+                disabled={!canCheckout || isCheckingOut}
+                onClick={handleProceedToCheckout}
               >
-                {canCheckout ? (
-                  <Link to="/patient/checkout" onClick={() => setIsCartOpen(false)}>
-                    Proceed to Checkout
-                  </Link>
-                ) : (
-                  <span>Proceed to Checkout</span>
-                )}
+                {isCheckingOut ? 'Opening secure checkout…' : 'Proceed to Checkout'}
               </Button>
 
               <p className="text-xs text-muted-foreground text-center">
