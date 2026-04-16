@@ -120,6 +120,27 @@ serve(async (req) => {
 
     logStep("Order synced", { internalOrderId });
 
+    // If paid, generate supplier/border pack-in prescription PDF (best-effort).
+    if ((financialStatus || "").toLowerCase() === "paid") {
+      try {
+        const fnUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-order-packin-prescription-pdf`;
+        const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+        const res = await fetch(fnUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({ internalOrderId }),
+        });
+        const txt = await res.text();
+        logStep("PDF generation triggered", { status: res.status, body: txt.slice(0, 500) });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        logStep("PDF generation failed (non-fatal)", { msg });
+      }
+    }
+
     return new Response("OK", { status: 200 });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);

@@ -6,6 +6,8 @@ import { mockAvailabilityService } from '@/services/availabilityService';
 import { supabase } from '@/integrations/supabase/client';
 import { userPreferencesService } from '@/services/userPreferencesService';
 import { getTimezoneAbbr } from '@/lib/datetime';
+import { CONSULTATION_FEE_CENTS } from '@/config/consultations';
+import { formatAudFromCents } from '@/lib/money';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -188,7 +190,7 @@ export default function BookingPayment() {
             <div className="border-t pt-4 mt-4">
               <div className="flex justify-between text-lg font-semibold">
                 <span>Total</span>
-                <span>$49.00 AUD</span>
+                <span>{formatAudFromCents(CONSULTATION_FEE_CENTS)} AUD</span>
               </div>
             </div>
 
@@ -285,7 +287,7 @@ export default function BookingPayment() {
               Processing...
             </>
           ) : (
-            'Pay $49.00 AUD'
+            `Pay ${formatAudFromCents(CONSULTATION_FEE_CENTS)} AUD`
           )}
         </Button>
       </div>

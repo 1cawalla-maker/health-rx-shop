@@ -4,6 +4,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { mockBookingService } from '@/services/consultationService';
 import { userPreferencesService } from '@/services/userPreferencesService';
 import { getTimezoneAbbr as getTzAbbr } from '@/lib/datetime';
+import { CONSULTATION_FEE_CENTS } from '@/config/consultations';
+import { formatAudFromCents } from '@/lib/money';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -123,7 +125,7 @@ export default function BookingConfirmation() {
           <div className="border-t pt-4">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Amount Paid</span>
-              <span className="font-semibold">${(booking.amountPaid || 4900) / 100} AUD</span>
+              <span className="font-semibold">{formatAudFromCents(booking.amountPaid ?? CONSULTATION_FEE_CENTS)} AUD</span>
             </div>
             {booking.paidAt && (
               <p className="text-xs text-muted-foreground mt-1">

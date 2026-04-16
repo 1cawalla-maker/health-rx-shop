@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import Seo, { SITE_ORIGIN } from "@/components/seo/Seo";
 import { breadcrumbSchema, serviceSchema, webPageSchema } from "@/components/seo/schema";
+import { CONSULTATION_FEE_CENTS } from "@/config/consultations";
+import { formatAudFromCents } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, ArrowRight, HelpCircle } from "lucide-react";
 
@@ -86,7 +88,7 @@ export default function Pricing() {
                 </div>
                 <div className="p-6 md:p-8">
                   <div className="text-center mb-8">
-                    <span className="font-display text-5xl font-bold text-foreground">$49</span>
+                    <span className="font-display text-5xl font-bold text-foreground">{formatAudFromCents(CONSULTATION_FEE_CENTS)}</span>
                     <span className="text-muted-foreground ml-2">AUD</span>
                   </div>
                   <ul className="space-y-4 mb-8">

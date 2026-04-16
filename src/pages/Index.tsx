@@ -3,6 +3,8 @@ import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Button } from "@/components/ui/button";
 import Seo, { SITE_ORIGIN } from "@/components/seo/Seo";
 import { breadcrumbSchema, serviceSchema, webPageSchema } from "@/components/seo/schema";
+import { CONSULTATION_FEE_CENTS } from "@/config/consultations";
+import { formatAudFromCents } from "@/lib/money";
 import { 
   Calendar, 
   ClipboardCheck, 
@@ -119,7 +121,7 @@ export default function Index() {
             </div>
 
             <p className="text-sm text-muted-foreground animate-fade-in-up animation-delay-300">
-              Consultations from $49 AUD • No commitment required
+              Consultations from {formatAudFromCents(CONSULTATION_FEE_CENTS)} AUD • No commitment required
             </p>
 
             <div className="pt-2">

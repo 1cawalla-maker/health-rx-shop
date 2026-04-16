@@ -2,6 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { ConsultationBooking, BookingStatus, LegacyCallAttempt, IntakeFormData, MockBooking, MockCallAttempt } from '@/types/telehealth';
 import { mockAvailabilityService } from './availabilityService';
+import { CONSULTATION_FEE_CENTS } from '@/config/consultations';
 
 // Constants
 const MOCK_BOOKINGS_KEY = 'nicopatch_mock_bookings';
@@ -139,7 +140,7 @@ export const mockBookingService = {
     bookings[index] = {
       ...booking,
       status: 'booked',
-      amountPaid: 4900, // $49.00 in cents
+      amountPaid: CONSULTATION_FEE_CENTS, // consultation fee in cents
       paidAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       reservationId: undefined,
@@ -172,7 +173,7 @@ export const mockBookingService = {
   },
 
   // Reschedule a booking atomically (validates slot, creates new paid booking, cancels old)
-  // amountPaid is in cents (e.g., 4900 = $49.00)
+  // amountPaid is in cents (e.g., 2999 = $29.99)
   rescheduleBooking(
     oldBookingId: string,
     patientId: string,

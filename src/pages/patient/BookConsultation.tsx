@@ -14,6 +14,8 @@ import { toast } from 'sonner';
 import { format, addDays, isBefore, startOfDay } from 'date-fns';
 import { Phone, Loader2, CalendarDays, Clock, AlertTriangle, Info } from 'lucide-react';
 import type { FiveMinuteSlot } from '@/types/telehealth';
+import { CONSULTATION_FEE_CENTS } from '@/config/consultations';
+import { formatAudFromCents } from '@/lib/money';
 
 export default function BookConsultation() {
   const { user } = useAuth();
@@ -445,7 +447,7 @@ export default function BookConsultation() {
                 <div>
                   <p className="text-sm text-muted-foreground">Fee</p>
                   <p className="font-medium">
-                    {isReschedule && rescheduleParamsValid ? 'Already paid' : '$49 AUD'}
+                    {isReschedule && rescheduleParamsValid ? 'Already paid' : `${formatAudFromCents(CONSULTATION_FEE_CENTS)} AUD`}
                   </p>
                 </div>
               </div>
@@ -469,7 +471,7 @@ export default function BookConsultation() {
               ) : isReschedule && rescheduleParamsValid ? (
                 'Confirm New Time'
               ) : (
-                'Proceed to Payment ($49)'
+                `Proceed to Payment (${formatAudFromCents(CONSULTATION_FEE_CENTS)})`
               )}
             </Button>
 

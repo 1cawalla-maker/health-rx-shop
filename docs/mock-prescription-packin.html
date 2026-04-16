@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PouchCare — Prescription (Personal Importation)</title>
+  <style>
+    /* Simple print-friendly A4 layout. No external fonts/deps. */
+    @page { size: A4; margin: 16mm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      color: #111827;
+      margin: 0;
+      background: #f3f4f6;
+    }
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      background: white;
+      padding: 0;
+    }
+    .pad { padding: 16mm; }
+    .row { display: flex; gap: 12mm; }
+    .col { flex: 1; }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10mm;
+      padding-bottom: 6mm;
+      border-bottom: 2px solid #0ea5e9;
+      margin-bottom: 8mm;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 6mm;
+    }
+    .logo {
+      width: 34mm;
+      height: 34mm;
+      border: 2px solid #0ea5e9;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: #0ea5e9;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .brand h1 {
+      font-size: 18px;
+      line-height: 1.1;
+      margin: 0;
+    }
+    .brand .sub {
+      margin-top: 2px;
+      font-size: 12px;
+      color: #374151;
+    }
+
+    .title {
+      text-align: right;
+    }
+    .title h2 {
+      font-size: 16px;
+      margin: 0;
+      color: #0f172a;
+    }
+    .title .meta {
+      margin-top: 2px;
+      font-size: 12px;
+      color: #374151;
+    }
+
+    h3 {
+      font-size: 12px;
+      margin: 0 0 4mm 0;
+      color: #0f172a;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .card {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 6mm;
+      margin-bottom: 6mm;
+    }
+
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3mm 6mm;
+    }
+
+    .field { font-size: 12px; }
+    .label { color: #6b7280; font-size: 11px; margin-bottom: 1mm; }
+    .value { font-weight: 600; }
+
+    .med-item {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 5mm;
+      margin-top: 4mm;
+    }
+    .med-name { font-weight: 800; font-size: 13px; }
+    .med-sub { color: #374151; font-size: 12px; margin-top: 1mm; }
+    .sigbox {
+      height: 18mm;
+      border: 1px dashed #9ca3af;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6b7280;
+      font-size: 11px;
+      margin-top: 2mm;
+    }
+
+    .callout {
+      border-left: 4px solid #0ea5e9;
+      background: #f0f9ff;
+      padding: 4mm 5mm;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #0f172a;
+    }
+
+    .refs {
+      font-size: 11px;
+      color: #374151;
+      word-break: break-word;
+      line-height: 1.35;
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 8mm;
+      margin-top: 6mm;
+      padding-top: 4mm;
+      border-top: 1px solid #e5e7eb;
+    }
+    .qr {
+      width: 30mm;
+      height: 30mm;
+      border: 1px dashed #9ca3af;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: #6b7280;
+      font-size: 10px;
+      text-align: center;
+      padding: 2mm;
+    }
+    .muted { color: #6b7280; font-size: 11px; }
+
+    /* Print: remove grey background */
+    @media print {
+      body { background: white; }
+      .page { margin: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="pad">
+      <div class="header">
+        <div class="brand">
+          <div class="logo">LOGO</div>
+          <div>
+            <h1>PouchCare</h1>
+            <div class="sub">Telehealth Clinic • Brisbane, QLD • (07) 3123 4567 • support@pouchcare.com.au</div>
+          </div>
+        </div>
+        <div class="title">
+          <h2>PRESCRIPTION — Personal Importation (Australia)</h2>
+          <div class="meta">Document type: Pack-in prescription (border/supplier)</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <div class="card">
+            <h3>Prescriber details</h3>
+            <div class="grid2">
+              <div class="field">
+                <div class="label">Prescriber</div>
+                <div class="value">Dr Jordan Nguyen</div>
+              </div>
+              <div class="field">
+                <div class="label">Prescriber / provider number</div>
+                <div class="value">1234567A</div>
+              </div>
+              <div class="field">
+                <div class="label">Clinic / practice</div>
+                <div class="value">PouchCare Telehealth Clinic</div>
+              </div>
+              <div class="field">
+                <div class="label">Phone</div>
+                <div class="value">(07) 3123 4567</div>
+              </div>
+              <div class="field" style="grid-column: 1 / -1;">
+                <div class="label">Address</div>
+                <div class="value">Level 3, 12 Creek St, Brisbane QLD 4000</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Patient details</h3>
+            <div class="grid2">
+              <div class="field">
+                <div class="label">Patient</div>
+                <div class="value">Callum Wallace</div>
+              </div>
+              <div class="field">
+                <div class="label">Date of birth</div>
+                <div class="value">14 Mar 1992</div>
+              </div>
+              <div class="field" style="grid-column: 1 / -1;">
+                <div class="label">Residential address</div>
+                <div class="value">88 Example Rd, New Farm QLD 4005</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Medication(s)</h3>
+
+            <div class="med-item">
+              <div class="med-name">Nicotine oral pouches (nicotine) — Cool Mint</div>
+              <div class="med-sub">Strength / form: <b>6 mg per pouch</b> (oral pouch) • Pack size: <b>20 pouches per can</b> • Quantity: <b>12 cans</b></div>
+              <div style="height: 3mm"></div>
+              <div class="label">Directions (Sig)</div>
+              <div class="value" style="font-size: 12px; font-weight: 600;">
+                Place <b>1 pouch</b> in the mouth as needed for cravings. Maximum <b>12 pouches per day</b>. Do not swallow pouches.
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="col" style="max-width: 78mm;">
+          <div class="card">
+            <h3>Administrative</h3>
+            <div class="field">
+              <div class="label">Date issued</div>
+              <div class="value">15 Apr 2026</div>
+            </div>
+            <div style="height: 4mm"></div>
+            <div class="field">
+              <div class="label">Prescriber signature</div>
+              <div class="sigbox">Signature image placed here</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Medication allowance</h3>
+            <div class="callout">
+              <div><b>Allowance limit:</b> 60 cans per prescription (3 months supply)</div>
+              <div><b>This order:</b> 12 cans</div>
+              <div><b>Total supplied to date:</b> 36 cans</div>
+              <div><b>Remaining allowance:</b> 24 cans</div>
+              <div><b>Status:</b> AVAILABLE</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Ingredients & compliance</h3>
+            <div class="field">
+              <div class="label">Active ingredient</div>
+              <div class="value">Nicotine (present as <b>nicotine bitartrate</b> salt)</div>
+            </div>
+            <div style="height: 3mm"></div>
+            <div class="field">
+              <div class="label">Other ingredients (excipients)</div>
+              <div class="value" style="font-weight: 600;">
+                Microcrystalline cellulose (E460), glycerol (E422), sodium carbonates (E500), tartaric acid (E334), calcium chloride (E509), acesulfame potassium (E950)
+              </div>
+            </div>
+            <div style="height: 3mm"></div>
+            <div class="field">
+              <div class="label">Compliance statement</div>
+              <div class="value" style="font-weight: 600;">
+                “This product contains <b>no controlled substances other than nicotine</b>. Supplied for the named patient’s <b>personal therapeutic use</b> only and must not be supplied to any other person.”
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>References (TGA)</h3>
+            <div class="refs">
+              Personal Importation Scheme:<br>
+              <span class="muted">https://www.tga.gov.au/products/unapproved-therapeutic-goods/access-pathways/personal-importation-scheme</span>
+              <div style="height: 2mm"></div>
+              Nicotine pouches (importation):<br>
+              <span class="muted">https://www.tga.gov.au/products/unapproved-therapeutic-goods/therapeutic-vaping-goods/vaping-hub/nicotine-pouches#importation</span>
+            </div>
+          </div>
+
+          <div class="footer">
+            <div class="muted">
+              For border processing information, scan the QR.
+              <div>Document: Prescription (pack-in) • Page 1 of 1</div>
+            </div>
+            <div>
+              <div class="qr">QR — URL TBC</div>
+              <div class="muted" style="text-align:center; margin-top: 1.5mm;">Scan: Import info (TGA)</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

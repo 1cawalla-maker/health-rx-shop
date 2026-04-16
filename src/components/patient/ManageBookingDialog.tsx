@@ -14,6 +14,7 @@ import { Calendar, Clock, User, AlertTriangle, Info } from 'lucide-react';
 import { formatDoctorName } from '@/lib/utils';
 import { mockBookingService } from '@/services/consultationService';
 import { toast } from '@/hooks/use-toast';
+import { CONSULTATION_FEE_CENTS } from '@/config/consultations';
 import { CountdownChip } from '@/components/bookings/CountdownChip';
 import type { BookingStatus } from '@/types/telehealth';
 
@@ -104,8 +105,8 @@ export function ManageBookingDialog({
     setIsRescheduling(true);
 
     // Get the amount paid (in cents) before navigating
-    // Default to $49 (4900 cents) if not set
-    const amountPaidCents = booking.amountPaid ?? 4900;
+    // Default to consult fee (in cents) if not set
+    const amountPaidCents = booking.amountPaid ?? CONSULTATION_FEE_CENTS;
 
     toast({
       title: 'Select new time',
@@ -116,7 +117,7 @@ export function ManageBookingDialog({
     setIsRescheduling(false);
 
     // Navigate to booking page with reschedule context
-    // amountPaid is in cents (e.g., 4900 = $49.00)
+    // amountPaid is in cents (e.g., 2999 = $29.99)
     // Do NOT cancel here - the atomic rescheduleBooking() will handle it
     navigate(`/patient/book?reschedule=true&bookingId=${booking.id}&amountPaid=${amountPaidCents}`);
   };

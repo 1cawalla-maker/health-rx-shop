@@ -14,6 +14,8 @@ import {
   Truck,
   Scale
 } from 'lucide-react';
+import { CONSULTATION_FEE_CENTS } from '@/config/consultations';
+import { formatAudFromCents } from '@/lib/money';
 
 const faqCategories = [
   {
@@ -263,7 +265,7 @@ Your prescribing doctor will recommend an appropriate strength range based on yo
     faqs: [
       {
         question: 'How much does the consultation cost?',
-        answer: `Our consultation fee is **$49 AUD**.
+        answer: `Our consultation fee is **${formatAudFromCents(CONSULTATION_FEE_CENTS)} AUD**.
 
 **What's included:**
 - Pre-booking eligibility screening

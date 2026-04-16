@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, User, Copy, AlertTriangle, Info } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { formatDoctorName } from '@/lib/utils';
+import { formatAudFromCents } from '@/lib/money';
+import { CONSULTATION_FEE_CENTS } from '@/config/consultations';
 import { CountdownChip } from '@/components/bookings/CountdownChip';
 
 // Status can come from different tables with different allowed values
@@ -136,7 +138,7 @@ export function ConsultationDetailDialog({ booking, open, onOpenChange }: Consul
           {booking.amountPaid && (
             <div className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
               <span className="text-sm text-muted-foreground">Amount Paid</span>
-              <span className="font-medium">${booking.amountPaid}</span>
+              <span className="font-medium">{formatAudFromCents(booking.amountPaid)}</span>
             </div>
           )}
 
@@ -157,7 +159,7 @@ export function ConsultationDetailDialog({ booking, open, onOpenChange }: Consul
               <div className="flex gap-2">
                 <AlertTriangle className="h-4 w-4 text-yellow-600 shrink-0 mt-0.5" />
                 <p className="text-sm text-yellow-700">
-                  If you do not answer after 3 call attempts within the scheduled time, your consultation will be marked as a no-show. The $49 consultation fee is non-refundable for no-shows.
+                  If you do not answer after 3 call attempts within the scheduled time, your consultation will be marked as a no-show. The {formatAudFromCents(CONSULTATION_FEE_CENTS)} consultation fee is non-refundable for no-shows.
                 </p>
               </div>
             </div>
