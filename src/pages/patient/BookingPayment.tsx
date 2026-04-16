@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { mockBookingService } from '@/services/consultationService';
 import { mockAvailabilityService } from '@/services/availabilityService';
@@ -22,6 +22,7 @@ export default function BookingPayment() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const patientTz = useMemo(() => user?.id ? userPreferencesService.getTimezone(user.id) : 'Australia/Brisbane', [user?.id]);
 
@@ -54,7 +55,55 @@ export default function BookingPayment() {
     }
   }, [bookingId, navigate]);
 
-  // Countdown timer
+  // Stripe return handling: when coming back from Checkout, wait for webhook to confirm.
+  useEffect(() => {
+    const stripeSuccess = searchParams.get('stripeSuccess') === '1';
+    const sessionId = searchParams.get('session_id');
+
+    if (!stripeSuccess || !bookingId || !user?.id) return;
+
+    let cancelled = false;
+    setProcessing(true);
+
+    const poll = async () => {
+      const startedAt = Date.now();
+      while (!cancelled && Date.now() - startedAt < 30_000) {
+        // 1) check payment row
+        const { data: payment } = await supabase
+          .from('consultation_payments')
+          .select('status, stripe_checkout_session_id')
+          .eq('consultation_id', bookingId)
+          .maybeSingle();
+
+        if (payment?.status === 'paid') {
+          toast.success('Payment successful!');
+          navigate(`/patient/booking/confirmation/${bookingId}`);
+          return;
+        }
+
+        // Fallback: if session_id differs, don't block the user forever.
+        if (sessionId && payment?.stripe_checkout_session_id && payment.stripe_checkout_session_id !== sessionId) {
+          break;
+        }
+
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+
+      if (!cancelled) {
+        toast.message('Payment received. We are still confirming your booking…');
+        // Allow user to retry by refreshing; keep them on page.
+        setProcessing(false);
+      }
+    };
+
+    void poll();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bookingId, navigate, searchParams, user?.id]);
+
+  // Countdown timer (reservation expiry)
   useEffect(() => {
     if (timeRemaining === null || timeRemaining <= 0) return;
 
@@ -93,30 +142,20 @@ export default function BookingPayment() {
 
     setProcessing(true);
 
-    
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      // Phase 2: real Stripe checkout. Server validates reservation + ownership.
+      const { stripeSupabaseService } = await import('@/services/stripeSupabaseService');
+      const { url } = await stripeSupabaseService.createConsultationCheckout({
+        consultationId: bookingId,
+        amountCents: CONSULTATION_FEE_CENTS,
+      });
 
-    const confirmed = mockBookingService.confirmPayment(bookingId);
-
-    if (confirmed) {
-      try {
-        // Phase 2: atomically assign doctor + confirm the consultation in Supabase.
-        const { data, error } = await supabase.rpc('confirm_paid_consultation', {
-          _consultation_id: bookingId,
-        });
-        if (error) throw error;
-
-        // If needed later, `data` contains the updated consultation row.
-        toast.success('Payment successful!');
-        navigate(`/patient/booking/confirmation/${bookingId}`);
-      } catch (e) {
-        console.error('Failed to confirm consultation in Supabase:', e);
-        const msg = (e as any)?.message || (e as any)?.error_description || 'Payment succeeded, but we could not confirm your booking.';
-        toast.error(`${msg} Please try again.`);
-        setProcessing(false);
-      }
-    } else {
-      toast.error('Payment failed. Please try again.');
+      if (!url) throw new Error('No checkout URL returned');
+      window.location.href = url;
+    } catch (e) {
+      console.error('Failed to start checkout:', e);
+      const msg = (e as any)?.message || (e as any)?.error_description || 'Could not start secure checkout.';
+      toast.error(msg);
       setProcessing(false);
     }
   };
