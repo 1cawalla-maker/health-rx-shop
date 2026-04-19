@@ -33,6 +33,7 @@ export default function BookingPayment() {
   const [processing, setProcessing] = useState(false);
   const [policyAgreed, setPolicyAgreed] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  const [confirmTimedOut, setConfirmTimedOut] = useState(false);
 
   useEffect(() => {
     if (bookingId) {
@@ -67,6 +68,7 @@ export default function BookingPayment() {
     // Never allow the user to start a new checkout from here (avoids "Edge Function returned non-2xx" loops
     // when the reservation has already been consumed/confirmed).
     setPolicyAgreed(true);
+    setConfirmTimedOut(false);
 
     let cancelled = false;
     setProcessing(true);
@@ -97,7 +99,7 @@ export default function BookingPayment() {
 
       if (!cancelled) {
         toast.message('Payment received. We are still confirming your booking…');
-        // Allow user to retry by refreshing; keep them on page.
+        setConfirmTimedOut(true);
         setProcessing(false);
       }
     };
@@ -298,12 +300,40 @@ export default function BookingPayment() {
       </Alert>
 
       {stripeSuccess ? (
-        <Alert className="border-primary/50 bg-primary/10">
-          <Loader2 className="h-4 w-4 animate-spin text-primary" />
-          <AlertDescription>
-            <strong>Payment received.</strong> We’re confirming your booking now…
-          </AlertDescription>
-        </Alert>
+        processing ? (
+          <Alert className="border-primary/50 bg-primary/10">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            <AlertDescription>
+              <strong>Payment received.</strong> We’re confirming your booking now…
+            </AlertDescription>
+          </Alert>
+        ) : confirmTimedOut ? (
+          <Alert className="border-orange-500/50 bg-orange-500/10">
+            <AlertTriangle className="h-4 w-4 text-orange-500" />
+            <AlertDescription>
+              <strong>Payment received.</strong> Confirmation is taking longer than expected.
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => window.location.reload()}>
+                  Check again
+                </Button>
+                <Button onClick={() => navigate(`/patient/booking/confirmation/${bookingId}`)}>
+                  Continue
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Alert className="border-primary/50 bg-primary/10">
+            <AlertDescription>
+              <strong>Payment received.</strong> Booking confirmation is ready.
+              <div className="mt-3">
+                <Button onClick={() => navigate(`/patient/booking/confirmation/${bookingId}`)}>
+                  Continue
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )
       ) : stripeCancelled ? (
         <Alert className="border-orange-500/50 bg-orange-500/10">
           <AlertTriangle className="h-4 w-4 text-orange-500" />
