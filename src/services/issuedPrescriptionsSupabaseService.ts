@@ -55,7 +55,17 @@ class IssuedPrescriptionsSupabaseService {
       );
 
     if (error) throw error;
+
+    // Best-effort email to patient (do not fail issuance)
+    try {
+      await (supabase as any).functions.invoke('send-prescription-active-email', {
+        body: { consultationId: params.consultationId },
+      });
+    } catch {
+      // non-fatal
+    }
   }
 }
+
 
 export const issuedPrescriptionsSupabaseService = new IssuedPrescriptionsSupabaseService();

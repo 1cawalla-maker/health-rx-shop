@@ -224,6 +224,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         setUserRole({ role, status });
+
+        // Best-effort welcome email (do not block signup)
+        try {
+          await (supabase as any).functions.invoke('send-welcome-email', {
+            body: { role },
+          });
+        } catch (e) {
+          if (import.meta.env.DEV) {
+            console.error('Welcome email failed (non-fatal):', e);
+          }
+        }
       }
 
       return { error: null, userId: createdUserId };

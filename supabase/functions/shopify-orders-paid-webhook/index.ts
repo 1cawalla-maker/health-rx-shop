@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { sendEmail } from "../_shared/email/resend.ts";
 
 const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : "";
@@ -138,6 +139,39 @@ serve(async (req) => {
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         logStep("PDF generation failed (non-fatal)", { msg });
+      }
+
+      // Best-effort patient order confirmation email
+      try {
+        const { data: userRes, error: userErr } = await supabase.auth.admin.getUserById(supabaseUserId);
+        const toEmail = userRes?.user?.email;
+
+        if (userErr || !toEmail) {
+          logStep("Order email skipped (user email not found)", { supabaseUserId, error: userErr?.message });
+        } else {
+          const appOrigin = Deno.env.get("APP_ORIGIN") ?? "";
+          const ordersUrl = appOrigin ? `${appOrigin}/orders` : undefined;
+
+          const text = [
+            `Your order ${order?.name ?? ""} has been confirmed.`,
+            "",
+            "Shipping estimate: typically 2–5 business days (Australia).",
+            ordersUrl ? `View your orders: ${ordersUrl}` : undefined,
+            "",
+            "— PouchCare",
+          ].filter(Boolean).join("\n");
+
+          await sendEmail({
+            to: toEmail,
+            subject: "PouchCare — Order confirmed",
+            text,
+          });
+
+          logStep("Order email sent", { internalOrderId, toEmail });
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        logStep("Order email failed (non-fatal)", { msg });
       }
     }
 
