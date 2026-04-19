@@ -1,0 +1,3 @@
+# Allow Stripe to call this webhook without a Supabase JWT.
+# We still verify authenticity via STRIPE_WEBHOOK_SECRET signature.
+verify_jwt = false
