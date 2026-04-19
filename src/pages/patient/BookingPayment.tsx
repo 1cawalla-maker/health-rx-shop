@@ -84,6 +84,13 @@ export default function BookingPayment() {
           .maybeSingle();
 
         if (payment?.status === 'paid') {
+          // Keep the local/mock booking state in sync so the Consultations list doesn't show "Pending Payment".
+          try {
+            mockBookingService.confirmPayment(bookingId);
+          } catch (e) {
+            console.warn('Failed to sync local booking after payment:', e);
+          }
+
           toast.success('Payment successful!');
           navigate(`/patient/booking/confirmation/${bookingId}`);
           return;

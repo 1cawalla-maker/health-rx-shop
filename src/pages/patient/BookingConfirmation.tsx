@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { mockBookingService } from '@/services/consultationService';
 import { userPreferencesService } from '@/services/userPreferencesService';
+import { supabase } from '@/integrations/supabase/client';
 import { getTimezoneAbbr as getTzAbbr } from '@/lib/datetime';
 import { CONSULTATION_FEE_CENTS } from '@/config/consultations';
 import { formatAudFromCents } from '@/lib/money';
@@ -23,11 +24,44 @@ export default function BookingConfirmation() {
   const patientTz = useMemo(() => user?.id ? userPreferencesService.getTimezone(user.id) : 'Australia/Brisbane', [user?.id]);
 
   useEffect(() => {
-    if (bookingId) {
+    let cancelled = false;
+
+    const run = async () => {
+      if (!bookingId) return;
+
+      // Load from local storage first (MVP state)
       const foundBooking = mockBookingService.getBooking(bookingId);
-      setBooking(foundBooking);
-      setLoading(false);
-    }
+
+      // If we returned from Stripe and the webhook confirmed payment, the DB will be updated
+      // but localStorage might still say pending_payment. Sync it so downstream UI is consistent.
+      if (foundBooking?.status === 'pending_payment') {
+        try {
+          const { data: payment } = await supabase
+            .from('consultation_payments')
+            .select('status')
+            .eq('consultation_id', bookingId)
+            .maybeSingle();
+
+          if (payment?.status === 'paid') {
+            const updated = mockBookingService.confirmPayment(bookingId);
+            if (!cancelled) setBooking(updated);
+            return;
+          }
+        } catch (e) {
+          console.warn('Failed to verify payment status for confirmation page:', e);
+        }
+      }
+
+      if (!cancelled) setBooking(foundBooking);
+    };
+
+    void run().finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [bookingId]);
 
   if (loading) {
