@@ -225,16 +225,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setUserRole({ role, status });
 
-        // Best-effort welcome email (do not block signup)
-        try {
-          await (supabase as any).functions.invoke('send-welcome-email', {
-            body: { role },
-          });
-        } catch (e) {
-          if (import.meta.env.DEV) {
-            console.error('Welcome email failed (non-fatal):', e);
-          }
-        }
+        // Note: we intentionally do NOT send the welcome email here.
+        // If email confirmation is enabled, Supabase signUp often returns no active session yet,
+        // which makes authenticated Edge Function invokes fail.
+        // We send the welcome email on the first successful login instead.
       }
 
       return { error: null, userId: createdUserId };
@@ -261,11 +255,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password
       });
 
-      if (error && import.meta.env.DEV) {
-        console.error('Supabase login error:', error);
+      if (error) {
+        if (import.meta.env.DEV) {
+          console.error('Supabase login error:', error);
+        }
+        return { error };
       }
 
-      return { error };
+      // Best-effort welcome email on first successful login.
+      // We use localStorage as a lightweight "send once" guard (MVP).
+      try {
+        const { data: userRes } = await supabase.auth.getUser();
+        const userId = userRes?.user?.id;
+
+        if (userId && typeof window !== 'undefined') {
+          const sentKey = `welcome_email_sent:${userId}`;
+          const alreadySent = window.localStorage.getItem(sentKey);
+
+          if (!alreadySent) {
+            const { error: welcomeErr } = await (supabase as any).functions.invoke(
+              'send-welcome-email',
+              { body: {} }
+            );
+
+            if (!welcomeErr) {
+              window.localStorage.setItem(sentKey, new Date().toISOString());
+            } else if (import.meta.env.DEV) {
+              console.error('Welcome email failed (non-fatal):', welcomeErr);
+            }
+          }
+        }
+      } catch (e) {
+        if (import.meta.env.DEV) {
+          console.error('Welcome email exception (non-fatal):', e);
+        }
+      }
+
+      return { error: null };
     } catch (err) {
       if (import.meta.env.DEV) {
         console.error('Login exception:', err);
