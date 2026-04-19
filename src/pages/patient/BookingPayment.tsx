@@ -23,6 +23,8 @@ export default function BookingPayment() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const stripeSuccess = searchParams.get('stripeSuccess') === '1';
+  const stripeCancelled = searchParams.get('stripeCancelled') === '1';
 
   const patientTz = useMemo(() => user?.id ? userPreferencesService.getTimezone(user.id) : 'Australia/Brisbane', [user?.id]);
 
@@ -57,10 +59,14 @@ export default function BookingPayment() {
 
   // Stripe return handling: when coming back from Checkout, wait for webhook to confirm.
   useEffect(() => {
-    const stripeSuccess = searchParams.get('stripeSuccess') === '1';
     const sessionId = searchParams.get('session_id');
 
     if (!stripeSuccess || !bookingId || !user?.id) return;
+
+    // If we just returned from Stripe, this page is only for confirmation polling.
+    // Never allow the user to start a new checkout from here (avoids "Edge Function returned non-2xx" loops
+    // when the reservation has already been consumed/confirmed).
+    setPolicyAgreed(true);
 
     let cancelled = false;
     setProcessing(true);
@@ -291,45 +297,53 @@ export default function BookingPayment() {
         </AlertDescription>
       </Alert>
 
-      {/* Policy Agreement */}
-      <div className="flex items-start space-x-3 p-4 bg-muted/50 rounded-lg">
-        <Checkbox
-          id="policy"
-          checked={policyAgreed}
-          onCheckedChange={(checked) => setPolicyAgreed(checked === true)}
-        />
-        <label htmlFor="policy" className="text-sm leading-relaxed cursor-pointer">
-          I understand that if I do not answer 3 call attempts, my consultation will be marked as 
-          no-show and I will still be charged the full consultation fee.
-        </label>
-      </div>
+      {stripeSuccess ? (
+        <Alert className="border-primary/50 bg-primary/10">
+          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          <AlertDescription>
+            <strong>Payment received.</strong> We’re confirming your booking now…
+          </AlertDescription>
+        </Alert>
+      ) : stripeCancelled ? (
+        <Alert className="border-orange-500/50 bg-orange-500/10">
+          <AlertTriangle className="h-4 w-4 text-orange-500" />
+          <AlertDescription>
+            Payment was cancelled. You can try again, as long as your reservation hasn’t expired.
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <>
+          {/* Policy Agreement */}
+          <div className="flex items-start space-x-3 p-4 bg-muted/50 rounded-lg">
+            <Checkbox
+              id="policy"
+              checked={policyAgreed}
+              onCheckedChange={(checked) => setPolicyAgreed(checked === true)}
+            />
+            <label htmlFor="policy" className="text-sm leading-relaxed cursor-pointer">
+              I understand that if I do not answer 3 call attempts, my consultation will be marked as
+              no-show and I will still be charged the full consultation fee.
+            </label>
+          </div>
 
-      {/* Action Buttons */}
-      <div className="flex gap-4">
-        <Button 
-          variant="outline" 
-          onClick={handleCancel}
-          className="flex-1"
-          disabled={processing}
-        >
-          Cancel
-        </Button>
-        <Button 
-          onClick={handlePayment}
-          disabled={!policyAgreed || processing}
-          className="flex-1"
-          size="lg"
-        >
-          {processing ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              Processing...
-            </>
-          ) : (
-            `Pay ${formatAudFromCents(CONSULTATION_FEE_CENTS)} AUD`
-          )}
-        </Button>
-      </div>
+          {/* Action Buttons */}
+          <div className="flex gap-4">
+            <Button variant="outline" onClick={handleCancel} className="flex-1" disabled={processing}>
+              Cancel
+            </Button>
+            <Button onClick={handlePayment} disabled={!policyAgreed || processing} className="flex-1" size="lg">
+              {processing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Processing...
+                </>
+              ) : (
+                `Pay ${formatAudFromCents(CONSULTATION_FEE_CENTS)} AUD`
+              )}
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

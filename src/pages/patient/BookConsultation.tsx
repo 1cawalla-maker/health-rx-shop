@@ -225,7 +225,15 @@ export default function BookConsultation() {
 
         if (reservationError) throw reservationError;
 
-        navigate(`/patient/booking/payment/${booking.id}`);
+        // Open Stripe Checkout immediately (skip in-app payment form).
+        const { stripeSupabaseService } = await import('@/services/stripeSupabaseService');
+        const { url } = await stripeSupabaseService.createConsultationCheckout({
+          consultationId: booking.id,
+          amountCents: CONSULTATION_FEE_CENTS,
+        });
+
+        if (!url) throw new Error('No checkout URL returned');
+        window.location.href = url;
       }
     } catch (error) {
       console.error('Error creating booking:', error);
