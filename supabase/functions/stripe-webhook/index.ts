@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { sendEmail } from "../_shared/email/resend.ts";
 
 const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : "";
@@ -54,6 +55,62 @@ serve(async (req) => {
         if (error) {
           logStep("confirm_paid_consultation failed", { consultationId, error: error.message });
           // Keep webhook 200 to avoid Stripe retries storm; investigation via logs.
+        } else {
+          // Best-effort email (do not fail webhook)
+          try {
+            const appOrigin = Deno.env.get("APP_ORIGIN") ?? "";
+
+            const { data: consultRow, error: consultErr } = await supabaseAdmin
+              .from("consultations")
+              .select("id, patient_id, scheduled_at")
+              .eq("id", consultationId)
+              .maybeSingle();
+
+            if (consultErr || !consultRow?.patient_id) {
+              logStep("email skipped (consultation lookup failed)", {
+                consultationId,
+                error: consultErr?.message,
+              });
+            } else {
+              const { data: userRes, error: userErr } = await supabaseAdmin.auth.admin.getUserById(
+                consultRow.patient_id,
+              );
+
+              const toEmail = userRes?.user?.email;
+              if (userErr || !toEmail) {
+                logStep("email skipped (user email not found)", {
+                  consultationId,
+                  error: userErr?.message,
+                });
+              } else {
+                const manageUrl = appOrigin
+                  ? `${appOrigin}/patient/consultations`
+                  : undefined;
+
+                const scheduledAt = (consultRow as any)?.scheduled_at as string | undefined;
+                const whenLine = scheduledAt ? `Scheduled time: ${scheduledAt}` : undefined;
+
+                const lines = [
+                  "Your consultation payment has been confirmed.",
+                  whenLine,
+                  manageUrl ? `Manage your booking: ${manageUrl}` : undefined,
+                  "",
+                  "If you have any questions, reply to this email.",
+                ].filter(Boolean);
+
+                await sendEmail({
+                  to: toEmail,
+                  subject: "PouchCare — Consultation confirmed",
+                  text: lines.join("\n"),
+                });
+
+                logStep("email sent", { consultationId, toEmail });
+              }
+            }
+          } catch (emailErr) {
+            const msg = emailErr instanceof Error ? emailErr.message : String(emailErr);
+            logStep("email failed", { consultationId, msg });
+          }
         }
       }
     }
