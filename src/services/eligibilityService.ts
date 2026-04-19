@@ -84,18 +84,29 @@ export const consentItems = [
   }
 ];
 
-// Store quiz result in session storage (before account creation)
+// Store quiz result before account creation.
+// We persist in BOTH sessionStorage and localStorage.
+// Why: sessionStorage is per-tab and is cleared when the user closes the tab,
+// which was blocking users who completed the quiz, then later came back to sign up.
+const LOCAL_STORAGE_KEY = 'healthrx_quiz_result_public';
+
 export function saveQuizToSession(result: EligibilityQuizResult): void {
-  sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(result));
-  // Also save under canonical key for Phase 1 (migrated to localStorage after auth)
-  sessionStorage.setItem(SESSION_STORAGE_KEY_V2, JSON.stringify(result));
+  const raw = JSON.stringify(result);
+
+  // Per-tab continuity (same tab flow)
+  sessionStorage.setItem(SESSION_STORAGE_KEY, raw);
+  // Canonical key used for Phase 1 import-on-auth into localStorage
+  sessionStorage.setItem(SESSION_STORAGE_KEY_V2, raw);
+
+  // Cross-tab continuity (user may close/reopen tabs before signup)
+  localStorage.setItem(LOCAL_STORAGE_KEY, raw);
 }
 
-// Get quiz result from session storage
+// Get quiz result (session first, then local fallback)
 export function getQuizFromSession(): EligibilityQuizResult | null {
-  const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
+  const stored = sessionStorage.getItem(SESSION_STORAGE_KEY) || localStorage.getItem(LOCAL_STORAGE_KEY);
   if (!stored) return null;
-  
+
   try {
     return JSON.parse(stored) as EligibilityQuizResult;
   } catch {
@@ -103,9 +114,11 @@ export function getQuizFromSession(): EligibilityQuizResult | null {
   }
 }
 
-// Clear quiz from session storage
+// Clear quiz result after successful persistence.
 export function clearQuizFromSession(): void {
   sessionStorage.removeItem(SESSION_STORAGE_KEY);
+  sessionStorage.removeItem(SESSION_STORAGE_KEY_V2);
+  localStorage.removeItem(LOCAL_STORAGE_KEY);
 }
 
 // Calculate quiz result based on answers
