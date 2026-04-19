@@ -138,19 +138,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchUserRole(session.user.id).then((role) => {
-          setUserRole(role);
+    // Protect against rare hangs during auth bootstrap (network blockers, stale cookies, etc.)
+    // If getSession never resolves, the /auth page can get stuck on an infinite spinner.
+    const sessionTimeoutMs = 10000;
+
+    Promise.race([
+      supabase.auth.getSession(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('AUTH_BOOTSTRAP_TIMEOUT')), sessionTimeoutMs)
+      ),
+    ])
+      .then(({ data: { session } }) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          fetchUserRole(session.user.id).then((role) => {
+            setUserRole(role);
+            setLoading(false);
+          });
+        } else {
           setLoading(false);
-        });
-      } else {
+        }
+      })
+      .catch((err) => {
+        console.error('Auth bootstrap failed:', err);
+        setSession(null);
+        setUser(null);
+        setUserRole(null);
         setLoading(false);
-      }
-    });
+        setConfigError(
+          'We had trouble loading your session. Please refresh the page. If it persists, clear site data for health-rx-shop.vercel.app or try an Incognito window.'
+        );
+      });
 
     return () => subscription.unsubscribe();
   }, []);
