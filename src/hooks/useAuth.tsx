@@ -89,17 +89,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!isSupabaseConfigured()) return;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
+          const userId = session.user.id;
+
           // Phase 1: if the user completed the public eligibility quiz pre-signup,
           // import it into localStorage scoped to this user.
-          eligibilityQuizService.importFromSession(session.user.id);
+          eligibilityQuizService.importFromSession(userId);
+
+          // Best-effort welcome email on first SIGNED_IN event.
+          // This covers:
+          // - users who end up with a session right after signup
+          // - users who only get a session after email confirmation redirect
+          // - normal logins
+          if (event === 'SIGNED_IN' && typeof window !== 'undefined') {
+            try {
+              const sentKey = `welcome_email_sent:${userId}`;
+              const alreadySent = window.localStorage.getItem(sentKey);
+
+              if (!alreadySent) {
+                const { error: welcomeErr } = await (supabase as any).functions.invoke(
+                  'send-welcome-email',
+                  { body: {} }
+                );
+
+                if (!welcomeErr) {
+                  window.localStorage.setItem(sentKey, new Date().toISOString());
+                } else if (import.meta.env.DEV) {
+                  console.error('Welcome email failed (non-fatal):', welcomeErr);
+                }
+              }
+            } catch (e) {
+              if (import.meta.env.DEV) {
+                console.error('Welcome email exception (non-fatal):', e);
+              }
+            }
+          }
 
           setTimeout(() => {
-            fetchUserRole(session.user.id).then(setUserRole);
+            fetchUserRole(userId).then(setUserRole);
           }, 0);
         } else {
           setUserRole(null);
@@ -260,35 +291,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.error('Supabase login error:', error);
         }
         return { error };
-      }
-
-      // Best-effort welcome email on first successful login.
-      // We use localStorage as a lightweight "send once" guard (MVP).
-      try {
-        const { data: userRes } = await supabase.auth.getUser();
-        const userId = userRes?.user?.id;
-
-        if (userId && typeof window !== 'undefined') {
-          const sentKey = `welcome_email_sent:${userId}`;
-          const alreadySent = window.localStorage.getItem(sentKey);
-
-          if (!alreadySent) {
-            const { error: welcomeErr } = await (supabase as any).functions.invoke(
-              'send-welcome-email',
-              { body: {} }
-            );
-
-            if (!welcomeErr) {
-              window.localStorage.setItem(sentKey, new Date().toISOString());
-            } else if (import.meta.env.DEV) {
-              console.error('Welcome email failed (non-fatal):', welcomeErr);
-            }
-          }
-        }
-      } catch (e) {
-        if (import.meta.env.DEV) {
-          console.error('Welcome email exception (non-fatal):', e);
-        }
       }
 
       return { error: null };
