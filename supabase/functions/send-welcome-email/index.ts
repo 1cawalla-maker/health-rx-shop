@@ -1,7 +1,7 @@
 /// <reference lib="deno.ns" />
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
-import { sendEmail } from "../_shared/email/resend.ts";
+import { sendTransactionalEmail } from "../_shared/email/index.ts";
 
 const corsHeaders: Record<string, string> = {
   // Keep permissive for MVP; tighten later (origin allowlist).
@@ -64,9 +64,9 @@ Deno.serve(async (req) => {
     "— PouchCare",
   ].join("\n");
 
-  console.log('send-welcome-email: sending', { toEmail, subject });
-  const resendResult = await sendEmail({ to: toEmail, subject, text });
-  console.log('send-welcome-email: resend result', resendResult);
+  console.log("send-welcome-email: sending", { toEmail, subject });
+  const sendResult = await sendTransactionalEmail({ to: toEmail, subject, text });
+  console.log("send-welcome-email: send result", sendResult);
 
-  return json({ ok: true, resendResult });
+  return json({ ok: true, sendResult });
 });
