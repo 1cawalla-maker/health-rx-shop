@@ -64,7 +64,9 @@ Deno.serve(async (req) => {
     "— PouchCare",
   ].join("\n");
 
-  await sendEmail({ to: toEmail, subject, text });
+  console.log('send-welcome-email: sending', { toEmail, subject });
+  const resendResult = await sendEmail({ to: toEmail, subject, text });
+  console.log('send-welcome-email: resend result', resendResult);
 
-  return json({ ok: true });
+  return json({ ok: true, resendResult });
 });
