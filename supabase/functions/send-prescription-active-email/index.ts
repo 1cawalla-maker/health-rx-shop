@@ -1,7 +1,7 @@
 /// <reference lib="deno.ns" />
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
-import { sendEmail } from "../_shared/email/resend.ts";
+import { sendTransactionalEmail } from "../_shared/email/index.ts";
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -76,11 +76,11 @@ Deno.serve(async (req) => {
     "— PouchCare",
   ].filter(Boolean).join("\n");
 
-  await sendEmail({
+  const sendResult = await sendTransactionalEmail({
     to: toEmail,
     subject: "PouchCare — Your prescription is active",
     text,
   });
 
-  return json({ ok: true });
+  return json({ ok: true, sendResult });
 });

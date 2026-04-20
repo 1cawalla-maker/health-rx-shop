@@ -1,6 +1,6 @@
 /// <reference lib="deno.ns" />
 
-import { sendEmail } from '../_shared/email/resend.ts'
+import { sendTransactionalEmail } from "../_shared/email/index.ts";
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -33,11 +33,11 @@ Deno.serve(async (req) => {
 
   const subject = body?.subject && typeof body.subject === 'string' ? body.subject : 'PouchCare test email'
 
-  const result = await sendEmail({
+  const sendResult = await sendTransactionalEmail({
     to,
     subject,
-    text: 'This is a test email from Supabase Edge Functions via Resend.',
-  })
+    text: "This is a test email from Supabase Edge Functions (provider wrapper).",
+  });
 
-  return json({ ok: true, result })
+  return json({ ok: true, sendResult });
 })

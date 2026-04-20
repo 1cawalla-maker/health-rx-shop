@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
-import { sendEmail } from "../_shared/email/resend.ts";
+import { sendTransactionalEmail } from "../_shared/email/index.ts";
 
 const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : "";
@@ -98,13 +98,13 @@ serve(async (req) => {
                   "If you have any questions, reply to this email.",
                 ].filter(Boolean);
 
-                await sendEmail({
+                const sendResult = await sendTransactionalEmail({
                   to: toEmail,
                   subject: "PouchCare — Consultation confirmed",
                   text: lines.join("\n"),
                 });
 
-                logStep("email sent", { consultationId, toEmail });
+                logStep("email send attempted", { consultationId, toEmail, sendResult });
               }
             }
           } catch (emailErr) {

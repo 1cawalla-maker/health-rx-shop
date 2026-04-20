@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
-import { sendEmail } from "../_shared/email/resend.ts";
+import { sendTransactionalEmail } from "../_shared/email/index.ts";
 
 const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : "";
@@ -161,13 +161,13 @@ serve(async (req) => {
             "— PouchCare",
           ].filter(Boolean).join("\n");
 
-          await sendEmail({
+          const sendResult = await sendTransactionalEmail({
             to: toEmail,
             subject: "PouchCare — Order confirmed",
             text,
           });
 
-          logStep("Order email sent", { internalOrderId, toEmail });
+          logStep("Order email send attempted", { internalOrderId, toEmail, sendResult });
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
