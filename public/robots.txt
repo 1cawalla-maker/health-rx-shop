@@ -14,4 +14,4 @@ Disallow: /auth/
 Disallow: /eligibility
 Disallow: /eligibility/
 
-Sitemap: https://nicopatch.com.au/sitemap.xml
+Sitemap: https://www.pouchcare.com.au/sitemap.xml
