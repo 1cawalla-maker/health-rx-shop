@@ -17,10 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Trash2, User, Landmark, Pencil, X, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
-function maskAccount(acc: string): string {
-  if (!acc || acc.length < 3) return acc;
-  return '•'.repeat(acc.length - 3) + acc.slice(-3);
-}
+// Stripe Connect holds bank payout details; we no longer display/mask bank account numbers here.
 
 export default function DoctorAccount() {
   const { user } = useAuth();
@@ -44,9 +41,6 @@ export default function DoctorAccount() {
   const [pEntityName, setPEntityName] = useState('');
   const [pGst, setPGst] = useState(false);
   const [pEmail, setPEmail] = useState('');
-  const [pBsb, setPBsb] = useState('');
-  const [pAccountNumber, setPAccountNumber] = useState('');
-  const [pAccountName, setPAccountName] = useState('');
   const [payoutErrors, setPayoutErrors] = useState<Record<string, string>>({});
 
   const loadPayout = async (uid: string) => {
@@ -64,9 +58,6 @@ export default function DoctorAccount() {
         entityName: payout.entity_name,
         gstRegistered: Boolean((payout as any).gst_registered),
         remittanceEmail: payout.remittance_email,
-        bsb: payout.bsb,
-        accountNumber: payout.account_number,
-        accountName: payout.account_name,
         createdAtUtc: payout.created_at,
         updatedAtUtc: payout.updated_at,
       };
@@ -76,9 +67,7 @@ export default function DoctorAccount() {
       setPEntityName(profile.entityName);
       setPGst(profile.gstRegistered);
       setPEmail(profile.remittanceEmail);
-      setPBsb(profile.bsb);
-      setPAccountNumber(profile.accountNumber);
-      setPAccountName(profile.accountName);
+      // Stripe Connect holds bank payout details
     } catch (e) {
       console.error('Failed to load payout profile:', e);
       setPayoutProfile(null);
@@ -262,9 +251,8 @@ export default function DoctorAccount() {
       setPEntityName(payoutProfile.entityName);
       setPGst(payoutProfile.gstRegistered);
       setPEmail(payoutProfile.remittanceEmail);
-      setPBsb(payoutProfile.bsb);
-      setPAccountNumber(payoutProfile.accountNumber);
-      setPAccountName(payoutProfile.accountName);
+      // Stripe Connect holds bank payout details
+
     }
     setPayoutErrors({});
     setPayoutEditing(true);
@@ -275,8 +263,10 @@ export default function DoctorAccount() {
   const savePayoutEdit = async () => {
     if (!user?.id) return;
     const errors = doctorPayoutProfileService.validateProfile({
-      abn: pAbn, entityName: pEntityName, gstRegistered: pGst, remittanceEmail: pEmail,
-      bsb: pBsb, accountNumber: pAccountNumber, accountName: pAccountName,
+      abn: pAbn,
+      entityName: pEntityName,
+      gstRegistered: pGst,
+      remittanceEmail: pEmail,
     });
     setPayoutErrors(errors);
     if (Object.keys(errors).length > 0) { toast.error('Please fix the errors'); return; }
@@ -288,9 +278,6 @@ export default function DoctorAccount() {
         entityName: pEntityName,
         gstRegistered: pGst,
         remittanceEmail: pEmail,
-        bsb: pBsb,
-        accountNumber: pAccountNumber,
-        accountName: pAccountName,
       });
       await loadPayout(user.id);
       setPayoutEditing(false);
@@ -360,7 +347,7 @@ export default function DoctorAccount() {
               </Button>
             )}
           </div>
-          <CardDescription>Bank and tax details for consultation payments</CardDescription>
+          <CardDescription>Business details for remittance/invoicing. Bank payout details are handled by Stripe.</CardDescription>
         </CardHeader>
         <CardContent>
           {payoutEditing ? (
@@ -385,21 +372,7 @@ export default function DoctorAccount() {
                   <Input type="email" value={pEmail} onChange={(e) => setPEmail(e.target.value)} />
                   {payoutErrors.remittanceEmail && <p className="text-xs text-destructive">{payoutErrors.remittanceEmail}</p>}
                 </div>
-                <div className="space-y-1">
-                  <Label>BSB</Label>
-                  <Input inputMode="numeric" maxLength={6} value={pBsb} onChange={(e) => setPBsb(e.target.value.replace(/\D/g, '').slice(0, 6))} />
-                  {payoutErrors.bsb && <p className="text-xs text-destructive">{payoutErrors.bsb}</p>}
-                </div>
-                <div className="space-y-1">
-                  <Label>Account Number</Label>
-                  <Input inputMode="numeric" maxLength={10} value={pAccountNumber} onChange={(e) => setPAccountNumber(e.target.value.replace(/\D/g, '').slice(0, 10))} />
-                  {payoutErrors.accountNumber && <p className="text-xs text-destructive">{payoutErrors.accountNumber}</p>}
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <Label>Account Name</Label>
-                  <Input value={pAccountName} onChange={(e) => setPAccountName(e.target.value)} />
-                  {payoutErrors.accountName && <p className="text-xs text-destructive">{payoutErrors.accountName}</p>}
-                </div>
+                {/* Stripe Connect collects bank details during onboarding. */}
               </div>
               <div className="flex gap-2">
                 <Button onClick={() => void savePayoutEdit()}>Save</Button>
@@ -412,9 +385,7 @@ export default function DoctorAccount() {
               <div><span className="text-muted-foreground">Entity:</span> <span className="font-medium">{payoutProfile.entityName}</span></div>
               <div><span className="text-muted-foreground">GST Registered:</span> <span className="font-medium">{payoutProfile.gstRegistered ? 'Yes' : 'No'}</span></div>
               <div><span className="text-muted-foreground">Remittance Email:</span> <span className="font-medium">{payoutProfile.remittanceEmail}</span></div>
-              <div><span className="text-muted-foreground">BSB:</span> <span className="font-medium">{payoutProfile.bsb}</span></div>
-              <div><span className="text-muted-foreground">Account:</span> <span className="font-medium">{maskAccount(payoutProfile.accountNumber)}</span></div>
-              <div className="sm:col-span-2"><span className="text-muted-foreground">Account Name:</span> <span className="font-medium">{payoutProfile.accountName}</span></div>
+              {/* Bank payout details are managed in Stripe Connect. */}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">No payout details saved yet. Click Edit to add your details.</p>

@@ -3,13 +3,12 @@ import { validateAbn } from '@/lib/abnValidation';
 // TODO(phase2): replace localStorage with Supabase table doctor_payout_profiles (RLS: user_id = auth.uid())
 
 export interface DoctorPayoutProfile {
+  // Stripe Connect holds bank/payout routing details.
+  // We only store business details needed for remittance/invoicing.
   abn: string;             // 11 digits
   entityName: string;      // Business/trading name
   gstRegistered: boolean;
   remittanceEmail: string;
-  bsb: string;             // 6 digits
-  accountNumber: string;   // 6-10 digits
-  accountName: string;
   createdAtUtc: string;
   updatedAtUtc: string;
 }
@@ -66,15 +65,7 @@ class DoctorPayoutProfileService {
       errors.remittanceEmail = 'Invalid email address';
     }
 
-    // BSB: exactly 6 digits
-    if (!/^\d{6}$/.test(profile.bsb || '')) errors.bsb = 'BSB must be exactly 6 digits';
-
-    // Account number: 6-10 digits
-    if (!/^\d{6,10}$/.test(profile.accountNumber || '')) errors.accountNumber = 'Account number must be 6-10 digits';
-
-    // Account name present
-    if (!profile.accountName?.trim()) errors.accountName = 'Account name is required';
-
+    // Bank details are collected in Stripe Connect onboarding.
     return errors;
   }
 }

@@ -9,7 +9,7 @@ const corsHeaders = {
 
 const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : "";
-  console.log(`[CREATE-DOCTOR-CONNECT-LINK] ${step}${detailsStr}`);
+  console.log(`[SYNC-DOCTOR-CONNECT-STATUS] ${step}${detailsStr}`);
 };
 
 serve(async (req) => {
@@ -34,7 +34,6 @@ serve(async (req) => {
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
-
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
     // Find doctor's row
@@ -46,47 +45,63 @@ serve(async (req) => {
 
     if (doctorErr || !doctor) throw new Error("Doctor not found");
 
-    // Get existing stripe account mapping
-    const { data: existing } = await supabaseAdmin
+    // Load connected account mapping
+    const { data: mapping, error: mapErr } = await supabaseAdmin
       .from("doctor_stripe_accounts")
       .select("doctor_id, stripe_account_id")
       .eq("doctor_id", doctor.id)
       .maybeSingle();
 
-    let stripeAccountId = existing?.stripe_account_id;
-
-    if (!stripeAccountId) {
-      const acct = await stripe.accounts.create({
-        type: "express",
-        country: "AU",
-        email: user.email ?? undefined,
-        business_type: "individual",
-        metadata: { doctor_id: doctor.id, user_id: user.id },
-      });
-      stripeAccountId = acct.id;
-
-      const { error: insertErr } = await supabaseAdmin
-        .from("doctor_stripe_accounts")
-        .insert({ doctor_id: doctor.id, stripe_account_id: stripeAccountId });
-
-      if (insertErr) throw new Error(insertErr.message);
+    if (mapErr) throw new Error(mapErr.message);
+    if (!mapping?.stripe_account_id) {
+      return new Response(
+        JSON.stringify({
+          stripe_account_id: null,
+          details_submitted: false,
+          charges_enabled: false,
+          payouts_enabled: false,
+          requirements: { currently_due: [] },
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
+      );
     }
 
-    const origin = req.headers.get("origin") || Deno.env.get("APP_ORIGIN") || "https://health-rx-shop.vercel.app";
-    const refreshUrl = `${origin}/doctor/onboarding?connect=refresh`;
-    const returnUrl = `${origin}/doctor/onboarding?connect=return`;
+    const acct = await stripe.accounts.retrieve(mapping.stripe_account_id);
 
-    const link = await stripe.accountLinks.create({
-      account: stripeAccountId,
-      refresh_url: refreshUrl,
-      return_url: returnUrl,
-      type: "account_onboarding",
+    const detailsSubmitted = Boolean((acct as any).details_submitted);
+    const chargesEnabled = Boolean((acct as any).charges_enabled);
+    const payoutsEnabled = Boolean((acct as any).payouts_enabled);
+    const currentlyDue = (((acct as any).requirements?.currently_due ?? []) as string[]);
+
+    await supabaseAdmin
+      .from("doctor_stripe_accounts")
+      .update({
+        onboarding_complete: detailsSubmitted,
+        charges_enabled: chargesEnabled,
+        payouts_enabled: payoutsEnabled,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("doctor_id", doctor.id);
+
+    logStep("Synced", {
+      doctorId: doctor.id,
+      stripeAccountId: mapping.stripe_account_id,
+      detailsSubmitted,
+      chargesEnabled,
+      payoutsEnabled,
+      currentlyDueCount: currentlyDue.length,
     });
 
-    return new Response(JSON.stringify({ url: link.url, stripeAccountId }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
+    return new Response(
+      JSON.stringify({
+        stripe_account_id: mapping.stripe_account_id,
+        details_submitted: detailsSubmitted,
+        charges_enabled: chargesEnabled,
+        payouts_enabled: payoutsEnabled,
+        requirements: { currently_due: currentlyDue },
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
+    );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     logStep("ERROR", { msg });

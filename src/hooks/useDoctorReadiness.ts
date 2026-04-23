@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { doctorOnboardingSupabaseService } from '@/services/doctorOnboardingSupabaseService';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Centralized onboarding gate for doctors.
@@ -31,8 +32,18 @@ export function useDoctorReadiness(): { ready: boolean; loading: boolean } {
       try {
         const doctorId = await doctorOnboardingSupabaseService.getDoctorRowIdForUser(user.id);
         const sig = await doctorOnboardingSupabaseService.getSignatureRowForDoctor(doctorId);
-        const payout = await doctorOnboardingSupabaseService.getPayoutProfileForDoctor(doctorId);
-        setReady(Boolean(sig?.storage_path) && Boolean(payout));
+        const business = await doctorOnboardingSupabaseService.getPayoutProfileForDoctor(doctorId);
+
+        const { data: stripeAcct, error: stripeErr } = await supabase
+          .from('doctor_stripe_accounts' as any)
+          .select('payouts_enabled')
+          .eq('doctor_id', doctorId)
+          .maybeSingle();
+        if (stripeErr) throw stripeErr;
+
+        const payoutsEnabled = Boolean((stripeAcct as any)?.payouts_enabled);
+
+        setReady(Boolean(sig?.storage_path) && Boolean(business) && payoutsEnabled);
       } catch (e) {
         console.error('Failed to check doctor readiness:', e);
         setReady(false);

@@ -18,9 +18,6 @@ export type DoctorPayoutProfileRow = {
   entity_name: string;
   gst_registered: boolean;
   remittance_email: string;
-  bsb: string;
-  account_number: string;
-  account_name: string;
   created_at: string;
   updated_at: string;
 };
@@ -119,7 +116,7 @@ export const doctorOnboardingSupabaseService = {
     const { data, error } = await supabase
       .from('doctor_payout_profiles')
       .select(
-        'id,doctor_id,abn,entity_name,gst_registered,remittance_email,bsb,account_number,account_name,created_at,updated_at'
+        'id,doctor_id,abn,entity_name,gst_registered,remittance_email,created_at,updated_at'
       )
       .eq('doctor_id', doctorId)
       .maybeSingle();
@@ -134,9 +131,6 @@ export const doctorOnboardingSupabaseService = {
     entityName: string;
     gstRegistered: boolean;
     remittanceEmail: string;
-    bsb: string;
-    accountNumber: string;
-    accountName: string;
   }): Promise<void> {
     const doctorId = await this.getDoctorRowIdForUser(params.userId);
     const { error } = await supabase
@@ -148,9 +142,6 @@ export const doctorOnboardingSupabaseService = {
           entity_name: params.entityName,
           gst_registered: params.gstRegistered,
           remittance_email: params.remittanceEmail,
-          bsb: params.bsb,
-          account_number: params.accountNumber,
-          account_name: params.accountName,
           updated_at: new Date().toISOString(),
         } as any,
         { onConflict: 'doctor_id' }
