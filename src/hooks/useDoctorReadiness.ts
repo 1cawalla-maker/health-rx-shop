@@ -29,10 +29,20 @@ export function useDoctorReadiness(): { ready: boolean; loading: boolean } {
     const run = async () => {
       if (loading || !user?.id) return;
       setChecking(true);
+
+      let doctorId: string | null = null;
+      let hasSignature = false;
+      let hasPayoutProfile = false;
+      let stripePayoutsEnabled = false;
+
       try {
-        const doctorId = await doctorOnboardingSupabaseService.getDoctorRowIdForUser(user.id);
+        doctorId = await doctorOnboardingSupabaseService.getDoctorRowIdForUser(user.id);
+
         const sig = await doctorOnboardingSupabaseService.getSignatureRowForDoctor(doctorId);
+        hasSignature = Boolean(sig?.storage_path);
+
         const business = await doctorOnboardingSupabaseService.getPayoutProfileForDoctor(doctorId);
+        hasPayoutProfile = Boolean(business);
 
         const { data: stripeAcct, error: stripeErr } = await supabase
           .from('doctor_stripe_accounts' as any)
@@ -41,11 +51,27 @@ export function useDoctorReadiness(): { ready: boolean; loading: boolean } {
           .maybeSingle();
         if (stripeErr) throw stripeErr;
 
-        const payoutsEnabled = Boolean((stripeAcct as any)?.payouts_enabled);
+        stripePayoutsEnabled = Boolean((stripeAcct as any)?.payouts_enabled);
 
-        setReady(Boolean(sig?.storage_path) && Boolean(business) && payoutsEnabled);
+        const readyNow = hasSignature && hasPayoutProfile && stripePayoutsEnabled;
+        setReady(readyNow);
+
+        if (!readyNow) {
+          console.warn('[DoctorReadiness] Not ready', {
+            doctorId,
+            hasSignature,
+            hasPayoutProfile,
+            stripePayoutsEnabled,
+          });
+        }
       } catch (e) {
-        console.error('Failed to check doctor readiness:', e);
+        console.error('[DoctorReadiness] Failed to check doctor readiness', {
+          doctorId,
+          hasSignature,
+          hasPayoutProfile,
+          stripePayoutsEnabled,
+          error: e,
+        });
         setReady(false);
       } finally {
         setChecking(false);
