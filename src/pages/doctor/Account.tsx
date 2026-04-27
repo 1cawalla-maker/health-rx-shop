@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2, User, Landmark, Pencil, X, Save } from 'lucide-react';
+import { Trash2, User, Landmark, Pencil, X, Save, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Stripe Connect holds bank payout details; we no longer display/mask bank account numbers here.
@@ -34,6 +34,13 @@ export default function DoctorAccount() {
   const [practiceLocation, setPracticeLocation] = useState('');
   const [profileSaving, setProfileSaving] = useState(false);
 
+  // Stripe Connect (payouts)
+  const [stripeLoading, setStripeLoading] = useState(false);
+  const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
+  const [stripePayoutsEnabled, setStripePayoutsEnabled] = useState(false);
+  const [stripeOnboardingComplete, setStripeOnboardingComplete] = useState(false);
+  const [stripeCurrentlyDue, setStripeCurrentlyDue] = useState<string[]>([]);
+
   // Payout profile
   const [payoutProfile, setPayoutProfile] = useState<DoctorPayoutProfile | null>(null);
   const [payoutEditing, setPayoutEditing] = useState(false);
@@ -42,6 +49,59 @@ export default function DoctorAccount() {
   const [pGst, setPGst] = useState(false);
   const [pEmail, setPEmail] = useState('');
   const [payoutErrors, setPayoutErrors] = useState<Record<string, string>>({});
+
+  const syncStripeStatus = async () => {
+    if (!user?.id) return;
+    setStripeLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-doctor-connect-status');
+      if (error) throw error;
+
+      setStripeAccountId((data as any)?.stripeAccountId ?? (data as any)?.stripe_account_id ?? null);
+      setStripePayoutsEnabled(Boolean((data as any)?.payouts_enabled));
+      setStripeOnboardingComplete(Boolean((data as any)?.details_submitted));
+      setStripeCurrentlyDue(((data as any)?.requirements?.currently_due ?? (data as any)?.currently_due ?? []) as string[]);
+    } catch (e: any) {
+      console.error('Failed to sync Stripe status:', e);
+      toast.error(e?.message || 'Could not refresh Stripe status');
+    } finally {
+      setStripeLoading(false);
+    }
+  };
+
+  const handleConnectStripe = async () => {
+    if (!user?.id) return;
+    setStripeLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-doctor-connect-link');
+      if (error) throw error;
+      const url = (data as any)?.url as string | undefined;
+      if (!url) throw new Error('Stripe onboarding link was not returned');
+      window.location.href = url;
+    } catch (e: any) {
+      console.error('Failed to create Stripe connect link:', e);
+      toast.error(e?.message || 'Could not start Stripe Connect setup');
+    } finally {
+      setStripeLoading(false);
+    }
+  };
+
+  const handleManageStripe = async () => {
+    if (!user?.id) return;
+    setStripeLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-doctor-connect-login-link');
+      if (error) throw error;
+      const url = (data as any)?.url as string | undefined;
+      if (!url) throw new Error('Stripe login link was not returned');
+      window.location.href = url;
+    } catch (e: any) {
+      console.error('Failed to open Stripe payout settings:', e);
+      toast.error(e?.message || 'Could not open Stripe payout settings');
+    } finally {
+      setStripeLoading(false);
+    }
+  };
 
   const loadPayout = async (uid: string) => {
     try {
@@ -97,6 +157,7 @@ export default function DoctorAccount() {
       if (wasReset) toast.info('Your timezone preference was reset to the default (Australia/Brisbane) because the stored value was invalid.');
 
       await loadPayout(user.id);
+      await syncStripeStatus();
     };
 
     void run();
@@ -333,6 +394,48 @@ export default function DoctorAccount() {
             <Save className="h-4 w-4" />
             {profileSaving ? 'Saving...' : 'Save Profile'}
           </Button>
+        </CardContent>
+      </Card>
+
+      {/* Stripe Connect (Payout Settings) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5 text-primary" />Stripe Payout Settings</CardTitle>
+          <CardDescription>
+            Connect Stripe to receive weekly payouts. You can revisit onboarding or manage payout details here at any time.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={stripeAccountId ? 'default' : 'outline'}>{stripeAccountId ? 'Connected' : 'Not connected'}</Badge>
+            <Badge variant={stripeOnboardingComplete ? 'default' : 'outline'}>{stripeOnboardingComplete ? 'Onboarding complete' : 'Onboarding incomplete'}</Badge>
+            <Badge variant={stripePayoutsEnabled ? 'default' : 'outline'}>{stripePayoutsEnabled ? 'Payouts enabled' : 'Payouts disabled'}</Badge>
+          </div>
+
+          {!stripePayoutsEnabled && stripeCurrentlyDue.length > 0 && (
+            <div className="text-sm">
+              <p className="text-muted-foreground">Stripe requires additional information:</p>
+              <ul className="list-disc pl-5 mt-1 text-muted-foreground">
+                {stripeCurrentlyDue.slice(0, 6).map((f) => (
+                  <li key={f}>{f}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => void handleConnectStripe()} disabled={stripeLoading}>
+              {stripeAccountId ? 'Continue Stripe setup' : 'Connect Stripe'}
+            </Button>
+            <Button variant="outline" onClick={() => void syncStripeStatus()} disabled={stripeLoading}>Refresh status</Button>
+            <Button variant="outline" onClick={() => void handleManageStripe()} disabled={stripeLoading || !stripeAccountId}>
+              Manage payout settings
+            </Button>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Weekly payouts require payouts to be enabled in Stripe. If you have trouble, click “Continue Stripe setup”, then refresh.
+          </p>
         </CardContent>
       </Card>
 
