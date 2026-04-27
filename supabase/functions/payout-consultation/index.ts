@@ -39,6 +39,39 @@ serve(async (req) => {
     if (cErr || !consultation) throw new Error("Consultation not found");
     if (!consultation.doctor_id) throw new Error("Consultation has no assigned doctor");
 
+    // Eligibility guards (safety)
+    // 1) Only pay if the patient payment is marked paid
+    const { data: payRow, error: payErr } = await supabaseAdmin
+      .from("consultation_payments")
+      .select("status")
+      .eq("consultation_id", consultationId)
+      .maybeSingle();
+    if (payErr) throw new Error(payErr.message);
+    if (!payRow || payRow.status !== "paid") {
+      return new Response(JSON.stringify({
+        success: true,
+        skipped: true,
+        reason: "payment_not_paid",
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
+    // 2) Only pay for billable outcomes
+    const billable = consultation.status === "completed" || consultation.status === "no_answer";
+    if (!billable) {
+      return new Response(JSON.stringify({
+        success: true,
+        skipped: true,
+        reason: "not_billable_status",
+        status: consultation.status,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
     // Load doctor's connected account
     const { data: acct, error: aErr } = await supabaseAdmin
       .from("doctor_stripe_accounts")
@@ -49,6 +82,25 @@ serve(async (req) => {
     if (aErr || !acct?.stripe_account_id) throw new Error("Doctor Stripe account not found");
 
     // Create payout row (idempotent on consultation_id)
+    // If already paid, treat as success (idempotent no-op)
+    const { data: existingPayout, error: exErr } = await supabaseAdmin
+      .from("doctor_payouts")
+      .select("id, status, stripe_transfer_id")
+      .eq("consultation_id", consultationId)
+      .maybeSingle();
+    if (exErr) throw new Error(exErr.message);
+    if (existingPayout?.status === "paid") {
+      return new Response(JSON.stringify({
+        success: true,
+        skipped: true,
+        reason: "already_paid",
+        transferId: existingPayout.stripe_transfer_id,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
     const { data: payoutRow, error: pErr } = await supabaseAdmin
       .from("doctor_payouts")
       .upsert(

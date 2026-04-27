@@ -11,13 +11,14 @@ export type BookingStatus =
 
 // Legacy status for consultations table
 export type ConsultationStatus = 
-  | 'requested' 
-  | 'confirmed' 
-  | 'intake_pending' 
-  | 'ready_for_call' 
-  | 'called' 
-  | 'script_uploaded' 
-  | 'completed' 
+  | 'requested'
+  | 'confirmed'
+  | 'intake_pending'
+  | 'ready_for_call'
+  | 'called'
+  | 'script_uploaded'
+  | 'completed'
+  | 'no_answer'
   | 'cancelled';
 
 export interface Booking {

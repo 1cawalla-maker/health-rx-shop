@@ -349,7 +349,7 @@ export default function DoctorConsultationView() {
           if (status === 'completed') return 'completed';
           if (status === 'in_progress') return 'called';
           if (status === 'booked') return 'confirmed';
-          if (status === 'no_answer') return 'cancelled';
+          if (status === 'no_answer') return 'no_answer';
           return 'requested';
         })();
 
