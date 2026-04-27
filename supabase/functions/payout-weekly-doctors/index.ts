@@ -28,6 +28,18 @@ type ResultRow = {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  // Optional shared-secret auth (recommended when Verify JWT is OFF)
+  const expectedSecret = Deno.env.get("PAYOUT_CRON_SECRET");
+  if (expectedSecret) {
+    const provided = req.headers.get("x-cron-secret");
+    if (provided !== expectedSecret) {
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+      });
+    }
+  }
+
   try {
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
