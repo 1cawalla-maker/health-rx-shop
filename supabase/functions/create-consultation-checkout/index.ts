@@ -39,6 +39,30 @@ serve(async (req) => {
     if (!consultationId) throw new Error("Missing consultationId");
     if (!amountCents || amountCents <= 0 || amountCents > 100000) throw new Error("Invalid amountCents");
 
+    // Optional test price override (easy to enable/disable via Supabase Edge Function secrets)
+    // To avoid accidentally discounting for everyone, you can restrict it via allowlist.
+    const testPriceCentsRaw = Deno.env.get("CONSULTATION_TEST_PRICE_CENTS");
+    const testPriceAllowlistEmail = (Deno.env.get("CONSULTATION_TEST_PRICE_ALLOWLIST_EMAIL") ?? "").toLowerCase();
+    const testPriceAllowlistUserId = (Deno.env.get("CONSULTATION_TEST_PRICE_ALLOWLIST_USER_ID") ?? "").toLowerCase();
+
+    let effectiveAmountCents = amountCents;
+    if (testPriceCentsRaw) {
+      const testPriceCents = Number.parseInt(testPriceCentsRaw, 10);
+      const allowedByEmail = !!testPriceAllowlistEmail && user.email.toLowerCase() === testPriceAllowlistEmail;
+      const allowedByUserId = !!testPriceAllowlistUserId && user.id.toLowerCase() === testPriceAllowlistUserId;
+
+      // If no allowlist is set, default to NOT applying the override.
+      if ((allowedByEmail || allowedByUserId) && testPriceCents > 0 && testPriceCents <= 100000) {
+        effectiveAmountCents = testPriceCents;
+        logStep("Applying test price override", {
+          originalAmountCents: amountCents,
+          effectiveAmountCents,
+          allowedByEmail,
+          allowedByUserId,
+        });
+      }
+    }
+
     // Ensure consultation exists + belongs to user
     const { data: consultation, error: consultationError } = await supabaseAdmin
       .from("consultations")
@@ -81,7 +105,7 @@ serve(async (req) => {
         {
           consultation_id: consultationId,
           patient_id: user.id,
-          amount_cents: amountCents,
+          amount_cents: effectiveAmountCents,
           currency: "aud",
           status: "pending",
         },
@@ -101,7 +125,7 @@ serve(async (req) => {
           price_data: {
             currency: "aud",
             product_data: { name: "5-minute phone consultation" },
-            unit_amount: amountCents,
+            unit_amount: effectiveAmountCents,
           },
           quantity: 1,
         },

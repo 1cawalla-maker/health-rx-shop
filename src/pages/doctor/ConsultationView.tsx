@@ -626,6 +626,17 @@ export default function DoctorConsultationView() {
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" onClick={() => setCancelOpen(true)}>Cancel Consultation</Button>
 
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void doStatus('completed')}
+                    disabled={isTerminal}
+                    title="Mark the consultation as completed"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Mark Completed
+                  </Button>
+
                   <Button size="sm" variant="outline" onClick={() => doStatus('no_answer')} disabled={!canMarkNoShow}
                     title={canMarkNoShow ? 'Mark as no-show' : `Need ${3 - unansweredCount} more unanswered attempt(s)`}
                   >
