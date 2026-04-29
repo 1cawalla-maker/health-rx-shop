@@ -225,7 +225,7 @@ serve(async (req) => {
       }
 
       const provider = (sendRes as any)?.provider ?? (Deno.env.get("EMAIL_PROVIDER") ?? "");
-      const providerMessageId = (sendRes as any)?.data?.MessageId ?? null;
+      const providerMessageId = (sendRes as any)?.messageId ?? (sendRes as any)?.data?.MessageId ?? null;
 
       await admin
         .from("email_outbox")

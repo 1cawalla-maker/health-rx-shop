@@ -164,5 +164,7 @@ export async function sesSendEmail(args: SesSendEmailArgs) {
     return { ok: false, error: err } as const;
   }
 
-  return { ok: true, data } as const;
+  // SESv2 returns { MessageId: string }
+  const messageId = (data as any)?.MessageId ?? null;
+  return { ok: true, data, messageId } as const;
 }

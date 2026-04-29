@@ -69,7 +69,7 @@ export async function sendTransactionalEmail(email: TransactionalEmail) {
       } as const;
     }
 
-    return await sesSendEmail({
+    const sesResult = await sesSendEmail({
       region,
       accessKeyId,
       secretAccessKey,
@@ -79,6 +79,13 @@ export async function sendTransactionalEmail(email: TransactionalEmail) {
       text: email.text,
       html: email.html,
     });
+
+    // Normalize provider envelope so callers can reliably read provider + data
+    if (sesResult.ok) {
+      return { ok: true, provider: "ses", data: sesResult.data, messageId: (sesResult as any).messageId ?? null } as const;
+    }
+
+    return sesResult;
   }
 
   // Default: Resend (existing MVP)
