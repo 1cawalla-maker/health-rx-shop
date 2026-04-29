@@ -3,6 +3,21 @@ import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { sendTransactionalEmail } from "../_shared/email/index.ts";
 
+async function enqueueEmail(supabaseAdmin: any, args: { eventType: string; toEmail: string; scheduledFor?: string; payload?: any; idempotencyKey: string }) {
+  const { eventType, toEmail, scheduledFor, payload, idempotencyKey } = args;
+  const { error } = await supabaseAdmin.from("email_outbox").upsert(
+    {
+      event_type: eventType,
+      to_email: toEmail,
+      scheduled_for: scheduledFor ?? new Date().toISOString(),
+      payload: payload ?? {},
+      idempotency_key: idempotencyKey,
+    },
+    { onConflict: "idempotency_key" },
+  );
+  if (error) throw new Error(`enqueueEmail failed: ${error.message}`);
+}
+
 const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : "";
   console.log(`[STRIPE-WEBHOOK] ${step}${detailsStr}`);
@@ -56,60 +71,78 @@ serve(async (req) => {
           logStep("confirm_paid_consultation failed", { consultationId, error: error.message });
           // Keep webhook 200 to avoid Stripe retries storm; investigation via logs.
         } else {
-          // Best-effort email (do not fail webhook)
+          // Enqueue transactional emails (worker sends reliably)
           try {
             const appOrigin = Deno.env.get("APP_ORIGIN") ?? "";
 
             const { data: consultRow, error: consultErr } = await supabaseAdmin
               .from("consultations")
-              .select("id, patient_id, scheduled_at")
+              .select("id, patient_id, doctor_id, scheduled_at")
               .eq("id", consultationId)
               .maybeSingle();
 
             if (consultErr || !consultRow?.patient_id) {
-              logStep("email skipped (consultation lookup failed)", {
+              logStep("enqueue skipped (consultation lookup failed)", {
                 consultationId,
                 error: consultErr?.message,
               });
             } else {
-              const { data: userRes, error: userErr } = await supabaseAdmin.auth.admin.getUserById(
+              const scheduledAt = (consultRow as any)?.scheduled_at as string | undefined;
+              const manageUrl = appOrigin ? `${appOrigin}/patient/consultations` : undefined;
+              const doctorUrl = appOrigin ? `${appOrigin}/doctor/consultations` : undefined;
+
+              // Patient email
+              const { data: patientRes, error: patientErr } = await supabaseAdmin.auth.admin.getUserById(
                 consultRow.patient_id,
               );
+              const patientEmail = patientRes?.user?.email;
 
-              const toEmail = userRes?.user?.email;
-              if (userErr || !toEmail) {
-                logStep("email skipped (user email not found)", {
-                  consultationId,
-                  error: userErr?.message,
+              if (!patientErr && patientEmail) {
+                await enqueueEmail(supabaseAdmin, {
+                  eventType: "patient.consultation_confirmed",
+                  toEmail: patientEmail,
+                  payload: { consultation_id: consultationId, scheduled_at: scheduledAt, manage_url: manageUrl },
+                  idempotencyKey: `patient.consultation_confirmed:${consultationId}`,
                 });
-              } else {
-                const manageUrl = appOrigin
-                  ? `${appOrigin}/patient/consultations`
-                  : undefined;
-
-                const scheduledAt = (consultRow as any)?.scheduled_at as string | undefined;
-                const whenLine = scheduledAt ? `Scheduled time: ${scheduledAt}` : undefined;
-
-                const lines = [
-                  "Your consultation payment has been confirmed.",
-                  whenLine,
-                  manageUrl ? `Manage your booking: ${manageUrl}` : undefined,
-                  "",
-                  "If you have any questions, reply to this email.",
-                ].filter(Boolean);
-
-                const sendResult = await sendTransactionalEmail({
-                  to: toEmail,
-                  subject: "PouchCare — Consultation confirmed",
-                  text: lines.join("\n"),
-                });
-
-                logStep("email send attempted", { consultationId, toEmail, sendResult });
               }
+
+              // Doctor emails (immediate + 24h reminder)
+              const doctorUserId = (consultRow as any)?.doctor_id as string | undefined;
+              if (doctorUserId) {
+                const { data: doctorRes, error: doctorErr } = await supabaseAdmin.auth.admin.getUserById(doctorUserId);
+                const doctorEmail = doctorRes?.user?.email;
+
+                if (!doctorErr && doctorEmail) {
+                  await enqueueEmail(supabaseAdmin, {
+                    eventType: "doctor.consultation_assigned_immediate",
+                    toEmail: doctorEmail,
+                    payload: { consultation_id: consultationId, scheduled_at: scheduledAt, doctor_consultations_url: doctorUrl },
+                    idempotencyKey: `doctor.consultation_assigned_immediate:${consultationId}:${doctorUserId}`,
+                  });
+
+                  if (scheduledAt) {
+                    const d = new Date(scheduledAt);
+                    d.setUTCHours(d.getUTCHours() - 24);
+                    const scheduledFor = d.toISOString();
+                    // Only schedule if in the future
+                    if (d.getTime() > Date.now()) {
+                      await enqueueEmail(supabaseAdmin, {
+                        eventType: "doctor.consultation_upcoming_24h",
+                        toEmail: doctorEmail,
+                        scheduledFor,
+                        payload: { consultation_id: consultationId, scheduled_at: scheduledAt, doctor_consultations_url: doctorUrl },
+                        idempotencyKey: `doctor.consultation_upcoming_24h:${consultationId}:${doctorUserId}`,
+                      });
+                    }
+                  }
+                }
+              }
+
+              logStep("emails enqueued", { consultationId });
             }
-          } catch (emailErr) {
-            const msg = emailErr instanceof Error ? emailErr.message : String(emailErr);
-            logStep("email failed", { consultationId, msg });
+          } catch (enqueueErr) {
+            const msg = enqueueErr instanceof Error ? enqueueErr.message : String(enqueueErr);
+            logStep("enqueue failed (non-fatal)", { consultationId, msg });
           }
         }
       }

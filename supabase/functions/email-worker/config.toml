@@ -1,0 +1,3 @@
+# Email outbox worker (invoke via Supabase scheduled trigger / external cron)
+
+verify_jwt = false

@@ -2,6 +2,21 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { sendTransactionalEmail } from "../_shared/email/index.ts";
 
+async function enqueueEmail(supabaseAdmin: any, args: { eventType: string; toEmail: string; scheduledFor?: string; payload?: any; idempotencyKey: string }) {
+  const { eventType, toEmail, scheduledFor, payload, idempotencyKey } = args;
+  const { error } = await supabaseAdmin.from("email_outbox").upsert(
+    {
+      event_type: eventType,
+      to_email: toEmail,
+      scheduled_for: scheduledFor ?? new Date().toISOString(),
+      payload: payload ?? {},
+      idempotency_key: idempotencyKey,
+    },
+    { onConflict: "idempotency_key" },
+  );
+  if (error) throw new Error(`enqueueEmail failed: ${error.message}`);
+}
+
 const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : "";
   console.log(`[SHOPIFY-PAID-WEBHOOK] ${step}${detailsStr}`);
@@ -141,37 +156,43 @@ serve(async (req) => {
         logStep("PDF generation failed (non-fatal)", { msg });
       }
 
-      // Best-effort patient order confirmation email
+      // Enqueue patient order confirmation + replenishment reminder
       try {
         const { data: userRes, error: userErr } = await supabase.auth.admin.getUserById(supabaseUserId);
         const toEmail = userRes?.user?.email;
 
         if (userErr || !toEmail) {
-          logStep("Order email skipped (user email not found)", { supabaseUserId, error: userErr?.message });
+          logStep("Order email enqueue skipped (user email not found)", { supabaseUserId, error: userErr?.message });
         } else {
           const appOrigin = Deno.env.get("APP_ORIGIN") ?? "";
           const ordersUrl = appOrigin ? `${appOrigin}/orders` : undefined;
+          const shopUrl = appOrigin ? `${appOrigin}/shop` : undefined;
 
-          const text = [
-            `Your order ${order?.name ?? ""} has been confirmed.`,
-            "",
-            "Shipping estimate: typically 2–5 business days (Australia).",
-            ordersUrl ? `View your orders: ${ordersUrl}` : undefined,
-            "",
-            "— PouchCare",
-          ].filter(Boolean).join("\n");
-
-          const sendResult = await sendTransactionalEmail({
-            to: toEmail,
-            subject: "PouchCare — Order confirmed",
-            text,
+          await enqueueEmail(supabase, {
+            eventType: "patient.order_confirmed",
+            toEmail,
+            payload: { internal_order_id: internalOrderId, order_name: order?.name ?? null, orders_url: ordersUrl },
+            idempotencyKey: `patient.order_confirmed:${internalOrderId}`,
           });
 
-          logStep("Order email send attempted", { internalOrderId, toEmail, sendResult });
+          // Anchor: Shopify processed_at if present, else now
+          const orderDateIso = (order?.processed_at ?? new Date().toISOString()) as string;
+          const d = new Date(orderDateIso);
+          d.setUTCDate(d.getUTCDate() + 70);
+
+          await enqueueEmail(supabase, {
+            eventType: "patient.replenishment_70d",
+            toEmail,
+            scheduledFor: d.toISOString(),
+            payload: { internal_order_id: internalOrderId, shop_url: shopUrl },
+            idempotencyKey: `patient.replenishment_70d:${internalOrderId}`,
+          });
+
+          logStep("Order emails enqueued", { internalOrderId, toEmail });
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        logStep("Order email failed (non-fatal)", { msg });
+        logStep("Order email enqueue failed (non-fatal)", { msg });
       }
     }
 
