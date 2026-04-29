@@ -42,6 +42,36 @@ function renderEmail(row: OutboxRow): { subject: string; text: string; html?: st
   const p = row.payload ?? {};
 
   switch (row.event_type) {
+    case "patient.welcome": {
+      const name = p?.name ? ` ${p.name}` : "";
+      const appOrigin = p?.app_origin;
+      const dashboardUrl = appOrigin ? `${appOrigin}/patient` : undefined;
+      const lines = [
+        `Hi${name},`,
+        "",
+        "Welcome to PouchCare.",
+        dashboardUrl ? `Get started here: ${dashboardUrl}` : undefined,
+        "",
+        "— PouchCare",
+      ].filter(Boolean);
+      return { subject: "Welcome to PouchCare", text: lines.join("\n") };
+    }
+
+    case "doctor.welcome": {
+      const name = p?.name ? ` ${p.name}` : "";
+      const appOrigin = p?.app_origin;
+      const dashboardUrl = appOrigin ? `${appOrigin}/doctor` : undefined;
+      const lines = [
+        `Hi${name},`,
+        "",
+        "Welcome to PouchCare (Doctor Portal).",
+        dashboardUrl ? `Open your dashboard: ${dashboardUrl}` : undefined,
+        "",
+        "— PouchCare",
+      ].filter(Boolean);
+      return { subject: "Welcome to PouchCare", text: lines.join("\n") };
+    }
+
     case "patient.consultation_confirmed": {
       const when = p?.scheduled_at ? `Scheduled time: ${p.scheduled_at}` : undefined;
       const manageUrl = p?.manage_url;
