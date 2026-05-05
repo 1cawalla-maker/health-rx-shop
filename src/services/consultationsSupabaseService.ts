@@ -17,11 +17,25 @@ export const consultationsSupabaseService = {
     return data || null;
   },
 
-  async listForDoctorAssigned(doctorId: string): Promise<ConsultationRow[]> {
+  /**
+   * List consultations assigned to the currently logged-in doctor.
+   * NOTE: consultations.doctor_id stores doctors.id (FK), NOT auth.users.id.
+   */
+  async listForDoctorUserId(doctorUserId: string): Promise<ConsultationRow[]> {
+    // Map auth user id -> doctors.id
+    const { data: doctorRow, error: doctorErr } = await supabase
+      .from('doctors')
+      .select('id')
+      .eq('user_id', doctorUserId)
+      .maybeSingle();
+
+    if (doctorErr) throw doctorErr;
+    if (!doctorRow?.id) return [];
+
     const { data, error } = await supabase
       .from('consultations')
       .select('*')
-      .eq('doctor_id', doctorId)
+      .eq('doctor_id', doctorRow.id)
       .order('scheduled_at', { ascending: true });
 
     if (error) throw error;

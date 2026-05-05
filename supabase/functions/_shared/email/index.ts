@@ -1,7 +1,6 @@
 /// <reference lib="deno.ns" />
 
-import { sendEmail as resendSendEmail } from "./resend.ts";
-import { sesSendEmail } from "./ses.ts";
+import { postmarkSendEmail } from "./postmark.ts";
 
 export type TransactionalEmail = {
   to: string;
@@ -37,7 +36,7 @@ function shouldAllowSend(to: string) {
  * - EMAIL_ALLOWLIST_REGEX=<regex> → only send when `to` matches (case-insensitive)
  *
  * Provider selection:
- * - EMAIL_PROVIDER=ses|resend (default: resend)
+ * - EMAIL_PROVIDER must be "postmark"
  */
 export async function sendTransactionalEmail(email: TransactionalEmail) {
   const sendEnabled = envBool("EMAIL_SEND_ENABLED", false);
@@ -51,49 +50,42 @@ export async function sendTransactionalEmail(email: TransactionalEmail) {
     return { ok: true, skipped: true, reason: "EMAIL_ALLOWLIST_REGEX" } as const;
   }
 
-  const provider = (Deno.env.get("EMAIL_PROVIDER") ?? "resend").trim().toLowerCase();
-
-  if (provider === "ses") {
-    const region = (Deno.env.get("AWS_REGION") ?? "").trim();
-    const accessKeyId = (Deno.env.get("AWS_ACCESS_KEY_ID") ?? "").trim();
-    const secretAccessKey = (Deno.env.get("AWS_SECRET_ACCESS_KEY") ?? "").trim();
-    const from = (Deno.env.get("EMAIL_FROM") ?? "").trim();
-
-    if (!region || !accessKeyId || !secretAccessKey || !from) {
-      return {
-        ok: false,
-        error: {
-          provider: "ses",
-          message: "Missing required SES env vars (AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, EMAIL_FROM)",
-        },
-      } as const;
-    }
-
-    const sesResult = await sesSendEmail({
-      region,
-      accessKeyId,
-      secretAccessKey,
-      from,
-      to: email.to,
-      subject: email.subject,
-      text: email.text,
-      html: email.html,
-    });
-
-    // Normalize provider envelope so callers can reliably read provider + data
-    if (sesResult.ok) {
-      return { ok: true, provider: "ses", data: sesResult.data, messageId: (sesResult as any).messageId ?? null } as const;
-    }
-
-    return sesResult;
+  const provider = (Deno.env.get("EMAIL_PROVIDER") ?? "postmark").trim().toLowerCase();
+  if (provider !== "postmark") {
+    return {
+      ok: false,
+      error: {
+        provider,
+        message: `EMAIL_PROVIDER must be postmark (got: ${provider})`,
+      },
+    } as const;
   }
 
-  // Default: Resend (existing MVP)
-  const resendResult = await resendSendEmail({
+  const serverToken = (Deno.env.get("POSTMARK_SERVER_TOKEN") ?? "").trim();
+  const from = (Deno.env.get("EMAIL_FROM") ?? "").trim();
+
+  if (!serverToken || !from) {
+    return {
+      ok: false,
+      error: {
+        provider: "postmark",
+        message: "Missing required Postmark env vars (POSTMARK_SERVER_TOKEN, EMAIL_FROM)",
+      },
+    } as const;
+  }
+
+  const pmResult = await postmarkSendEmail({
+    serverToken,
+    from,
     to: email.to,
     subject: email.subject,
     text: email.text,
+    html: email.html,
   });
 
-  return { ok: true, provider: "resend", data: resendResult } as const;
+  if (pmResult.ok) {
+    return { ok: true, provider: "postmark", data: pmResult.data, messageId: pmResult.messageId } as const;
+  }
+
+  return pmResult;
 }

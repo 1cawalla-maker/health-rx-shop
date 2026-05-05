@@ -180,6 +180,12 @@ serve(async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   if (!supabaseUrl || !serviceKey) return json({ error: "Server misconfig" }, 500);
 
+  // Postmark-only guardrail
+  const emailProvider = (Deno.env.get("EMAIL_PROVIDER") ?? "").toLowerCase();
+  if (emailProvider && emailProvider !== "postmark") {
+    return json({ error: `EMAIL_PROVIDER must be postmark (got: ${emailProvider})` }, 500);
+  }
+
   const admin = createClient(supabaseUrl, serviceKey);
 
   const limit = 25;
@@ -224,8 +230,13 @@ serve(async (req) => {
         throw new Error(JSON.stringify((sendRes as any).error ?? sendRes));
       }
 
-      const provider = (sendRes as any)?.provider ?? (Deno.env.get("EMAIL_PROVIDER") ?? "");
-      const providerMessageId = (sendRes as any)?.messageId ?? (sendRes as any)?.data?.MessageId ?? null;
+      // Enforce Postmark-only sending (no SES fallback)
+      const requiredProvider = "postmark";
+      const provider = ((sendRes as any)?.provider ?? (Deno.env.get("EMAIL_PROVIDER") ?? "")).toLowerCase();
+      if (provider && provider !== requiredProvider) {
+        throw new Error(`Unexpected provider: ${provider} (expected ${requiredProvider})`);
+      }
+      const providerMessageId = (sendRes as any)?.messageId ?? null;
 
       await admin
         .from("email_outbox")

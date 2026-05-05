@@ -107,32 +107,49 @@ serve(async (req) => {
               }
 
               // Doctor emails (immediate + 24h reminder)
-              const doctorUserId = (consultRow as any)?.doctor_id as string | undefined;
-              if (doctorUserId) {
-                const { data: doctorRes, error: doctorErr } = await supabaseAdmin.auth.admin.getUserById(doctorUserId);
-                const doctorEmail = doctorRes?.user?.email;
+              // consultRow.doctor_id is doctors.id (FK). We must map to doctors.user_id (auth user id) for email lookup.
+              const doctorId = (consultRow as any)?.doctor_id as string | undefined;
+              if (doctorId) {
+                const { data: doctorRow, error: doctorRowErr } = await supabaseAdmin
+                  .from("doctors")
+                  .select("id,user_id")
+                  .eq("id", doctorId)
+                  .maybeSingle();
 
-                if (!doctorErr && doctorEmail) {
-                  await enqueueEmail(supabaseAdmin, {
-                    eventType: "doctor.consultation_assigned_immediate",
-                    toEmail: doctorEmail,
-                    payload: { consultation_id: consultationId, scheduled_at: scheduledAt, doctor_consultations_url: doctorUrl },
-                    idempotencyKey: `doctor.consultation_assigned_immediate:${consultationId}:${doctorUserId}`,
+                const doctorUserId = (doctorRow as any)?.user_id as string | undefined;
+
+                if (doctorRowErr || !doctorUserId) {
+                  logStep("enqueue skipped (doctor lookup failed)", {
+                    consultationId,
+                    doctorId,
+                    error: doctorRowErr?.message,
                   });
+                } else {
+                  const { data: doctorRes, error: doctorErr } = await supabaseAdmin.auth.admin.getUserById(doctorUserId);
+                  const doctorEmail = doctorRes?.user?.email;
 
-                  if (scheduledAt) {
-                    const d = new Date(scheduledAt);
-                    d.setUTCHours(d.getUTCHours() - 24);
-                    const scheduledFor = d.toISOString();
-                    // Only schedule if in the future
-                    if (d.getTime() > Date.now()) {
-                      await enqueueEmail(supabaseAdmin, {
-                        eventType: "doctor.consultation_upcoming_24h",
-                        toEmail: doctorEmail,
-                        scheduledFor,
-                        payload: { consultation_id: consultationId, scheduled_at: scheduledAt, doctor_consultations_url: doctorUrl },
-                        idempotencyKey: `doctor.consultation_upcoming_24h:${consultationId}:${doctorUserId}`,
-                      });
+                  if (!doctorErr && doctorEmail) {
+                    await enqueueEmail(supabaseAdmin, {
+                      eventType: "doctor.consultation_assigned_immediate",
+                      toEmail: doctorEmail,
+                      payload: { consultation_id: consultationId, scheduled_at: scheduledAt, doctor_consultations_url: doctorUrl },
+                      idempotencyKey: `doctor.consultation_assigned_immediate:${consultationId}:${doctorUserId}`,
+                    });
+
+                    if (scheduledAt) {
+                      const d = new Date(scheduledAt);
+                      d.setUTCHours(d.getUTCHours() - 24);
+                      const scheduledFor = d.toISOString();
+                      // Only schedule if in the future
+                      if (d.getTime() > Date.now()) {
+                        await enqueueEmail(supabaseAdmin, {
+                          eventType: "doctor.consultation_upcoming_24h",
+                          toEmail: doctorEmail,
+                          scheduledFor,
+                          payload: { consultation_id: consultationId, scheduled_at: scheduledAt, doctor_consultations_url: doctorUrl },
+                          idempotencyKey: `doctor.consultation_upcoming_24h:${consultationId}:${doctorUserId}`,
+                        });
+                      }
                     }
                   }
                 }

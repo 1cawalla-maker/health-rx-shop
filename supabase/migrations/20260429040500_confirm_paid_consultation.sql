@@ -9,7 +9,7 @@ CREATE OR REPLACE FUNCTION public.confirm_paid_consultation(_consultation_id uui
 AS $function$
 declare
   v_consult public.consultations%rowtype;
-  v_doctor_user_id uuid;
+  v_doctor_id uuid;
   v_held_doctor_id uuid;
   v_patient_id uuid;
 begin
@@ -46,8 +46,8 @@ begin
 
   if v_held_doctor_id is null then
     -- No held doctor: choose one from explicit per-date availability blocks
-    select d.user_id
-      into v_doctor_user_id
+    select d.id
+      into v_doctor_id
     from public.doctor_availability_blocks b
     join public.doctors d on d.id = b.doctor_id
     where b.date = (v_consult.scheduled_at at time zone b.timezone)::date
@@ -56,26 +56,23 @@ begin
       and not exists (
         select 1
         from public.consultations c2
-        where c2.doctor_id = d.user_id
+        where c2.doctor_id = d.id
           and c2.scheduled_at = v_consult.scheduled_at
           and c2.status = 'confirmed'
       )
-    order by d.user_id
+    order by d.id
     limit 1;
   else
     -- Use the held doctor
-    select d.user_id
-      into v_doctor_user_id
-    from public.doctors d
-    where d.id = v_held_doctor_id;
+    v_doctor_id := v_held_doctor_id;
   end if;
 
-  if v_doctor_user_id is null then
+  if v_doctor_id is null then
     raise exception 'No doctor available for this time';
   end if;
 
   update public.consultations
-  set doctor_id = v_doctor_user_id,
+  set doctor_id = v_doctor_id,
       status = 'confirmed',
       updated_at = now()
   where id = _consultation_id
