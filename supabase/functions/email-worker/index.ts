@@ -160,6 +160,23 @@ function renderEmail(row: OutboxRow): { subject: string; text: string; html?: st
       };
     }
 
+    case "patient.prescription_active": {
+      const appOrigin = p?.app_origin;
+      const shopUrl = appOrigin ? `${appOrigin}/shop` : p?.shop_url;
+
+      const lines = [
+        "Your prescription is now active.",
+        shopUrl ? `You can now visit the shop: ${shopUrl}` : undefined,
+        "",
+        "— PouchCare",
+      ].filter(Boolean);
+
+      return {
+        subject: "PouchCare — Your prescription is active",
+        text: lines.join("\n"),
+      };
+    }
+
     default:
       return {
         subject: `PouchCare — Notification (${row.event_type})`,
