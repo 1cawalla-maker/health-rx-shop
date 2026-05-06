@@ -1,0 +1,36 @@
+name: Deploy Supabase Edge Functions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+      - '.github/workflows/supabase-edge-functions-deploy.yml'
+
+concurrency:
+  group: supabase-edge-functions-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy functions
+        working-directory: ./
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${{ secrets.SUPABASE_PROJECT_REF }}" ]; then
+            echo "Missing secret SUPABASE_PROJECT_REF" >&2
+            exit 1
+          fi
+          supabase functions deploy --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
