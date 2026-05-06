@@ -256,10 +256,40 @@ export default function DoctorConsultationView() {
   }, [id, consultSource, user?.id]);
 
   // Access rules:
+  // - consultations.doctor_id stores doctors.id (NOT auth.users.id)
   // - If a consultation is already assigned (doctorId set), only that doctor can open it.
   // - If it's unassigned (doctorId null), allow any authenticated doctor to open it (queue triage).
   const isDoctor = userRole?.role === 'doctor';
-  const hasAccess = Boolean(user?.id && booking && isDoctor && (!booking.doctorId || booking.doctorId === user.id));
+
+  const [doctorRowId, setDoctorRowId] = useState<string | null>(null);
+  useEffect(() => {
+    const run = async () => {
+      if (!user?.id || !isDoctor) {
+        setDoctorRowId(null);
+        return;
+      }
+      try {
+        const id = await doctorOnboardingSupabaseService.getDoctorRowIdForUser(user.id);
+        setDoctorRowId(id || null);
+      } catch (e) {
+        console.error('Failed to resolve doctor row id for access control:', e);
+        setDoctorRowId(null);
+      }
+    };
+
+    void run();
+  }, [user?.id, isDoctor]);
+
+  const hasAccess = Boolean(
+    user?.id &&
+      booking &&
+      isDoctor &&
+      (
+        !booking.doctorId || // unassigned consult
+        (doctorRowId && booking.doctorId === doctorRowId) // assigned consult
+      )
+  );
+
   const isTerminal = booking ? TERMINAL.includes(booking.status) : false;
 
   const [patientProfile, setPatientProfile] = useState<{
