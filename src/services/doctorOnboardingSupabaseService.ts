@@ -35,10 +35,14 @@ export const doctorOnboardingSupabaseService = {
   signatureBucket: SIGNATURE_BUCKET,
 
   async getDoctorRowIdForUser(userId: string): Promise<string> {
+    // NOTE: This should be 1:1, but some environments may contain duplicate doctor rows.
+    // maybeSingle() will throw "Cannot coerce the result to a single JSON object" if multiple rows match.
     const { data, error } = await supabase
       .from('doctors')
-      .select('id')
+      .select('id, created_at')
       .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (error) throw error;
