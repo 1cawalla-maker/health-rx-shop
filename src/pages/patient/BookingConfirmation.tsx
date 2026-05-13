@@ -32,27 +32,30 @@ export default function BookingConfirmation() {
       // Load from local storage first (MVP state)
       const foundBooking = mockBookingService.getBooking(bookingId);
 
-      // If we returned from Stripe and the webhook confirmed payment, the DB will be updated
-      // but localStorage might still say pending_payment. Sync it so downstream UI is consistent.
-      if (foundBooking?.status === 'pending_payment') {
-        try {
-          const { data: payment } = await supabase
-            .from('consultation_payments')
-            .select('status')
-            .eq('consultation_id', bookingId)
-            .maybeSingle();
+      // Confirmation must be backed by the server payment ledger. Local storage alone
+      // can be stale or misleading after Stripe/webhook delays.
+      try {
+        const { data: payment } = await supabase
+          .from('consultation_payments')
+          .select('status')
+          .eq('consultation_id', bookingId)
+          .maybeSingle();
 
-          if (payment?.status === 'paid') {
-            const updated = mockBookingService.confirmPayment(bookingId);
-            if (!cancelled) setBooking(updated);
-            return;
-          }
-        } catch (e) {
-          console.warn('Failed to verify payment status for confirmation page:', e);
+        if (payment?.status === 'paid') {
+          const updated = foundBooking?.status === 'pending_payment'
+            ? mockBookingService.confirmPayment(bookingId)
+            : foundBooking;
+          if (!cancelled) setBooking(updated);
+          return;
         }
-      }
 
-      if (!cancelled) setBooking(foundBooking);
+        if (!cancelled) setBooking(null);
+        return;
+      } catch (e) {
+        console.warn('Failed to verify payment status for confirmation page:', e);
+        if (!cancelled) setBooking(null);
+        return;
+      }
     };
 
     void run().finally(() => {
@@ -75,10 +78,18 @@ export default function BookingConfirmation() {
   if (!booking) {
     return (
       <div className="max-w-md mx-auto text-center py-12">
-        <h2 className="text-xl font-bold mb-4">Booking not found</h2>
-        <Button asChild>
-          <Link to="/patient/consultations">View My Consultations</Link>
-        </Button>
+        <h2 className="text-xl font-bold mb-4">Booking not confirmed yet</h2>
+        <p className="text-muted-foreground mb-4">
+          We have not received confirmed payment for this booking yet. Please check again shortly.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            Check again
+          </Button>
+          <Button asChild>
+            <Link to="/patient/consultations">View My Consultations</Link>
+          </Button>
+        </div>
       </div>
     );
   }

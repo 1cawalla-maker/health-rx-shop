@@ -120,6 +120,10 @@ serve(async (req) => {
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
       mode: "payment",
+      // Keep checkout simple/trustworthy for consults. Link is managed in Stripe
+      // payment-method settings, but explicitly requesting card avoids dynamic
+      // payment method surprises where possible.
+      payment_method_types: ["card"],
       line_items: [
         {
           price_data: {

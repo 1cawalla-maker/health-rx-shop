@@ -318,24 +318,25 @@ export default function BookingPayment() {
           <Alert className="border-orange-500/50 bg-orange-500/10">
             <AlertTriangle className="h-4 w-4 text-orange-500" />
             <AlertDescription>
-              <strong>Payment received.</strong> Confirmation is taking longer than expected.
+              <strong>Payment status is still pending.</strong> Please do not treat this booking as confirmed yet.
               <div className="mt-3 flex flex-wrap gap-2">
                 <Button variant="outline" onClick={() => window.location.reload()}>
-                  Check again
+                  Check payment status
                 </Button>
-                <Button onClick={() => navigate(`/patient/booking/confirmation/${bookingId}`)}>
-                  Continue
+                <Button variant="outline" asChild>
+                  <Link to="/patient/consultations">View consultations</Link>
                 </Button>
               </div>
             </AlertDescription>
           </Alert>
         ) : (
-          <Alert className="border-primary/50 bg-primary/10">
+          <Alert className="border-orange-500/50 bg-orange-500/10">
+            <AlertTriangle className="h-4 w-4 text-orange-500" />
             <AlertDescription>
-              <strong>Payment received.</strong> Booking confirmation is ready.
+              <strong>Payment status unknown.</strong> Please wait while we confirm your booking.
               <div className="mt-3">
-                <Button onClick={() => navigate(`/patient/booking/confirmation/${bookingId}`)}>
-                  Continue
+                <Button variant="outline" onClick={() => window.location.reload()}>
+                  Check payment status
                 </Button>
               </div>
             </AlertDescription>
