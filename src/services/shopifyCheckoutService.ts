@@ -46,8 +46,19 @@ class ShopifyCheckoutService {
     });
 
     if (error) {
-      // Supabase-js wraps function errors here.
-      throw new Error(error.message || 'Failed to create Shopify checkout');
+      // Supabase-js wraps non-2xx Edge Function responses. Pull the JSON body out
+      // when available so the UI/devtools show the real server-side reason.
+      const context = (error as any)?.context;
+      let serverMessage = '';
+      if (context && typeof context.json === 'function') {
+        try {
+          const body = await context.json();
+          serverMessage = String(body?.error || body?.message || '');
+        } catch {
+          // Ignore body parse failures and fall back to the wrapper message.
+        }
+      }
+      throw new Error(serverMessage || error.message || 'Failed to create Shopify checkout');
     }
 
     if (!data?.checkoutUrl || !data?.cartId) {

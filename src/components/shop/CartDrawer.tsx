@@ -36,7 +36,10 @@ export function CartDrawer({ remainingCans, maxContainers }: CartDrawerProps) {
       window.location.assign(checkoutUrl);
     } catch (error) {
       console.error('CartDrawer: Failed to start Shopify checkout', error);
-      toast.error('Failed to start secure checkout. Please try again.');
+      const message = error instanceof Error && error.message
+        ? error.message
+        : 'Failed to start secure checkout. Please try again.';
+      toast.error(message);
       setIsCheckingOut(false);
     }
   };
