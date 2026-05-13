@@ -72,7 +72,7 @@ serve(async (req) => {
       if (insertErr) throw new Error(insertErr.message);
     }
 
-    const origin = req.headers.get("origin") || Deno.env.get("APP_ORIGIN") || "https://health-rx-shop.vercel.app";
+    const origin = req.headers.get("origin") || Deno.env.get("APP_ORIGIN") || "https://www.pouchcare.com.au";
     const refreshUrl = `${origin}/doctor/onboarding?connect=refresh`;
     const returnUrl = `${origin}/doctor/onboarding?connect=return`;
 

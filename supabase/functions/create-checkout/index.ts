@@ -79,7 +79,7 @@ serve(async (req) => {
     logStep("Booking created", { bookingId: booking.id });
 
     // Create Stripe checkout session
-    const origin = req.headers.get("origin") || "https://health-rx-shop.vercel.app";
+    const origin = req.headers.get("origin") || "https://www.pouchcare.com.au";
     
     const session = await stripe.checkout.sessions.create({
       customer: customerId,

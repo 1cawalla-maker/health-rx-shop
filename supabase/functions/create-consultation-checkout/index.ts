@@ -96,7 +96,7 @@ serve(async (req) => {
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     const customerId = customers.data[0]?.id;
 
-    const origin = req.headers.get("origin") || Deno.env.get("APP_ORIGIN") || "https://health-rx-shop.vercel.app";
+    const origin = req.headers.get("origin") || Deno.env.get("APP_ORIGIN") || "https://www.pouchcare.com.au";
 
     // Create/Upsert payment ledger row
     const { data: paymentRow, error: upsertErr } = await supabaseAdmin
