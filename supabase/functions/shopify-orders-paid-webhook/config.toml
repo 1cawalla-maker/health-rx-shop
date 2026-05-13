@@ -1,0 +1,3 @@
+# Allow Shopify to call this webhook without a Supabase JWT.
+# Authenticity is verified via SHOPIFY_WEBHOOK_SECRET HMAC.
+verify_jwt = false
