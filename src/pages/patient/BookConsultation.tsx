@@ -188,42 +188,38 @@ export default function BookConsultation() {
         toast.success('Consultation rescheduled successfully!');
         navigate(`/patient/booking/confirmation/${newBooking.id}`);
       } else {
-        // Normal flow: create pending booking and go to payment
-        const booking = mockBookingService.createBooking(
-          user.id,
-          dateStr,
-          selectedSlot.time,
-          selectedSlot.utcTimestamp,
-          selectedSlot.displayTimezone,
-          selectedSlot.doctorIds
-        );
+        // Normal flow: create requested consultation, then let Supabase fairly choose
+        // one eligible doctor for this exact slot. Do not pick doctorIds[0] in the frontend.
+        const consultationId = crypto.randomUUID();
 
-        // Phase 2 wiring: persist a corresponding consultation to Supabase so doctors can see it.
-        // Keep doctor_id null (assigned after payment confirmation).
         await consultationsSupabaseService.createRequested({
-          id: booking.id,
+          id: consultationId,
           patientId: user.id,
-          scheduledAtIso: booking.utcTimestamp,
-          timezone: booking.displayTimezone,
+          scheduledAtIso: selectedSlot.utcTimestamp,
+          timezone: selectedSlot.displayTimezone,
         });
 
-        // Create a server-side 10 minute reservation/hold (source of truth for collision prevention).
-        // The payment page timer should reflect this expiry.
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-        const { error: reservationError } = await supabase
-          .from('consultation_reservations')
-          .insert({
-            consultation_id: booking.id,
-            patient_id: user.id,
-            scheduled_at: booking.utcTimestamp,
-            expires_at: expiresAt,
-            status: 'active',
-            // IMPORTANT: capture the held doctor so other patients won't see/select this time.
-            // If the column doesn't exist yet, add it via SQL: ALTER TABLE public.consultation_reservations ADD COLUMN doctor_id uuid;
-            doctor_id: booking.doctorId,
-          } as any);
+        const { data: reservation, error: reservationError } = await supabase.rpc(
+          'create_fair_consultation_reservation' as any,
+          {
+            _consultation_id: consultationId,
+            _expires_at: expiresAt,
+          } as any
+        ).single();
 
         if (reservationError) throw reservationError;
+
+        const booking = mockBookingService.createPendingBookingFromServerReservation({
+          id: consultationId,
+          patientId: user.id,
+          doctorId: (reservation as any)?.doctor_id ?? null,
+          date: dateStr,
+          time: selectedSlot.time,
+          utcTimestamp: selectedSlot.utcTimestamp,
+          displayTimezone: selectedSlot.displayTimezone,
+          reservationId: (reservation as any)?.reservation_id,
+        });
 
         // Open Stripe Checkout immediately (skip in-app payment form).
         const { stripeSupabaseService } = await import('@/services/stripeSupabaseService');

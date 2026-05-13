@@ -124,6 +124,45 @@ export const mockBookingService = {
     return booking;
   },
 
+  // Create a local pending booking after the server has fairly assigned/held a doctor.
+  // This keeps existing payment/confirmation screens working while Supabase remains the source of truth.
+  createPendingBookingFromServerReservation(params: {
+    id: string;
+    patientId: string;
+    doctorId: string | null;
+    date: string;
+    time: string;
+    utcTimestamp: string;
+    displayTimezone: string;
+    reservationId?: string;
+  }): MockBooking {
+    const endTime = this.addMinutes(params.time, 5);
+    const booking: MockBooking = {
+      id: params.id,
+      patientId: params.patientId,
+      doctorId: params.doctorId,
+      doctorName: null,
+      scheduledDate: params.date,
+      timeWindowStart: params.time,
+      timeWindowEnd: endTime,
+      utcTimestamp: params.utcTimestamp,
+      displayTimezone: params.displayTimezone,
+      status: 'pending_payment',
+      amountPaid: null,
+      paidAt: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      reservationId: params.reservationId,
+      callAttempts: [],
+    };
+
+    const bookings = this.getBookings().filter((b) => b.id !== params.id);
+    bookings.push(booking);
+    localStorage.setItem(MOCK_BOOKINGS_KEY, JSON.stringify(bookings));
+
+    return booking;
+  },
+
   // Confirm payment - converts reservation to confirmed booking
   confirmPayment(bookingId: string): MockBooking | null {
     const bookings = this.getBookings();
