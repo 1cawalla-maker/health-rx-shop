@@ -36,9 +36,9 @@ import UploadPrescription from "./pages/patient/UploadPrescription";
 import PatientPrescriptions from "./pages/patient/Prescriptions";
 import PatientShop from "./pages/patient/Shop";
 import PatientProductDetail from "./pages/patient/ProductDetail";
+import PatientShopCheckout from "./pages/patient/ShopCheckout";
 import PatientIntake from "./pages/patient/Intake";
 import PatientAccount from "./pages/patient/Account";
-// Checkout is handled by Shopify (no in-app checkout page).
 import PatientOrders from "./pages/patient/Orders";
 import PatientOrderSuccess from "./pages/patient/OrderSuccess";
 
@@ -133,8 +133,8 @@ const App = () => (
                 <Route path="upload-prescription" element={<UploadPrescription />} />
                 <Route path="prescriptions" element={<PatientPrescriptions />} />
                 <Route path="shop" element={<PatientShop />} />
+                <Route path="shop/checkout" element={<PatientShopCheckout />} />
                 <Route path="shop/:productId" element={<PatientProductDetail />} />
-                {/* Checkout is handled by Shopify (no in-app checkout route). */}
                 <Route path="orders" element={<PatientOrders />} />
                 <Route path="order-success" element={<PatientOrderSuccess />} />
                 <Route path="account" element={<PatientAccount />} />

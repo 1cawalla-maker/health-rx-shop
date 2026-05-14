@@ -1,5 +1,6 @@
 import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
@@ -7,8 +8,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { useCart } from '@/contexts/CartContext';
 import { PRESCRIPTION_TOTAL_CANS } from '@/types/shop';
-import { shopifyCheckoutService } from '@/services/shopifyCheckoutService';
-import { toast } from 'sonner';
 
 interface CartDrawerProps {
   remainingCans?: number;
@@ -16,6 +15,7 @@ interface CartDrawerProps {
 }
 
 export function CartDrawer({ remainingCans, maxContainers }: CartDrawerProps) {
+  const navigate = useNavigate();
   const { cart, isCartOpen, setIsCartOpen, updateQuantity, removeFromCart } = useCart();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
@@ -28,20 +28,9 @@ export function CartDrawer({ remainingCans, maxContainers }: CartDrawerProps) {
     if (!canCheckout || isCheckingOut) return;
 
     setIsCheckingOut(true);
-
-    try {
-      const { checkoutUrl } = await shopifyCheckoutService.createCheckoutUrlFromCartItems(cart.items);
-      // Close drawer before redirect.
-      setIsCartOpen(false);
-      window.location.assign(checkoutUrl);
-    } catch (error) {
-      console.error('CartDrawer: Failed to start Shopify checkout', error);
-      const message = error instanceof Error && error.message
-        ? error.message
-        : 'Failed to start secure checkout. Please try again.';
-      toast.error(message);
-      setIsCheckingOut(false);
-    }
+    setIsCartOpen(false);
+    navigate('/patient/shop/checkout');
+    setIsCheckingOut(false);
   };
 
   return (
@@ -165,7 +154,7 @@ export function CartDrawer({ remainingCans, maxContainers }: CartDrawerProps) {
                 disabled={!canCheckout || isCheckingOut}
                 onClick={handleProceedToCheckout}
               >
-                {isCheckingOut ? 'Opening secure checkout…' : 'Proceed to Checkout'}
+                {isCheckingOut ? 'Opening checkout…' : 'Review order'}
               </Button>
 
               <p className="text-xs text-muted-foreground text-center">
