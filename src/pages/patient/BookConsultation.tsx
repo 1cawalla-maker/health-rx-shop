@@ -221,15 +221,8 @@ export default function BookConsultation() {
           reservationId: (reservation as any)?.reservation_id,
         });
 
-        // Open Stripe Checkout immediately (skip in-app payment form).
-        const { stripeSupabaseService } = await import('@/services/stripeSupabaseService');
-        const { url } = await stripeSupabaseService.createConsultationCheckout({
-          consultationId: booking.id,
-          amountCents: CONSULTATION_FEE_CENTS,
-        });
-
-        if (!url) throw new Error('No checkout URL returned');
-        window.location.href = url;
+        // Keep payment in-app. The payment page mounts embedded Stripe Checkout.
+        navigate(`/patient/booking/payment/${booking.id}`);
       }
     } catch (error) {
       console.error('Error creating booking:', error);

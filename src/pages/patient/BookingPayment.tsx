@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { loadStripe } from '@stripe/stripe-js';
 import { useAuth } from '@/hooks/useAuth';
 import { mockBookingService } from '@/services/consultationService';
 import { mockAvailabilityService } from '@/services/availabilityService';
@@ -10,13 +11,15 @@ import { CONSULTATION_FEE_CENTS } from '@/config/consultations';
 import { formatAudFromCents } from '@/lib/money';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { Loader2, CreditCard, Clock, AlertTriangle, ChevronLeft, Phone, Calendar } from 'lucide-react';
+
+const STRIPE_PUBLISHABLE_KEY =
+  (import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '').trim() ||
+  'pk_live_51SjXHYJgy5iKUeNmvjs0mEY5IYriERSO1x35rW8IcBV0N56tWiBrcJ8wGvnYwjiGqZKPTnRWtjZLw8biHYw4cV8600m21UNZj5';
 
 export default function BookingPayment() {
   const { bookingId } = useParams<{ bookingId: string }>();
@@ -34,6 +37,9 @@ export default function BookingPayment() {
   const [policyAgreed, setPolicyAgreed] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [confirmTimedOut, setConfirmTimedOut] = useState(false);
+  const [checkoutClientSecret, setCheckoutClientSecret] = useState<string | null>(null);
+  const [embeddedCheckoutError, setEmbeddedCheckoutError] = useState<string | null>(null);
+  const embeddedCheckoutRef = useRef<any>(null);
 
   useEffect(() => {
     if (bookingId) {
@@ -141,6 +147,54 @@ export default function BookingPayment() {
     return () => clearInterval(interval);
   }, [timeRemaining, bookingId, navigate]);
 
+  useEffect(() => {
+    if (!checkoutClientSecret) return;
+
+    let cancelled = false;
+    let checkout: any = null;
+
+    const mountEmbeddedCheckout = async () => {
+      try {
+        setEmbeddedCheckoutError(null);
+
+        if (!STRIPE_PUBLISHABLE_KEY) {
+          throw new Error('Missing VITE_STRIPE_PUBLISHABLE_KEY. Add the Stripe publishable key before using embedded checkout.');
+        }
+
+        const stripe = await loadStripe(STRIPE_PUBLISHABLE_KEY);
+        if (!stripe) throw new Error('Could not load Stripe. Please refresh and try again.');
+
+        checkout = await stripe.initEmbeddedCheckout({ clientSecret: checkoutClientSecret });
+        if (cancelled) {
+          checkout.destroy();
+          return;
+        }
+
+        embeddedCheckoutRef.current = checkout;
+        checkout.mount('#embedded-checkout');
+        setProcessing(false);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Could not load secure payment form.';
+        console.error('Failed to mount embedded Stripe Checkout:', e);
+        setEmbeddedCheckoutError(msg);
+        toast.error(msg);
+        setProcessing(false);
+      }
+    };
+
+    void mountEmbeddedCheckout();
+
+    return () => {
+      cancelled = true;
+      try {
+        checkout?.destroy?.();
+      } catch {
+        // Ignore Stripe cleanup errors during route changes.
+      }
+      if (embeddedCheckoutRef.current === checkout) embeddedCheckoutRef.current = null;
+    };
+  }, [checkoutClientSecret]);
+
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -160,13 +214,24 @@ export default function BookingPayment() {
     try {
       // Phase 2: real Stripe checkout. Server validates reservation + ownership.
       const { stripeSupabaseService } = await import('@/services/stripeSupabaseService');
-      const { url } = await stripeSupabaseService.createConsultationCheckout({
+      const { clientSecret, url } = await stripeSupabaseService.createConsultationCheckout({
         consultationId: bookingId,
         amountCents: CONSULTATION_FEE_CENTS,
+        embedded: true,
       });
 
-      if (!url) throw new Error('No checkout URL returned');
-      window.location.href = url;
+      if (clientSecret) {
+        setCheckoutClientSecret(clientSecret);
+        return;
+      }
+
+      // Fallback for older deployed Edge Function responses while rolling out embedded checkout.
+      if (url) {
+        window.location.href = url;
+        return;
+      }
+
+      throw new Error('No checkout session returned');
     } catch (e) {
       console.error('Failed to start checkout:', e);
       const msg = (e as any)?.message || (e as any)?.error_description || 'Could not start secure checkout.';
@@ -265,33 +330,24 @@ export default function BookingPayment() {
             <CardDescription>Your payment is secure and encrypted</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Payment form */}
-            <div className="space-y-2">
-              <Label>Card Number</Label>
-              <Input 
-                value="4242 4242 4242 4242" 
-                disabled 
-                className="bg-muted"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Expiry</Label>
-                <Input 
-                  value="12/25" 
-                  disabled 
-                  className="bg-muted"
-                />
+            {checkoutClientSecret ? (
+              <div className="rounded-lg border bg-background p-2">
+                <div id="embedded-checkout" className="min-h-[420px]" />
               </div>
-              <div className="space-y-2">
-                <Label>CVV</Label>
-                <Input 
-                  value="123" 
-                  disabled 
-                  className="bg-muted"
-                />
+            ) : (
+              <div className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">
+                Agree to the no-show policy, then load the secure PouchCare payment form here.
               </div>
-            </div>
+            )}
+
+            {embeddedCheckoutError && (
+              <Alert className="border-destructive/50 bg-destructive/10">
+                <AlertTriangle className="h-4 w-4 text-destructive" />
+                <AlertDescription className="text-destructive">
+                  {embeddedCheckoutError}
+                </AlertDescription>
+              </Alert>
+            )}
 
           </CardContent>
         </Card>
@@ -366,17 +422,19 @@ export default function BookingPayment() {
 
           {/* Action Buttons */}
           <div className="flex gap-4">
-            <Button variant="outline" onClick={handleCancel} className="flex-1" disabled={processing}>
+            <Button variant="outline" onClick={handleCancel} className="flex-1" disabled={processing || !!checkoutClientSecret}>
               Cancel
             </Button>
-            <Button onClick={handlePayment} disabled={!policyAgreed || processing} className="flex-1" size="lg">
+            <Button onClick={handlePayment} disabled={!policyAgreed || processing || !!checkoutClientSecret} className="flex-1" size="lg">
               {processing ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Processing...
+                  Loading payment...
                 </>
+              ) : checkoutClientSecret ? (
+                'Secure payment form loaded'
               ) : (
-                `Pay ${formatAudFromCents(CONSULTATION_FEE_CENTS)} AUD`
+                `Load payment form — ${formatAudFromCents(CONSULTATION_FEE_CENTS)} AUD`
               )}
             </Button>
           </div>

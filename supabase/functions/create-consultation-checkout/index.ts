@@ -35,6 +35,7 @@ serve(async (req) => {
     const body = await req.json();
     const consultationId = body?.consultationId as string | undefined;
     const amountCents = body?.amountCents as number | undefined;
+    const embedded = body?.embedded === true || body?.uiMode === "embedded";
 
     if (!consultationId) throw new Error("Missing consultationId");
     if (!amountCents || amountCents <= 0 || amountCents > 100000) throw new Error("Invalid amountCents");
@@ -116,10 +117,21 @@ serve(async (req) => {
 
     if (upsertErr) throw new Error(upsertErr.message);
 
+    const returnUrl = `${origin}/patient/booking/payment/${consultationId}?stripeSuccess=1&session_id={CHECKOUT_SESSION_ID}`;
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
       mode: "payment",
+      ...(embedded
+        ? {
+          ui_mode: "embedded" as const,
+          return_url: returnUrl,
+        }
+        : {
+          success_url: returnUrl,
+          cancel_url: `${origin}/patient/booking/payment/${consultationId}?stripeCancelled=1`,
+        }),
       // Keep checkout simple/trustworthy for consults. Link is managed in Stripe
       // payment-method settings, but explicitly requesting card avoids dynamic
       // payment method surprises where possible.
@@ -128,14 +140,15 @@ serve(async (req) => {
         {
           price_data: {
             currency: "aud",
-            product_data: { name: "5-minute phone consultation" },
+            product_data: {
+              name: "PouchCare doctor consultation",
+              description: "Secure 5-minute telehealth consultation for prescription assessment.",
+            },
             unit_amount: effectiveAmountCents,
           },
           quantity: 1,
         },
       ],
-      success_url: `${origin}/patient/booking/payment/${consultationId}?stripeSuccess=1&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/patient/booking/payment/${consultationId}?stripeCancelled=1`,
       metadata: {
         consultation_id: consultationId,
         patient_id: user.id,
@@ -150,7 +163,7 @@ serve(async (req) => {
 
     logStep("Checkout session created", { consultationId, sessionId: session.id });
 
-    return new Response(JSON.stringify({ url: session.url, sessionId: session.id }), {
+    return new Response(JSON.stringify({ url: session.url, clientSecret: session.client_secret, sessionId: session.id }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
