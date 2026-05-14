@@ -221,8 +221,8 @@ export default function BookConsultation() {
           reservationId: (reservation as any)?.reservation_id,
         });
 
-        // Keep payment in-app. The payment page mounts embedded Stripe Checkout.
-        navigate(`/patient/booking/payment/${booking.id}`);
+        // Keep payment in-app and start embedded Stripe Checkout from the Proceed to Payment action.
+        navigate(`/patient/booking/payment/${booking.id}?startCheckout=1`);
       }
     } catch (error) {
       console.error('Error creating booking:', error);

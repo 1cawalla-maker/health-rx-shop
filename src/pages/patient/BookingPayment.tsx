@@ -28,6 +28,7 @@ export default function BookingPayment() {
   const [searchParams] = useSearchParams();
   const stripeSuccess = searchParams.get('stripeSuccess') === '1';
   const stripeCancelled = searchParams.get('stripeCancelled') === '1';
+  const startCheckout = searchParams.get('startCheckout') === '1';
 
   const patientTz = useMemo(() => user?.id ? userPreferencesService.getTimezone(user.id) : 'Australia/Brisbane', [user?.id]);
 
@@ -40,6 +41,7 @@ export default function BookingPayment() {
   const [checkoutClientSecret, setCheckoutClientSecret] = useState<string | null>(null);
   const [embeddedCheckoutError, setEmbeddedCheckoutError] = useState<string | null>(null);
   const embeddedCheckoutRef = useRef<any>(null);
+  const autoStartedCheckoutRef = useRef(false);
 
   useEffect(() => {
     if (bookingId) {
@@ -201,8 +203,8 @@ export default function BookingPayment() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handlePayment = async () => {
-    if (!policyAgreed) {
+  const handlePayment = async (options?: { skipPolicyCheck?: boolean }) => {
+    if (!options?.skipPolicyCheck && !policyAgreed) {
       toast.error('Please agree to the no-show policy');
       return;
     }
@@ -239,6 +241,15 @@ export default function BookingPayment() {
       setProcessing(false);
     }
   };
+
+  useEffect(() => {
+    if (!startCheckout || stripeSuccess || stripeCancelled || !booking || autoStartedCheckoutRef.current) return;
+    if (checkoutClientSecret || processing) return;
+
+    autoStartedCheckoutRef.current = true;
+    setPolicyAgreed(true);
+    void handlePayment({ skipPolicyCheck: true });
+  }, [startCheckout, stripeSuccess, stripeCancelled, booking, checkoutClientSecret, processing]);
 
   const handleCancel = () => {
     if (bookingId) {
@@ -336,7 +347,9 @@ export default function BookingPayment() {
               </div>
             ) : (
               <div className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">
-                Agree to the no-show policy, then load the secure PouchCare payment form here.
+                {startCheckout
+                  ? 'Loading your secure PouchCare payment form…'
+                  : 'Agree to the no-show policy, then load the secure PouchCare payment form here.'}
               </div>
             )}
 
@@ -405,6 +418,24 @@ export default function BookingPayment() {
             Payment was cancelled. You can try again, as long as your reservation hasn’t expired.
           </AlertDescription>
         </Alert>
+      ) : startCheckout ? (
+        !checkoutClientSecret && !embeddedCheckoutError ? (
+          <Alert className="border-primary/50 bg-primary/10">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            <AlertDescription>
+              Loading your secure PouchCare payment form…
+            </AlertDescription>
+          </Alert>
+        ) : embeddedCheckoutError ? (
+          <div className="flex gap-4">
+            <Button variant="outline" onClick={handleCancel} className="flex-1">
+              Cancel
+            </Button>
+            <Button onClick={() => handlePayment({ skipPolicyCheck: true })} className="flex-1" size="lg">
+              Try payment again
+            </Button>
+          </div>
+        ) : null
       ) : (
         <>
           {/* Policy Agreement */}
