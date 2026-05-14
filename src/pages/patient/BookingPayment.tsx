@@ -164,7 +164,7 @@ export default function BookingPayment() {
         const stripe = await loadStripe(STRIPE_PUBLISHABLE_KEY);
         if (!stripe) throw new Error('Could not load Stripe. Please refresh and try again.');
 
-        checkout = await stripe.initEmbeddedCheckout({ clientSecret: checkoutClientSecret });
+        checkout = await stripe.createEmbeddedCheckoutPage({ clientSecret: checkoutClientSecret });
         if (cancelled) {
           checkout.destroy();
           return;
