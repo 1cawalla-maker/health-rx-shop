@@ -142,7 +142,7 @@ export default function PatientShopCheckout() {
           </Button>
           <h1 className="font-display text-3xl font-bold text-foreground">Review your order</h1>
           <p className="text-muted-foreground">
-            Confirm your PouchCare cart before continuing to Shopify secure payment.
+            Review your PouchCare order first. Shopify securely handles the final payment and shipping details.
           </p>
         </div>
       </div>
@@ -225,11 +225,18 @@ export default function PatientShopCheckout() {
           <Card className="border-primary/15 bg-primary/5">
             <CardContent className="flex gap-3 pt-6">
               <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-              <div className="space-y-1 text-sm">
-                <p className="font-medium">Prescription checks stay active</p>
-                <p className="text-muted-foreground">
-                  PouchCare validates your prescription, strength limit, and 60-can allowance before Shopify checkout opens. Shopify then handles secure payment and shipping details.
-                </p>
+              <div className="space-y-3 text-sm">
+                <div className="space-y-1">
+                  <p className="font-medium">Secure Shopify handoff</p>
+                  <p className="text-muted-foreground">
+                    PouchCare validates your prescription, strength limit, and 60-can allowance before Shopify opens for payment and shipping.
+                  </p>
+                </div>
+                <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
+                  <div className="rounded-lg bg-background/70 p-3">1. Review your order on PouchCare</div>
+                  <div className="rounded-lg bg-background/70 p-3">2. Enter payment and shipping in Shopify</div>
+                  <div className="rounded-lg bg-background/70 p-3">3. Return to PouchCare after ordering</div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -298,18 +305,18 @@ export default function PatientShopCheckout() {
                 {isRedirecting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Opening secure payment…
+                    Opening Shopify checkout…
                   </>
                 ) : (
                   <>
-                    Continue to secure payment
+                    Continue to Shopify secure checkout
                     <CheckCircle2 className="ml-2 h-4 w-4" />
                   </>
                 )}
               </Button>
 
               <p className="text-center text-xs text-muted-foreground">
-                Payment is completed securely through Shopify. You will return to PouchCare after ordering.
+                Payment and shipping are completed securely through Shopify for your PouchCare order.
               </p>
             </CardContent>
           </Card>
