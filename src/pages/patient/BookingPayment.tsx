@@ -465,7 +465,7 @@ export default function BookingPayment() {
               ) : checkoutClientSecret ? (
                 'Secure payment form loaded'
               ) : (
-                `Load payment form — ${formatAudFromCents(CONSULTATION_FEE_CENTS)} AUD`
+                `Proceed to secure payment — ${formatAudFromCents(CONSULTATION_FEE_CENTS)} AUD`
               )}
             </Button>
           </div>
