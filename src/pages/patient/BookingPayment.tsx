@@ -272,7 +272,7 @@ export default function BookingPayment() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={handleCancel}>
@@ -295,9 +295,9 @@ export default function BookingPayment() {
         </Alert>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start">
         {/* Order Summary */}
-        <Card>
+        <Card className="lg:sticky lg:top-24">
           <CardHeader>
             <CardTitle>Booking Summary</CardTitle>
           </CardHeader>
@@ -342,8 +342,8 @@ export default function BookingPayment() {
           </CardHeader>
           <CardContent className="space-y-4">
             {checkoutClientSecret ? (
-              <div className="rounded-lg border bg-background p-2">
-                <div id="embedded-checkout" className="min-h-[420px]" />
+              <div className="rounded-xl border bg-background p-3 sm:p-4">
+                <div id="embedded-checkout" className="min-h-[560px] w-full" />
               </div>
             ) : (
               <div className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">
