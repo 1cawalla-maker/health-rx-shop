@@ -168,7 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUserRole(null);
         setLoading(false);
         setConfigError(
-          'We had trouble loading your session. Please refresh the page. If it persists, clear site data for health-rx-shop.vercel.app or try an Incognito window.'
+          'We had trouble loading your session. Please refresh the page. If it persists, clear site data for pouchcare.com.au or try an Incognito window.'
         );
       });
 
@@ -181,7 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const siteUrl = import.meta.env.VITE_SITE_URL || 'https://health-rx-shop.vercel.app';
+      const siteUrl = import.meta.env.VITE_SITE_URL || 'https://www.pouchcare.com.au';
       const redirectUrl = `${siteUrl}/`;
       
       if (import.meta.env.DEV) {
@@ -338,7 +338,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const siteUrl = import.meta.env.VITE_SITE_URL || 'https://health-rx-shop.vercel.app';
+      const siteUrl = import.meta.env.VITE_SITE_URL || 'https://www.pouchcare.com.au';
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${siteUrl}/auth?mode=reset`

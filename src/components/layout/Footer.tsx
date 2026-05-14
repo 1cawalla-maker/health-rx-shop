@@ -30,10 +30,10 @@ export function Footer() {
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
                 <Stethoscope className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span>NicoPatch</span>
+              <span>PouchCare</span>
             </Link>
             <p className="text-sm text-muted-foreground max-w-xs">
-              Australia's trusted telehealth platform for nicotine pouch prescriptions. 
+              Australia's trusted telehealth platform for nicotine pouch consultations.
               Consult with registered doctors online.
             </p>
           </div>
@@ -92,10 +92,10 @@ export function Footer() {
 
         <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} NicoPatch. All rights reserved.
+            © {new Date().getFullYear()} PouchCare. All rights reserved.
           </p>
           <p className="text-xs text-muted-foreground text-center md:text-right max-w-md">
-            NicoPatch is a registered telehealth service operating under Australian law. 
+            PouchCare is a telehealth platform operating under Australian law.
             This service is not intended for emergency medical situations.
           </p>
         </div>

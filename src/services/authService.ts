@@ -4,7 +4,7 @@
 import type { CurrentUser } from '@/types/services';
 import type { UserRole } from '@/types/enums';
 
-const MOCK_STORAGE_KEY = 'healthrx_mock_user';
+const MOCK_STORAGE_KEY = 'pouchcare_mock_user';
 
 // Mock user for development - in production, this comes from Supabase auth
 const getMockUser = (): CurrentUser | null => {

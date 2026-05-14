@@ -23,7 +23,7 @@ const faqCategories = [
     title: 'About the Service',
     faqs: [
       {
-        question: 'How does the Health Rx Shop telehealth service work?',
+        question: 'How does the PouchCare telehealth service work?',
         answer: `Our service provides a streamlined pathway for Australian adults to access nicotine pouches through proper medical supervision. Here's the process:
 
 1. **Check Eligibility**: Complete a quick pre-screening questionnaire to see if nicotine pouch therapy might be suitable for you.

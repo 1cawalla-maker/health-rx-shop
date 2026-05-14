@@ -3,12 +3,12 @@ import { PublicLayout } from "@/components/layout/PublicLayout";
 import Seo, { SITE_ORIGIN } from "@/components/seo/Seo";
 import { breadcrumbSchema, howToSchema, serviceSchema, webPageSchema } from "@/components/seo/schema";
 import { Button } from "@/components/ui/button";
-import { 
-  UserPlus, 
-  ClipboardList, 
-  Phone, 
-  FileCheck, 
-  ShoppingBag, 
+import {
+  UserPlus,
+  ClipboardList,
+  Phone,
+  FileCheck,
+  ShoppingBag,
   Truck,
   ArrowRight,
   CheckCircle,
@@ -20,7 +20,7 @@ const detailedSteps = [
     icon: UserPlus,
     step: 1,
     title: "Create Your Account",
-    description: "Sign up for a free NicoPatch account in minutes. We'll need some basic information to get you started.",
+    description: "Sign up for a free PouchCare account in minutes. We'll need some basic information to get you started.",
     details: [
       "Provide your email and create a secure password",
       "Verify your identity with a valid Australian ID",
@@ -94,7 +94,7 @@ export default function HowItWorks() {
     <PublicLayout>
       <Seo
         title="How to Get Nicotine Pouches in Australia (Zyn): How It Works"
-        description="Learn how NicoPatch works: questionnaire, telehealth consultation, clinical assessment, and ordering nicotine pouches in Australia through a compliant pathway."
+        description="Learn how PouchCare works: questionnaire, telehealth consultation, clinical assessment, and ordering nicotine pouches in Australia through a compliant pathway."
         canonicalPath="/how-it-works"
         ogImagePath="/og/how-it-works.png"
         ogType="website"
@@ -103,7 +103,7 @@ export default function HowItWorks() {
             url: `${SITE_ORIGIN}/how-it-works`,
             name: 'How it works',
             description:
-              'Learn how NicoPatch works: questionnaire, telehealth consultation, clinical assessment, and ordering nicotine pouches in Australia through a compliant pathway.',
+              'Learn how PouchCare works: questionnaire, telehealth consultation, clinical assessment, and ordering nicotine pouches in Australia through a compliant pathway.',
             dateModified: '2026-03-30',
             siteOrigin: SITE_ORIGIN,
           }),
@@ -115,14 +115,14 @@ export default function HowItWorks() {
           }),
           serviceSchema({
             url: `${SITE_ORIGIN}/how-it-works`,
-            name: 'How NicoPatch works',
+            name: 'How PouchCare works',
             description:
               'Questionnaire, telehealth consultation, clinical assessment, and next steps for nicotine pouches in Australia through a doctor-supervised pathway.',
             providerUrl: SITE_ORIGIN,
           }),
           howToSchema({
             url: `${SITE_ORIGIN}/how-it-works`,
-            name: 'How to access nicotine pouches through NicoPatch',
+            name: 'How to access nicotine pouches through PouchCare',
             description:
               'Step-by-step process from account creation to delivery, via a phone consultation with an Australian doctor.',
             steps: detailedSteps.map((s) => ({
@@ -140,8 +140,8 @@ export default function HowItWorks() {
               How It Works
             </h1>
             <p className="text-lg text-muted-foreground">
-              Our simple, secure process takes you from sign-up to delivery in just a few steps. 
-              Here's everything you need to know about accessing nicotine pouches through NicoPatch.
+              Our simple, secure process takes you from sign-up to delivery in just a few steps.
+              Here's everything you need to know about accessing nicotine pouches through PouchCare.
             </p>
           </div>
         </div>
@@ -152,7 +152,7 @@ export default function HowItWorks() {
         <div className="container">
           <div className="max-w-4xl mx-auto">
             {detailedSteps.map((step, index) => (
-              <div 
+              <div
                 key={step.step}
                 className={`relative flex gap-6 md:gap-8 pb-12 ${
                   index < detailedSteps.length - 1 ? "border-l-2 border-border ml-6 md:ml-8" : "ml-6 md:ml-8"
@@ -210,18 +210,18 @@ export default function HowItWorks() {
 
               <div className="space-y-4 text-muted-foreground">
                 <p>
-                  In Australia, nicotine-containing products (including nicotine pouches) require a valid 
-                  prescription from a registered medical practitioner. The Therapeutic Goods Administration (TGA) 
-                  allows individuals with a valid prescription to import nicotine products for personal use 
+                  In Australia, nicotine-containing products (including nicotine pouches) require a valid
+                  prescription from a registered medical practitioner. The Therapeutic Goods Administration (TGA)
+                  allows individuals with a valid prescription to import nicotine products for personal use
                   under the Personal Importation Scheme.
                 </p>
                 <p>
-                  Through NicoPatch, you can consult with AHPRA-registered doctors who can assess your 
-                  suitability for nicotine pouches. If clinically appropriate, they may issue a prescription 
+                  Through PouchCare, you can consult with AHPRA-registered doctors who can assess your
+                  suitability for nicotine pouches. If clinically appropriate, they may issue a prescription
                   that allows you to legally import and use these products.
                 </p>
                 <p className="text-sm italic">
-                  Please note: Prescriptions are issued at the sole discretion of the prescribing doctor 
+                  Please note: Prescriptions are issued at the sole discretion of the prescribing doctor
                   based on clinical assessment. Not all consultations will result in a prescription.
                 </p>
               </div>

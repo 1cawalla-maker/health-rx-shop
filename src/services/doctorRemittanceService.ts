@@ -3,7 +3,7 @@
  * Each entry stores a URL pointing to an external remittance document.
  */
 
-const STORAGE_KEY = 'healthrx_doctor_remittances';
+const STORAGE_KEY = 'pouchcare_doctor_remittances';
 
 export interface RemittanceEntry {
   weekStart: string;        // ISO YYYY-MM-DD (Monday)

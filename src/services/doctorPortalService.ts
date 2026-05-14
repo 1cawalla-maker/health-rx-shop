@@ -48,7 +48,7 @@ class DoctorPortalService {
       updatedAt: new Date().toISOString(),
     };
 
-    localStorage.setItem('nicopatch_mock_bookings', JSON.stringify(all));
+    localStorage.setItem('pouchcare_mock_bookings', JSON.stringify(all));
     return all[idx];
   }
 
@@ -74,7 +74,7 @@ class DoctorPortalService {
       updatedAt: new Date().toISOString(),
     };
 
-    localStorage.setItem('nicopatch_mock_bookings', JSON.stringify(all));
+    localStorage.setItem('pouchcare_mock_bookings', JSON.stringify(all));
     return all[idx];
   }
 
@@ -109,7 +109,7 @@ class DoctorPortalService {
       status: 'completed',
     } as any;
 
-    localStorage.setItem('nicopatch_mock_bookings', JSON.stringify(all));
+    localStorage.setItem('pouchcare_mock_bookings', JSON.stringify(all));
     return all[idx];
   }
 
@@ -130,7 +130,7 @@ class DoctorPortalService {
     };
     (all[idx] as any).doctorNotes = `Cancelled by doctor: ${reason.trim()}`;
 
-    localStorage.setItem('nicopatch_mock_bookings', JSON.stringify(all));
+    localStorage.setItem('pouchcare_mock_bookings', JSON.stringify(all));
     return all[idx];
   }
 
@@ -145,13 +145,13 @@ class DoctorPortalService {
     );
 
     all[idx] = { ...booking, callAttempts: attempts, updatedAt: new Date().toISOString() };
-    localStorage.setItem('nicopatch_mock_bookings', JSON.stringify(all));
+    localStorage.setItem('pouchcare_mock_bookings', JSON.stringify(all));
     return all[idx];
   }
 
   // --- Consult notes (keyed by bookingId) ---
   private notesKey(bookingId: string): string {
-    return `nicopatch_consult_notes:${bookingId}`;
+    return `pouchcare_consult_notes:${bookingId}`;
   }
 
   getConsultNotes(bookingId: string): string {

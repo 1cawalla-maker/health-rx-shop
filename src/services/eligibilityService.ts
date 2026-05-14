@@ -4,7 +4,7 @@ import type { EligibilityAnswers, EligibilityQuizResult, EligibilityQuizQuestion
 
 const SESSION_STORAGE_KEY = 'eligibility_responses';
 // Canonical key used for Phase 1 import-on-auth into localStorage
-const SESSION_STORAGE_KEY_V2 = 'healthrx_quiz_result';
+const SESSION_STORAGE_KEY_V2 = 'pouchcare_quiz_result';
 
 // Quiz questions configuration
 export const eligibilityQuestions: EligibilityQuizQuestion[] = [
@@ -88,7 +88,7 @@ export const consentItems = [
 // We persist in BOTH sessionStorage and localStorage.
 // Why: sessionStorage is per-tab and is cleared when the user closes the tab,
 // which was blocking users who completed the quiz, then later came back to sign up.
-const LOCAL_STORAGE_KEY = 'healthrx_quiz_result_public';
+const LOCAL_STORAGE_KEY = 'pouchcare_quiz_result_public';
 
 export function saveQuizToSession(result: EligibilityQuizResult): void {
   const raw = JSON.stringify(result);

@@ -69,7 +69,7 @@ export default function Index() {
         jsonLd={[
           webPageSchema({
             url: `${SITE_ORIGIN}/`,
-            name: 'NicoPatch: Nicotine pouches in Australia',
+            name: 'PouchCare: Nicotine pouches in Australia',
             description:
               'Doctor-supervised telehealth consultations for nicotine pouches in Australia. If clinically appropriate, receive a prescription and access nicotine pouches legally.',
             dateModified: '2026-03-30',
@@ -195,7 +195,7 @@ export default function Index() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-6">
-                Why Choose NicoPatch?
+                Why Choose PouchCare?
               </h2>
               <p className="text-lg text-muted-foreground mb-8">
                 We combine the convenience of telehealth with the oversight of registered medical 

@@ -53,17 +53,17 @@ export default function About() {
   return (
     <PublicLayout>
       <Seo
-        title="About NicoPatch: Doctor‑Supervised Nicotine Pouches in Australia"
-        description="NicoPatch is an Australian telehealth platform connecting patients with AHPRA‑registered doctors for nicotine pouch consultations and clinically guided next steps."
+        title="About PouchCare: Doctor‑Supervised Nicotine Pouches in Australia"
+        description="PouchCare is an Australian telehealth platform connecting patients with AHPRA‑registered doctors for nicotine pouch consultations and clinically guided next steps."
         canonicalPath="/about"
         ogImagePath="/og/about.png"
         ogType="website"
         jsonLd={[
           aboutPageSchema({
             url: `${SITE_ORIGIN}/about`,
-            name: 'About NicoPatch',
+            name: 'About PouchCare',
             description:
-              'NicoPatch is an Australian telehealth platform connecting patients with AHPRA-registered doctors for nicotine pouch consultations and clinically guided next steps.',
+              'PouchCare is an Australian telehealth platform connecting patients with AHPRA-registered doctors for nicotine pouch consultations and clinically guided next steps.',
             dateModified: '2026-03-30',
           }),
           breadcrumbSchema({
@@ -86,10 +86,10 @@ export default function About() {
         <div className="container">
           <div className="max-w-3xl mx-auto text-center space-y-6">
             <h1 className="font-display text-4xl md:text-5xl font-bold text-foreground">
-              About NicoPatch
+              About PouchCare
             </h1>
             <p className="text-lg text-muted-foreground">
-              We're on a mission to provide Australians with safe, legal access to nicotine pouches 
+              We're on a mission to provide Australians with safe, legal access to nicotine pouches
               through doctor-supervised telehealth consultations.
             </p>
           </div>
@@ -107,20 +107,20 @@ export default function About() {
                 </h2>
                 <div className="space-y-4 text-muted-foreground">
                   <p>
-                    NicoPatch was founded with a clear purpose: to bridge the gap between 
-                    Australians seeking nicotine alternatives and the medical oversight required 
+                    PouchCare was founded with a clear purpose: to bridge the gap between
+                    Australians seeking nicotine alternatives and the medical oversight required
                     to access them legally and safely.
                   </p>
                   <p>
-                    We recognized that many people were struggling to find accessible, 
-                    professional healthcare to support their transition away from traditional 
-                    smoking or vaping. Our telehealth platform connects patients with registered 
-                    Australian doctors who can provide thorough assessments and, when appropriate, 
+                    We recognized that many people were struggling to find accessible,
+                    professional healthcare to support their transition away from traditional
+                    smoking or vaping. Our telehealth platform connects patients with registered
+                    Australian doctors who can provide thorough assessments and, when appropriate,
                     prescriptions for nicotine pouches.
                   </p>
                   <p>
-                    Today, we're proud to serve patients across Australia, providing a seamless 
-                    experience from consultation to product delivery—all while maintaining the 
+                    Today, we're proud to serve patients across Australia, providing a seamless
+                    experience from consultation to product delivery—all while maintaining the
                     highest standards of medical care and regulatory compliance.
                   </p>
                 </div>
@@ -153,7 +153,7 @@ export default function About() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {values.map((value) => (
-                <div 
+                <div
                   key={value.title}
                   className="bg-card rounded-xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow"
                 >
@@ -188,7 +188,7 @@ export default function About() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {doctors.map((doctor) => (
-                <div 
+                <div
                   key={doctor.name}
                   className="bg-card rounded-xl border border-border overflow-hidden shadow-sm hover:shadow-lg transition-shadow"
                 >
@@ -274,8 +274,8 @@ export default function About() {
             <p className="text-lg text-primary-foreground/80">
               Book a consultation with one of our experienced doctors today.
             </p>
-            <Button 
-              size="xl" 
+            <Button
+              size="xl"
               className="bg-background text-primary hover:bg-background/90 shadow-lg"
               asChild
             >

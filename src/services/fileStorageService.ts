@@ -3,7 +3,7 @@
 
 import type { FileUploadResult } from '@/types/services';
 
-const MOCK_FILES_KEY = 'healthrx_mock_files';
+const MOCK_FILES_KEY = 'pouchcare_mock_files';
 
 interface StoredFile {
   path: string;

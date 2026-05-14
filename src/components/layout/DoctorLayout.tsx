@@ -67,7 +67,7 @@ export function DoctorLayout() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <Stethoscope className="h-4 w-4 text-primary-foreground" />
           </div>
-          <span>NicoPatch</span>
+          <span>PouchCare</span>
         </Link>
         <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -88,7 +88,7 @@ export function DoctorLayout() {
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
                 <Stethoscope className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span>NicoPatch</span>
+              <span>PouchCare</span>
             </Link>
           </div>
 

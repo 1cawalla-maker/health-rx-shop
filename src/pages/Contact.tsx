@@ -13,7 +13,7 @@ const contactInfo = [
   {
     icon: Mail,
     title: "Email",
-    value: "support@nicopatch.com.au",
+    value: "support@pouchcare.com.au",
     description: "We'll respond within 24 hours",
   },
   {
@@ -48,8 +48,8 @@ export default function Contact() {
   return (
     <PublicLayout>
       <Seo
-        title="Contact NicoPatch"
-        description="Contact the NicoPatch team for help with consultations, prescriptions, and ordering nicotine pouches in Australia."
+        title="Contact PouchCare"
+        description="Contact the PouchCare team for help with consultations, prescriptions, and ordering nicotine pouches in Australia."
         canonicalPath="/contact"
         ogImagePath="/og/contact.png"
         ogType="website"
@@ -58,7 +58,7 @@ export default function Contact() {
             url: `${SITE_ORIGIN}/contact`,
             name: 'Contact',
             description:
-              'Contact the NicoPatch team for help with consultations, prescriptions, and ordering nicotine pouches in Australia.',
+              'Contact the PouchCare team for help with consultations, prescriptions, and ordering nicotine pouches in Australia.',
             dateModified: '2026-03-30',
           }),
           breadcrumbSchema({
@@ -71,7 +71,7 @@ export default function Contact() {
             url: `${SITE_ORIGIN}/contact`,
             name: 'Customer support',
             description:
-              'Customer support for NicoPatch consultations and ordering questions.',
+              'Customer support for PouchCare consultations and ordering questions.',
             providerUrl: SITE_ORIGIN,
           }),
         ]}
@@ -198,7 +198,7 @@ export default function Contact() {
                   </h3>
                   <p className="text-sm text-muted-foreground">
                     For medical emergencies, please call 000 or visit your nearest emergency 
-                    department. NicoPatch is not an emergency medical service.
+                    department. PouchCare is not an emergency medical service.
                   </p>
                 </div>
               </div>

@@ -8,7 +8,7 @@ export default function Disclaimer() {
     <PublicLayout>
       <Seo
         title="Medical & Telehealth Disclaimer"
-        description="Medical and telehealth disclaimer for NicoPatch, including clinical suitability, consultation limits, and important safety information."
+        description="Medical and telehealth disclaimer for PouchCare, including clinical suitability, consultation limits, and important safety information."
         canonicalPath="/disclaimer"
         ogImagePath="/og/disclaimer.png"
         ogType="website"
@@ -17,7 +17,7 @@ export default function Disclaimer() {
             url: `${SITE_ORIGIN}/disclaimer`,
             name: 'Medical & Telehealth Disclaimer',
             description:
-              'Medical and telehealth disclaimer for NicoPatch, including clinical suitability, consultation limits, and important safety information.',
+              'Medical and telehealth disclaimer for PouchCare, including clinical suitability, consultation limits, and important safety information.',
             dateModified: '2026-03-30',
           }),
           breadcrumbSchema({
@@ -39,7 +39,7 @@ export default function Disclaimer() {
                 Medical & Telehealth Disclaimer
               </h1>
             </div>
-            
+
             <p className="text-muted-foreground mb-6">
               Last updated: March 2026
             </p>
@@ -50,8 +50,8 @@ export default function Disclaimer() {
                   Important Notice
                 </h2>
                 <p>
-                  Please read this disclaimer carefully before using NicoPatch services. By using our 
-                  platform, you acknowledge that you have read, understood, and agree to be bound by 
+                  Please read this disclaimer carefully before using PouchCare services. By using our
+                  platform, you acknowledge that you have read, understood, and agree to be bound by
                   this disclaimer.
                 </p>
               </section>
@@ -61,8 +61,8 @@ export default function Disclaimer() {
                   Telehealth Services
                 </h2>
                 <p>
-                  NicoPatch provides telehealth consultations via phone with registered Australian 
-                  medical practitioners. While telehealth is a convenient and effective way to access healthcare, 
+                  PouchCare provides telehealth consultations via phone with registered Australian
+                  medical practitioners. While telehealth is a convenient and effective way to access healthcare,
                   it has certain limitations:
                 </p>
                 <ul className="list-disc pl-6 mt-4 space-y-2">
@@ -77,11 +77,11 @@ export default function Disclaimer() {
                   Not a Substitute for Emergency Care
                 </h2>
                 <p className="font-semibold text-foreground">
-                  NicoPatch is NOT an emergency medical service.
+                  PouchCare is NOT an emergency medical service.
                 </p>
                 <p className="mt-4">
-                  If you are experiencing a medical emergency, please call 000 immediately or go to your 
-                  nearest emergency department. Our service is designed for non-emergency consultations 
+                  If you are experiencing a medical emergency, please call 000 immediately or go to your
+                  nearest emergency department. Our service is designed for non-emergency consultations
                   only.
                 </p>
               </section>
@@ -91,7 +91,7 @@ export default function Disclaimer() {
                   Prescription Decisions
                 </h2>
                 <p>
-                  All prescription decisions are made solely by the consulting physician based on their 
+                  All prescription decisions are made solely by the consulting physician based on their
                   clinical judgment and the information provided by the patient. Please note:
                 </p>
                 <ul className="list-disc pl-6 mt-4 space-y-2">
@@ -123,7 +123,7 @@ export default function Disclaimer() {
                   Personal Importation Scheme
                 </h2>
                 <p>
-                  Products ordered through NicoPatch are imported under Australia's Personal Importation 
+                  Products ordered through PouchCare are imported under Australia's Personal Importation
                   Scheme as permitted by the Therapeutic Goods Administration (TGA). This means:
                 </p>
                 <ul className="list-disc pl-6 mt-4 space-y-2">
@@ -139,7 +139,7 @@ export default function Disclaimer() {
                   Information Accuracy
                 </h2>
                 <p>
-                  The accuracy and effectiveness of our service depends on you providing complete and 
+                  The accuracy and effectiveness of our service depends on you providing complete and
                   truthful information about your health. You are responsible for:
                 </p>
                 <ul className="list-disc pl-6 mt-4 space-y-2">
@@ -155,9 +155,9 @@ export default function Disclaimer() {
                   Limitation of Liability
                 </h2>
                 <p>
-                  To the maximum extent permitted by law, NicoPatch, its directors, employees, and 
-                  affiliated medical practitioners shall not be liable for any direct, indirect, 
-                  incidental, consequential, or punitive damages arising from your use of our services 
+                  To the maximum extent permitted by law, PouchCare, its directors, employees, and
+                  affiliated medical practitioners shall not be liable for any direct, indirect,
+                  incidental, consequential, or punitive damages arising from your use of our services
                   or products ordered through our platform.
                 </p>
               </section>
@@ -167,8 +167,8 @@ export default function Disclaimer() {
                   Questions or Concerns
                 </h2>
                 <p>
-                  If you have any questions about this disclaimer or concerns about our services, 
-                  please contact us at support@nicopatch.com.au before using our platform.
+                  If you have any questions about this disclaimer or concerns about our services,
+                  please contact us at support@pouchcare.com.au before using our platform.
                 </p>
               </section>
             </div>

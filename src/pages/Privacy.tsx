@@ -7,7 +7,7 @@ export default function Privacy() {
     <PublicLayout>
       <Seo
         title="Privacy Policy"
-        description="NicoPatch privacy policy and how we handle personal information."
+        description="PouchCare privacy policy and how we handle personal information."
         canonicalPath="/privacy"
         ogImagePath="/og/privacy.png"
         ogType="website"
@@ -15,7 +15,7 @@ export default function Privacy() {
           webPageSchema({
             url: `${SITE_ORIGIN}/privacy`,
             name: 'Privacy policy',
-            description: 'NicoPatch privacy policy and how we handle personal information.',
+            description: 'PouchCare privacy policy and how we handle personal information.',
             dateModified: '2026-03-30',
             siteOrigin: SITE_ORIGIN,
           }),
@@ -33,7 +33,7 @@ export default function Privacy() {
             <h1 className="font-display text-4xl font-bold text-foreground mb-8">
               Privacy Policy
             </h1>
-            
+
             <p className="text-muted-foreground mb-6">
               Last updated: March 2026
             </p>
@@ -44,8 +44,8 @@ export default function Privacy() {
                   1. Introduction
                 </h2>
                 <p>
-                  NicoPatch ("we", "our", or "us") is committed to protecting your privacy. This Privacy 
-                  Policy explains how we collect, use, disclose, and safeguard your information when you 
+                  PouchCare ("we", "our", or "us") is committed to protecting your privacy. This Privacy
+                  Policy explains how we collect, use, disclose, and safeguard your information when you
                   use our telehealth platform and related services.
                 </p>
               </section>
@@ -56,12 +56,12 @@ export default function Privacy() {
                 </h2>
                 <p>We collect information you provide directly to us, including:</p>
                 <ul className="list-disc pl-6 mt-4 space-y-2">
-                  <li><strong>Personal Information:</strong> Name, email address, phone number, date of birth, 
+                  <li><strong>Personal Information:</strong> Name, email address, phone number, date of birth,
                   and residential address</li>
-                  <li><strong>Medical Information:</strong> Health history, current medications, allergies, 
+                  <li><strong>Medical Information:</strong> Health history, current medications, allergies,
                   and other health-related information provided during consultations</li>
                   <li><strong>Identity Verification:</strong> Government-issued ID for age and identity verification</li>
-                  <li><strong>Payment Information:</strong> Credit card details and billing information 
+                  <li><strong>Payment Information:</strong> Credit card details and billing information
                   (processed securely by our payment provider)</li>
                 </ul>
               </section>
@@ -86,8 +86,8 @@ export default function Privacy() {
                   4. Medical Record Keeping
                 </h2>
                 <p>
-                  As a healthcare service, we are required to maintain medical records in accordance with 
-                  Australian healthcare regulations. Your medical records are stored securely and are 
+                  As a healthcare service, we are required to maintain medical records in accordance with
+                  Australian healthcare regulations. Your medical records are stored securely and are
                   accessible only to authorized healthcare professionals involved in your care.
                 </p>
               </section>
@@ -113,8 +113,8 @@ export default function Privacy() {
                   6. Data Security
                 </h2>
                 <p>
-                  We implement appropriate technical and organizational measures to protect your personal 
-                  and medical information against unauthorized access, alteration, disclosure, or destruction. 
+                  We implement appropriate technical and organizational measures to protect your personal
+                  and medical information against unauthorized access, alteration, disclosure, or destruction.
                   This includes encryption, secure servers, and strict access controls.
                 </p>
               </section>
@@ -137,8 +137,8 @@ export default function Privacy() {
                   8. Cookies and Tracking
                 </h2>
                 <p>
-                  We use cookies and similar technologies to improve your experience on our platform, 
-                  analyze usage patterns, and provide personalized content. You can control cookie settings 
+                  We use cookies and similar technologies to improve your experience on our platform,
+                  analyze usage patterns, and provide personalized content. You can control cookie settings
                   through your browser preferences.
                 </p>
               </section>
@@ -148,8 +148,8 @@ export default function Privacy() {
                   9. Contact Us
                 </h2>
                 <p>
-                  If you have questions about this Privacy Policy or wish to exercise your privacy rights, 
-                  please contact our Privacy Officer at privacy@nicopatch.com.au
+                  If you have questions about this Privacy Policy or wish to exercise your privacy rights,
+                  please contact our Privacy Officer at privacy@pouchcare.com.au
                 </p>
               </section>
             </div>

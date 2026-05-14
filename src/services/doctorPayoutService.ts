@@ -4,7 +4,7 @@ import { doctorEarningsService } from '@/services/doctorEarningsService';
 // We derive payable consults from bookings, then track which bookingIds have been marked as paid.
 // Phase 2: replace with Stripe payout ledger + webhook-driven reconciliation.
 
-const KEY = 'healthrx_mock_doctor_payouts';
+const KEY = 'pouchcare_mock_doctor_payouts';
 
 type PaidLedger = {
   doctorId: string;

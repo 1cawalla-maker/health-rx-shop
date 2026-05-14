@@ -3,10 +3,10 @@
  // Phase 2: Map to backend tables
  
  export const STORAGE_KEYS = {
-   prescriptions: 'healthrx_mock_prescriptions',
-   orders: 'nicopatch_orders',
-   cart: 'nicopatch_cart',
-   shippingDraft: 'nicopatch_shipping_draft',
+   prescriptions: 'pouchcare_mock_prescriptions',
+   orders: 'pouchcare_orders',
+   cart: 'pouchcare_cart',
+   shippingDraft: 'pouchcare_shipping_draft',
  } as const;
  
  export type StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS];

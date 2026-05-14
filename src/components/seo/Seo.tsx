@@ -12,11 +12,11 @@ interface SeoProps {
   ogType?: 'website' | 'article';
 }
 
-const SITE_NAME = 'NicoPatch';
+const SITE_NAME: string = (import.meta as any)?.env?.VITE_SITE_NAME || 'PouchCare';
 
 // IMPORTANT: use env when available so Preview/dev don't emit incorrect canonical URLs.
 // Vite exposes env vars as import.meta.env.* at build time.
-const SITE_ORIGIN: string = (import.meta as any)?.env?.VITE_SITE_ORIGIN || 'https://nicopatch.com.au';
+const SITE_ORIGIN: string = (import.meta as any)?.env?.VITE_SITE_ORIGIN || 'https://www.pouchcare.com.au';
 
 export default function Seo({ title, description, canonicalPath, noIndex, jsonLd, ogImagePath, ogType = 'website' }: SeoProps) {
   const hasTitle = Boolean(title && title.trim());

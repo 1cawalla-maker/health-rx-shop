@@ -14,7 +14,7 @@ interface StoredBlob extends PrescriptionBlob {
   blob: Blob;
 }
 
-const DB_NAME = 'healthrx_prescriptions';
+const DB_NAME = 'pouchcare_prescriptions';
 const STORE_NAME = 'uploads';
 const DB_VERSION = 1;
 

@@ -1,4 +1,6 @@
-import Seo, { SITE_ORIGIN } from './Seo';
+import Seo, { SITE_ORIGIN, SITE_NAME } from './Seo';
+
+const SUPPORT_EMAIL: string = (import.meta as any)?.env?.VITE_SUPPORT_EMAIL || 'support@pouchcare.com.au';
 
 // Adds global Organization + WebSite schema once for the whole app.
 // Keep public-safe; avoid listing private addresses/identifiers until confirmed.
@@ -12,14 +14,14 @@ export default function GlobalSchema() {
           '@context': 'https://schema.org',
           '@type': 'Organization',
           '@id': `${SITE_ORIGIN}#organization`,
-          name: 'NicoPatch',
+          name: SITE_NAME,
           url: SITE_ORIGIN,
           inLanguage: 'en-AU',
           contactPoint: [
             {
               '@type': 'ContactPoint',
               contactType: 'customer support',
-              email: 'support@nicopatch.com.au',
+              email: SUPPORT_EMAIL,
               availableLanguage: ['en-AU'],
             },
           ],
@@ -29,7 +31,7 @@ export default function GlobalSchema() {
           '@context': 'https://schema.org',
           '@type': 'WebSite',
           '@id': `${SITE_ORIGIN}#website`,
-          name: 'NicoPatch',
+          name: SITE_NAME,
           url: SITE_ORIGIN,
           inLanguage: 'en-AU',
           publisher: {

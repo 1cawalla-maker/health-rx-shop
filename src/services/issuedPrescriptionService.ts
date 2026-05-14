@@ -1,6 +1,6 @@
 import type { MockPrescription } from '@/types/shop';
 
-const KEY = 'healthrx_mock_issued_prescriptions';
+const KEY = 'pouchcare_mock_issued_prescriptions';
 
 export type IssuedPrescriptionRecord = {
   id: string;

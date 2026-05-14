@@ -5,7 +5,7 @@ import type { PrescriptionUploadRecord, PrescriptionApprovalData, PrescriptionRe
 import type { PrescriptionUploadStatus } from '@/types/enums';
 import { fileStorageService } from './fileStorageService';
 
-const MOCK_PRESCRIPTIONS_KEY = 'healthrx_mock_prescription_uploads';
+const MOCK_PRESCRIPTIONS_KEY = 'pouchcare_mock_prescription_uploads';
 
 // Initialize with some mock data
 const getDefaultPrescriptions = (): PrescriptionUploadRecord[] => [

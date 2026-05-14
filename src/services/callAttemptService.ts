@@ -6,7 +6,7 @@
 import type { CallAttempt, CallAttemptOutcome, CallAttemptRepository } from '@/types/telehealth';
 
 // localStorage key for mock call attempts
-const STORAGE_KEY = 'nicopatch_call_attempts';
+const STORAGE_KEY = 'pouchcare_call_attempts';
 
 // Helper to get stored attempts
 function getStoredAttempts(): CallAttempt[] {

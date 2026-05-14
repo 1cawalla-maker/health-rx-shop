@@ -1,6 +1,6 @@
 import type { EligibilityQuizResult } from '@/types/eligibility';
 
-const QUIZ_KEY = 'healthrx_mock_quiz_results';
+const QUIZ_KEY = 'pouchcare_mock_quiz_results';
 
 export type StoredQuizResult = EligibilityQuizResult & { userId: string };
 
@@ -34,12 +34,12 @@ class EligibilityQuizService {
   importFromSession(userId: string): void {
     if (!userId) return;
     try {
-      const raw = sessionStorage.getItem('healthrx_quiz_result');
+      const raw = sessionStorage.getItem('pouchcare_quiz_result');
       if (!raw) return;
       const result = JSON.parse(raw) as EligibilityQuizResult;
       if (!result?.completedAt) return;
       this.saveResult(userId, result);
-      sessionStorage.removeItem('healthrx_quiz_result');
+      sessionStorage.removeItem('pouchcare_quiz_result');
     } catch {
       // ignore
     }

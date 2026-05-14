@@ -1,4 +1,4 @@
-const KEY = 'healthrx_mock_doctor_signatures';
+const KEY = 'pouchcare_mock_doctor_signatures';
 
 export type DoctorSignature = {
   doctorId: string;

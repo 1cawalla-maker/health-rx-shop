@@ -5,9 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 
 // Constants
 const SLOT_DURATION_MINUTES = 5;
-const MOCK_AVAILABILITY_KEY = 'nicopatch_mock_availability';
-const MOCK_BOOKINGS_KEY = 'nicopatch_mock_bookings';
-const RESERVATIONS_KEY = 'nicopatch_reservations';
+const MOCK_AVAILABILITY_KEY = 'pouchcare_mock_availability';
+const MOCK_BOOKINGS_KEY = 'pouchcare_mock_bookings';
+const RESERVATIONS_KEY = 'pouchcare_reservations';
 const DEFAULT_TIMEZONE = 'Australia/Brisbane';
 
 // Map database row to AvailabilitySlot

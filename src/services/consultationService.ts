@@ -5,7 +5,7 @@ import { mockAvailabilityService } from './availabilityService';
 import { CONSULTATION_FEE_CENTS } from '@/config/consultations';
 
 // Constants
-const MOCK_BOOKINGS_KEY = 'nicopatch_mock_bookings';
+const MOCK_BOOKINGS_KEY = 'pouchcare_mock_bookings';
 
 const MOCK_DOCTORS = [
   { id: 'mock-doc-1', name: 'Dr. Sarah Chen' },

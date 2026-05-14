@@ -16,8 +16,8 @@ const faqCategories = [
     title: "General Questions",
     faqs: [
       {
-        question: "What is NicoPatch?",
-        answer: "NicoPatch is an Australian telehealth platform that connects you with AHPRA-registered doctors for consultations regarding nicotine pouches. If clinically appropriate, doctors can issue prescriptions that allow you to access nicotine pouches through a compliant pathway.",
+        question: "What is PouchCare?",
+        answer: "PouchCare is an Australian telehealth platform that connects you with AHPRA-registered doctors for consultations regarding nicotine pouches. If clinically appropriate, doctors can issue prescriptions that allow you to access nicotine pouches through a compliant pathway.",
       },
       {
         question: "Are your doctors registered in Australia?",

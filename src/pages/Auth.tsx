@@ -363,7 +363,7 @@ export default function Auth() {
     <PublicLayout>
       <Seo
         title="Log In / Sign Up"
-        description="Log in or create your NicoPatch account to book a telehealth consultation."
+        description="Log in or create your PouchCare account to book a telehealth consultation."
         canonicalPath="/auth"
         ogType="website"
         noIndex
@@ -430,7 +430,7 @@ export default function Auth() {
                       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
                         <Stethoscope className="h-5 w-5 text-primary-foreground" />
                       </div>
-                      <span>NicoPatch</span>
+                      <span>PouchCare</span>
                     </Link>
                     <p className="text-muted-foreground">
                       Access your telehealth account
