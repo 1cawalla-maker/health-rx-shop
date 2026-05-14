@@ -342,8 +342,8 @@ export default function BookingPayment() {
           </CardHeader>
           <CardContent className="space-y-4">
             {checkoutClientSecret ? (
-              <div className="overflow-hidden rounded-2xl border border-primary/25 bg-white p-1 shadow-sm shadow-primary/10">
-                <div id="embedded-checkout" className="min-h-[560px] w-full overflow-hidden rounded-[1rem] bg-white [&_iframe]:rounded-[1rem]" />
+              <div className="overflow-hidden rounded-2xl border border-primary/20 bg-white shadow-sm shadow-primary/10">
+                <div id="embedded-checkout" className="w-full overflow-hidden rounded-2xl bg-white [&_iframe]:block [&_iframe]:w-full [&_iframe]:rounded-2xl [&_iframe]:border-0" />
               </div>
             ) : (
               <div className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">
