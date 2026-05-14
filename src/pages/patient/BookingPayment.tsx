@@ -332,8 +332,8 @@ export default function BookingPayment() {
         </Card>
 
         {/* Payment Form */}
-        <Card>
-          <CardHeader>
+        <Card className="overflow-hidden border-primary/15 shadow-lg shadow-primary/5">
+          <CardHeader className="border-b border-primary/10 bg-gradient-to-r from-primary/5 to-accent/5">
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5" />
               Payment Details
@@ -342,8 +342,8 @@ export default function BookingPayment() {
           </CardHeader>
           <CardContent className="space-y-4">
             {checkoutClientSecret ? (
-              <div className="rounded-xl border bg-background p-3 sm:p-4">
-                <div id="embedded-checkout" className="min-h-[560px] w-full" />
+              <div className="overflow-hidden rounded-2xl border border-primary/25 bg-white p-1 shadow-sm shadow-primary/10">
+                <div id="embedded-checkout" className="min-h-[560px] w-full overflow-hidden rounded-[1rem] bg-white [&_iframe]:rounded-[1rem]" />
               </div>
             ) : (
               <div className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">
