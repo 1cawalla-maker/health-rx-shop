@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import {
   CheckCircle2,
   ClipboardCopy,
+  Download,
   ExternalLink,
   FileText,
   Loader2,
@@ -158,8 +159,7 @@ function orderAdminUrl(order: ShopifyOrderRow) {
 
 function buildFulfilmentPackText(order: AdminOrder) {
   const customer = getCustomer(order);
-  const prescriptionReady = order.pdfs.some((pdf) => pdf.kind === 'prescription');
-  const importDeclarationReady = order.pdfs.some((pdf) => pdf.kind === 'packing_slip');
+  const supplierPdfReady = order.pdfs.some((pdf) => pdf.kind === 'prescription');
 
   return [
     `PouchCare fulfilment pack`,
@@ -177,12 +177,11 @@ function buildFulfilmentPackText(order: AdminOrder) {
     `Products`,
     ...order.items.map((item) => `- ${itemLabel(item)} x ${item.quantity}`),
     ``,
-    `Required parcel documents`,
-    `- Prescription PDF: ${prescriptionReady ? 'ready' : 'missing'}`,
-    `- Prescription Import Declaration: ${importDeclarationReady ? 'ready' : 'missing'}`,
+    `Required parcel document`,
+    `- Supplier Print PDF: ${supplierPdfReady ? 'ready' : 'missing'}`,
     ``,
     `Packing instruction`,
-    `Print and include the prescription and Prescription Import Declaration inside the parcel. The parcel must be shipped directly to the named customer only.`,
+    `Print one copy of the Supplier Print PDF and include it inside the parcel. Ship directly to the named customer only. Do not combine patients, prescriptions or orders in one parcel.`,
   ].join('\n');
 }
 
@@ -190,6 +189,7 @@ export default function AdminOrders() {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [generatingPdfOrderId, setGeneratingPdfOrderId] = useState<string | null>(null);
 
   const loadOrders = async () => {
     setIsLoading(true);
@@ -267,7 +267,7 @@ export default function AdminOrders() {
   const stats = useMemo(() => {
     const paid = orders.filter((order) => (order.financial_status || '').toLowerCase() === 'paid').length;
     const unfulfilled = orders.filter((order) => (order.financial_status || '').toLowerCase() === 'paid' && (order.fulfillment_status || '').toLowerCase() !== 'fulfilled').length;
-    const missingDocs = orders.filter((order) => !order.pdfs.some((pdf) => pdf.kind === 'prescription') || !order.pdfs.some((pdf) => pdf.kind === 'packing_slip')).length;
+    const missingDocs = orders.filter((order) => !order.pdfs.some((pdf) => pdf.kind === 'prescription')).length;
     return { paid, unfulfilled, missingDocs };
   }, [orders]);
 
@@ -277,6 +277,29 @@ export default function AdminOrders() {
       toast.success('Fulfilment pack copied');
     } catch (error) {
       toast.error('Could not copy fulfilment pack');
+    }
+  };
+
+  const openSupplierPdf = async (order: AdminOrder) => {
+    setGeneratingPdfOrderId(order.id);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-order-packin-prescription-pdf', {
+        body: { internalOrderId: order.id },
+      });
+
+      if (error) throw error;
+      const signedUrl = (data as { signedUrl?: string | null } | null)?.signedUrl;
+      if (!signedUrl) throw new Error('PDF generated, but no download URL was returned.');
+
+      window.open(signedUrl, '_blank', 'noopener,noreferrer');
+      toast.success('Supplier PDF ready');
+      await loadOrders();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error(`Could not open supplier PDF: ${message}`);
+    } finally {
+      setGeneratingPdfOrderId(null);
     }
   };
 
@@ -355,8 +378,7 @@ export default function AdminOrders() {
           {orders.map((order) => {
             const customer = getCustomer(order);
             const tracking = getTracking(order);
-            const prescriptionReady = order.pdfs.some((pdf) => pdf.kind === 'prescription');
-            const importDeclarationReady = order.pdfs.some((pdf) => pdf.kind === 'packing_slip');
+            const supplierPdfReady = order.pdfs.some((pdf) => pdf.kind === 'prescription');
             const processedAt = order.processed_at ? new Date(order.processed_at) : null;
             const totalCans = order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
 
@@ -382,6 +404,10 @@ export default function AdminOrders() {
                         <ClipboardCopy className="mr-2 h-4 w-4" />
                         Copy pack
                       </Button>
+                      <Button variant="outline" size="sm" onClick={() => openSupplierPdf(order)} disabled={generatingPdfOrderId === order.id}>
+                        {generatingPdfOrderId === order.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                        {supplierPdfReady ? 'Open PDF' : 'Generate PDF'}
+                      </Button>
                       <Button variant="outline" size="sm" asChild>
                         <a href={orderAdminUrl(order)} target="_blank" rel="noopener noreferrer">
                           Shopify
@@ -392,8 +418,7 @@ export default function AdminOrders() {
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-                    {docBadge('Prescription PDF', prescriptionReady)}
-                    {docBadge('Prescription Import Declaration', importDeclarationReady)}
+                    {docBadge('Supplier Print PDF', supplierPdfReady)}
                     {tracking.number ? (
                       <Badge className="bg-green-500/10 text-green-700 border-green-500/20">Tracking added</Badge>
                     ) : (

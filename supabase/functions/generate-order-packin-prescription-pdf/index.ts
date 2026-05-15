@@ -73,7 +73,35 @@ async function safeDownloadStorageObject(supabase: any, bucket: string, path: st
   }
 }
 
-const LAYOUT_VERSION = "2026-04-15-allowance-stacked";
+const LAYOUT_VERSION = "2026-05-15-single-supplier-print-document";
+
+function buildOrderShippingAddress(order: any): string {
+  const shipping = order?.raw?.shipping_address || {};
+  const parts = [
+    shipping.address1,
+    shipping.address2,
+    [shipping.city, shipping.province_code || shipping.province, shipping.zip].filter(Boolean).join(" "),
+    shipping.country_code || shipping.country,
+  ]
+    .map((s) => (s ? String(s).trim() : ""))
+    .filter(Boolean);
+
+  return parts.join(", ");
+}
+
+function buildOrderCustomerName(order: any): string {
+  const shipping = order?.raw?.shipping_address || {};
+  const billing = order?.raw?.billing_address || {};
+  const customer = order?.raw?.customer || {};
+
+  return coalesce(
+    shipping.name,
+    [shipping.first_name, shipping.last_name].filter(Boolean).join(" "),
+    billing.name,
+    [billing.first_name, billing.last_name].filter(Boolean).join(" "),
+    [customer.first_name, customer.last_name].filter(Boolean).join(" "),
+  );
+}
 
 async function generatePdfBytes(params: {
   order: any;
@@ -185,11 +213,12 @@ async function generatePdfBytes(params: {
 
   // Header
   drawText("PouchCare", marginX, y, 22, true, brand);
-  drawText("PRESCRIPTION — Personal Importation (Australia)", marginX, y - 22, 11, true, text);
+  drawText("SUPPLIER PRINT DOCUMENT", marginX, y - 22, 11, true, text);
+  drawText("Prescription Import Declaration + Patient Prescription", marginX, y - 38, 9, true, muted);
   drawText(
-    "Telehealth Clinic • (clinic details TBD)",
+    "Print one copy and include inside the direct-to-patient parcel.",
     marginX,
-    y - 38,
+    y - 52,
     9,
     false,
     muted,
@@ -197,13 +226,13 @@ async function generatePdfBytes(params: {
 
   // top border
   page.drawLine({
-    start: { x: marginX, y: y - 50 },
-    end: { x: width - marginX, y: y - 50 },
+    start: { x: marginX, y: y - 64 },
+    end: { x: width - marginX, y: y - 64 },
     thickness: 2,
     color: brand,
   });
 
-  y = y - 70;
+  y = y - 82;
 
   const drawSectionTitle = (t: string, x: number, y0: number) => {
     drawText(t.toUpperCase(), x, y0, 9, true, muted);
@@ -240,10 +269,13 @@ async function generatePdfBytes(params: {
   yl = drawKV("Address", "Level 3, 12 Creek St, Brisbane QLD 4000", marginX, yl, leftW);
 
   yl -= 2;
-  yl = drawSectionTitle("Patient details", marginX, yl);
-  yl = drawKV("Patient", coalesce(patientProfile?.full_name, "Patient"), marginX, yl, leftW);
+  const orderCustomerName = buildOrderCustomerName(order);
+  const orderShippingAddress = buildOrderShippingAddress(order);
+
+  yl = drawSectionTitle("Patient / importer details", marginX, yl);
+  yl = drawKV("Named patient / importer", coalesce(orderCustomerName, patientProfile?.full_name, "Patient"), marginX, yl, leftW);
   yl = drawKV("Date of birth", formatDateAULong(patientProfile?.date_of_birth), marginX, yl, leftW);
-  yl = drawKV("Residential address", buildPatientAddress(patientProfile), marginX, yl, leftW);
+  yl = drawKV("Delivery address", coalesce(orderShippingAddress, buildPatientAddress(patientProfile)), marginX, yl, leftW);
 
   yl -= 2;
   yl = drawSectionTitle("Medication(s)", marginX, yl);
@@ -312,14 +344,17 @@ async function generatePdfBytes(params: {
   // RIGHT COLUMN
   let yr = y;
 
-  yr = drawSectionTitle("Administrative", rightX, yr);
+  yr = drawSectionTitle("Supplier / parcel details", rightX, yr);
+  yr = drawKV("Order", coalesce(order?.order_name, String(order?.shopify_order_id ?? "")), rightX, yr, rightW);
   yr = drawKV(
-    "Date issued",
+    "Prescription / declaration date",
     formatDateAULong(order?.processed_at ?? order?.created_at ?? new Date().toISOString()),
     rightX,
     yr,
     rightW,
   );
+  yr = drawKV("Print instruction", "Print this single document and include it inside the parcel.", rightX, yr, rightW);
+  yr = drawKV("Shipping instruction", "Ship directly to the named patient only. Do not combine patients, prescriptions or orders into one parcel.", rightX, yr, rightW);
 
   // Signature box
   drawText("Prescriber signature", rightX, yr, 9, false, muted);
@@ -392,7 +427,7 @@ async function generatePdfBytes(params: {
 
   yr -= boxH + 12;
 
-  yr = drawSectionTitle("Ingredients & compliance", rightX, yr);
+  yr = drawSectionTitle("Prescription Import Declaration", rightX, yr);
   drawText("Active ingredient:", rightX, yr, 9, false, muted);
   yr -= 12;
   yr = drawParagraph("Nicotine (present as nicotine bitartrate salt)", rightX, yr, rightW, { size: 10, bold: true, color: text, lineHeight: 12 });
@@ -408,10 +443,10 @@ async function generatePdfBytes(params: {
   );
   yr -= 6;
 
-  drawText("Compliance statement:", rightX, yr, 9, false, muted);
+  drawText("Declaration:", rightX, yr, 9, false, muted);
   yr -= 12;
   yr = drawParagraph(
-    "“This product contains no controlled substances other than nicotine. Supplied for the named patient’s personal therapeutic use only and must not be supplied to any other person.”",
+    "Prescription-supported personal importation for the named Australian patient/importer. Supplied for personal therapeutic use only and not for resale or supply to any other person.",
     rightX,
     yr,
     rightW,
@@ -427,10 +462,10 @@ async function generatePdfBytes(params: {
   yr = drawParagraph(`Nicotine pouches (importation): ${ref2}`, rightX, yr, rightW, { size: 7.6, bold: false, color: muted, lineHeight: 10 });
   yr -= 8;
 
-  // Footer + QR placeholder
+  // Footer
   const footerY = 44;
   drawText(
-    `Generated: ${formatDateAUShort(new Date().toISOString())} • Order: ${order?.order_name ?? order?.shopify_order_id ?? ""} • Layout: ${LAYOUT_VERSION}`,
+    `Generated: ${formatDateAUShort(new Date().toISOString())} • Order: ${order?.order_name ?? order?.shopify_order_id ?? ""} • Single supplier print document • Layout: ${LAYOUT_VERSION}`,
     marginX,
     footerY,
     8,
@@ -438,22 +473,9 @@ async function generatePdfBytes(params: {
     muted,
   );
 
-  // QR area (place in the blank space under Medication(s), centered in the left column)
-  const qrSize = 70;
-  const qrX = marginX + (leftW - qrSize) / 2 - 24; // slight left-of-center
-  const qrY = footerY + 140; // higher in the blank space
-
-  page.drawRectangle({
-    x: qrX,
-    y: qrY,
-    width: qrSize,
-    height: qrSize,
-    borderColor: border,
-    borderWidth: 1,
-    color: rgb(1, 1, 1),
-  });
-  drawText("QR", qrX + 25, qrY + 30, 10, true, muted);
-  drawText(importInfoUrl ? "(scan)" : "URL TBC", qrX + 12, qrY + 18, 7.5, false, muted);
+  if (importInfoUrl) {
+    drawText(`Import information: ${importInfoUrl}`, marginX, footerY - 12, 7.5, false, muted);
+  }
 
   return await pdfDoc.save();
 }
@@ -677,7 +699,7 @@ serve(async (req) => {
       importInfoUrl,
     });
 
-    const filePath = `${patientId}/orders/${order.shopify_order_id}/prescription.pdf`;
+    const filePath = `${patientId}/orders/${order.shopify_order_id}/supplier-print-document.pdf`;
 
     const { error: uploadErr } = await supabase.storage
       .from("order-pdfs")
@@ -699,9 +721,15 @@ serve(async (req) => {
 
     if (upsertPdfErr) throw new Error(`Failed to upsert order_pdfs row: ${upsertPdfErr.message}`);
 
+    const { data: signed, error: signedErr } = await supabase.storage
+      .from("order-pdfs")
+      .createSignedUrl(filePath, 60 * 10);
+
+    if (signedErr) throw new Error(`Failed to create signed PDF URL: ${signedErr.message}`);
+
     logStep("Generated and uploaded", { filePath });
 
-    return new Response(JSON.stringify({ success: true, path: filePath }), {
+    return new Response(JSON.stringify({ success: true, path: filePath, signedUrl: signed?.signedUrl ?? null }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
