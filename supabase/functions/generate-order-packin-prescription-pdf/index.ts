@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1";
+import QRCode from "https://esm.sh/qrcode@1.5.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -73,7 +74,9 @@ async function safeDownloadStorageObject(supabase: any, bucket: string, path: st
   }
 }
 
-const LAYOUT_VERSION = "2026-05-15-legal-compliance-border-section";
+const LAYOUT_VERSION = "2026-05-15-importation-basis-qr";
+
+const DEFAULT_IMPORTATION_BASIS_URL = "https://www.pouchcare.com.au/importation-basis";
 
 function buildOrderShippingAddress(order: any): string {
   const shipping = order?.raw?.shipping_address || {};
@@ -136,6 +139,26 @@ async function generatePdfBytes(params: {
 
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  let importInfoQrImage: any = null;
+  if (importInfoUrl) {
+    try {
+      const qrDataUrl = await QRCode.toDataURL(importInfoUrl, {
+        errorCorrectionLevel: "M",
+        margin: 1,
+        width: 160,
+      });
+      const [, base64] = qrDataUrl.split(",");
+      if (base64) {
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        importInfoQrImage = await pdfDoc.embedPng(bytes);
+      }
+    } catch (err) {
+      logStep("QR generation skipped", { msg: err instanceof Error ? err.message : String(err) });
+    }
+  }
 
   const brand = rgb(0.06, 0.65, 0.91); // sky-ish
   const text = rgb(0.07, 0.09, 0.14);
@@ -366,12 +389,25 @@ async function generatePdfBytes(params: {
     });
     drawText("FOR BORDER SECURITY / CUSTOMS REVIEW", boxX + pad, boxY + boxH - 17, 10, true, rgb(1, 1, 1));
 
+    const qrSize = importInfoQrImage ? 58 : 0;
+    const qrGap = importInfoQrImage ? 12 : 0;
+    const introW = boxW - (pad * 2) - qrSize - qrGap;
+
+    if (importInfoQrImage) {
+      const qrX = boxX + boxW - pad - qrSize;
+      const qrY = boxY + boxH - 88;
+      page.drawRectangle({ x: qrX - 3, y: qrY - 3, width: qrSize + 6, height: qrSize + 6, color: rgb(1, 1, 1), borderColor: border, borderWidth: 0.8 });
+      page.drawImage(importInfoQrImage, { x: qrX, y: qrY, width: qrSize, height: qrSize });
+      drawText("Scan legal", qrX + 4, qrY - 10, 6.7, true, muted);
+      drawText("basis", qrX + 18, qrY - 18, 6.7, true, muted);
+    }
+
     let by = boxY + boxH - 42;
     by = drawParagraph(
       "LEGAL BASIS: This parcel is for the named Australian patient/importer and is supported by the attached patient-specific prescription.",
       boxX + pad,
       by,
-      boxW - (pad * 2),
+      introW,
       { size: 8.7, bold: true, color: text, lineHeight: 11 },
     );
     by -= 2;
@@ -405,7 +441,7 @@ async function generatePdfBytes(params: {
     drawText("Authority references:", boxX + pad, by, 7.8, true, muted);
     by -= 9;
     by = drawParagraph(
-      "TGA Personal Importation Scheme: tga.gov.au/products/unapproved-therapeutic-goods/access-pathways/personal-importation-scheme",
+      `PouchCare importation basis: ${importInfoUrl || DEFAULT_IMPORTATION_BASIS_URL}`,
       boxX + pad,
       by,
       boxW - (pad * 2),
@@ -413,7 +449,7 @@ async function generatePdfBytes(params: {
     );
     by -= 1;
     by = drawParagraph(
-      "TGA nicotine pouches importation guidance: tga.gov.au/products/unapproved-therapeutic-goods/therapeutic-vaping-goods/vaping-hub/nicotine-pouches#importation",
+      "TGA Personal Importation Scheme + nicotine pouches importation guidance linked on page.",
       boxX + pad,
       by,
       boxW - (pad * 2),
@@ -762,7 +798,10 @@ serve(async (req) => {
     const remainingCans = Math.max(0, limitCans - totalSuppliedToDateCans);
     const status = remainingCans === 0 ? "EXHAUSTED" : "AVAILABLE";
 
-    const importInfoUrl = (Deno.env.get("IMPORT_INFO_URL") ?? "").trim() || null;
+    const appOrigin = (Deno.env.get("APP_ORIGIN") ?? "").trim().replace(/\/+$/, "");
+    const importInfoUrl =
+      (Deno.env.get("IMPORT_INFO_URL") ?? "").trim() ||
+      (appOrigin ? `${appOrigin}/importation-basis` : DEFAULT_IMPORTATION_BASIS_URL);
 
     const pdfBytes = await generatePdfBytes({
       order,

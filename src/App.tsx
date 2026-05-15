@@ -19,6 +19,7 @@ import Privacy from "./pages/Privacy";
 import Disclaimer from "./pages/Disclaimer";
 import Contact from "./pages/Contact";
 import Auth from "./pages/Auth";
+import ImportationBasis from "./pages/ImportationBasis";
 import NotFound from "./pages/NotFound";
 
 // Layouts
@@ -107,6 +108,7 @@ const App = () => (
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/disclaimer" element={<Disclaimer />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/importation-basis" element={<ImportationBasis />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/eligibility" element={<EligibilityQuiz />} />
 
