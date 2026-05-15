@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Stethoscope } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { getDashboardPathForRole } from "@/lib/roleRoutes";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -15,6 +17,35 @@ const navLinks = [
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
+  const { user, userRole, loading } = useAuth();
+  const dashboardPath = getDashboardPathForRole(userRole?.role);
+
+  const renderAuthActions = (isMobile = false) => {
+    if (loading || (user && !dashboardPath)) {
+      return null;
+    }
+
+    if (user && dashboardPath) {
+      return (
+        <Button asChild className={isMobile ? "w-full" : undefined}>
+          <Link to={dashboardPath} onClick={() => isMobile && setIsMenuOpen(false)}>
+            Dashboard
+          </Link>
+        </Button>
+      );
+    }
+
+    return (
+      <>
+        <Button variant={isMobile ? "outline" : "ghost"} asChild className={isMobile ? "w-full" : undefined}>
+          <Link to="/auth" onClick={() => isMobile && setIsMenuOpen(false)}>Log in</Link>
+        </Button>
+        <Button asChild className={isMobile ? "w-full" : undefined}>
+          <Link to="/auth?mode=signup" onClick={() => isMobile && setIsMenuOpen(false)}>Sign up</Link>
+        </Button>
+      </>
+    );
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -45,12 +76,7 @@ export function Header() {
 
         {/* Desktop Auth Buttons */}
         <div className="hidden md:flex items-center gap-3">
-          <Button variant="ghost" asChild>
-            <Link to="/auth">Log in</Link>
-          </Button>
-          <Button asChild>
-            <Link to="/auth?mode=signup">Sign up</Link>
-          </Button>
+          {renderAuthActions()}
         </div>
 
         {/* Mobile Menu Button */}
@@ -82,12 +108,7 @@ export function Header() {
               </Link>
             ))}
             <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-border">
-              <Button variant="outline" asChild className="w-full">
-                <Link to="/auth" onClick={() => setIsMenuOpen(false)}>Log in</Link>
-              </Button>
-              <Button asChild className="w-full">
-                <Link to="/auth?mode=signup" onClick={() => setIsMenuOpen(false)}>Sign up</Link>
-              </Button>
+              {renderAuthActions(true)}
             </div>
           </nav>
         </div>
