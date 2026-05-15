@@ -73,7 +73,7 @@ async function safeDownloadStorageObject(supabase: any, bucket: string, path: st
   }
 }
 
-const LAYOUT_VERSION = "2026-05-15-border-security-section";
+const LAYOUT_VERSION = "2026-05-15-legal-compliance-border-section";
 
 function buildOrderShippingAddress(order: any): string {
   const shipping = order?.raw?.shipping_address || {};
@@ -344,8 +344,8 @@ async function generatePdfBytes(params: {
   const drawBorderSecuritySection = () => {
     const boxX = marginX;
     const boxW = leftW;
-    const boxH = 156;
-    const boxY = 86;
+    const boxH = 178;
+    const boxY = 68;
     const pad = 12;
 
     page.drawRectangle({
@@ -368,7 +368,7 @@ async function generatePdfBytes(params: {
 
     let by = boxY + boxH - 42;
     by = drawParagraph(
-      "This parcel is addressed to the named Australian patient/importer and is accompanied by patient-specific prescription details.",
+      "LEGAL BASIS: This parcel is for the named Australian patient/importer and is supported by the attached patient-specific prescription.",
       boxX + pad,
       by,
       boxW - (pad * 2),
@@ -377,21 +377,22 @@ async function generatePdfBytes(params: {
     by -= 2;
 
     const bullets = [
-      "Prescription-supported personal importation pathway; not commercial distribution.",
+      "Compliant personal importation pathway under the TGA Personal Importation Scheme; not commercial distribution.",
       `Declared quantity for this order: ${allowance.thisOrderCans} cans; prescription allowance limit: ${allowance.limitCans} cans / 3 months supply.`,
+      "Nicotine is present as nicotine bitartrate salt and is prescribed for this named patient.",
+      "All listed non-nicotine ingredients are common excipients/food additives and are within permitted limits; no other controlled substances are declared.",
       "Product is for the named patient's personal therapeutic use only; not for resale or supply to another person.",
-      "Document identifies prescriber, patient/importer, medicine, quantity, and delivery address for review.",
     ];
 
     for (const bullet of bullets) {
       drawText("•", boxX + pad, by, 8.5, true, text);
       by = drawParagraph(bullet, boxX + pad + 10, by, boxW - (pad * 2) - 10, {
-        size: 8.2,
+        size: 7.9,
         bold: false,
         color: text,
-        lineHeight: 10,
+        lineHeight: 9.4,
       });
-      by -= 2;
+      by -= 1.2;
     }
 
     page.drawLine({
@@ -401,14 +402,22 @@ async function generatePdfBytes(params: {
       color: border,
     });
     by -= 9;
-    drawText("TGA reference pathways:", boxX + pad, by, 7.8, true, muted);
+    drawText("Authority references:", boxX + pad, by, 7.8, true, muted);
     by -= 9;
     by = drawParagraph(
-      "Personal Importation Scheme; TGA nicotine pouches importation guidance.",
+      "TGA Personal Importation Scheme: tga.gov.au/products/unapproved-therapeutic-goods/access-pathways/personal-importation-scheme",
       boxX + pad,
       by,
       boxW - (pad * 2),
-      { size: 7.4, bold: false, color: muted, lineHeight: 9 },
+      { size: 6.7, bold: false, color: muted, lineHeight: 8.2 },
+    );
+    by -= 1;
+    by = drawParagraph(
+      "TGA nicotine pouches importation guidance: tga.gov.au/products/unapproved-therapeutic-goods/therapeutic-vaping-goods/vaping-hub/nicotine-pouches#importation",
+      boxX + pad,
+      by,
+      boxW - (pad * 2),
+      { size: 6.7, bold: false, color: muted, lineHeight: 8.2 },
     );
   };
 
@@ -519,7 +528,7 @@ async function generatePdfBytes(params: {
   drawText("Declaration:", rightX, yr, 9, false, muted);
   yr -= 12;
   yr = drawParagraph(
-    "Prescription-supported personal importation for the named Australian patient/importer. Supplied for personal therapeutic use only and not for resale or supply to any other person.",
+    "Compliant prescription-supported personal importation for the named Australian patient/importer. The prescribed nicotine salt is supported by the attached prescription; listed non-nicotine excipients are within permitted limits. Supplied for personal therapeutic use only and not for resale or supply to any other person.",
     rightX,
     yr,
     rightW,
