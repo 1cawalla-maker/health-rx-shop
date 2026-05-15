@@ -64,7 +64,7 @@ export function DoctorLayout() {
     <div className="min-h-screen bg-muted/30 flex">
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-background border-b border-border h-16 flex items-center justify-between px-4">
-        <Link to="/doctor/dashboard" className="flex items-center gap-2 font-display text-lg font-bold">
+        <Link to="/" className="flex items-center gap-2 font-display text-lg font-bold">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <Stethoscope className="h-4 w-4 text-primary-foreground" />
           </div>
@@ -85,7 +85,7 @@ export function DoctorLayout() {
       )}>
         <div className="flex flex-col h-full">
           <div className="hidden lg:flex items-center gap-2 p-6 border-b border-border">
-            <Link to="/doctor/dashboard" className="flex items-center gap-2 font-display text-lg font-bold">
+            <Link to="/" className="flex items-center gap-2 font-display text-lg font-bold">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
                 <Stethoscope className="h-5 w-5 text-primary-foreground" />
               </div>
@@ -128,7 +128,7 @@ export function DoctorLayout() {
               className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
               <Globe className="h-5 w-5" />
-              <span>Website</span>
+              <span>Homepage</span>
             </Link>
             <button
               onClick={handleSignOut}
