@@ -368,7 +368,9 @@ async function generatePdfBytes(params: {
     const boxX = marginX;
     const boxW = leftW;
     const boxH = 178;
-    const boxY = 68;
+    // Place the customs/border box directly below the medication section when there is room.
+    // Keep a floor so unusually long medication lists do not push it into the footer.
+    const boxY = Math.max(86, yl - boxH - 18);
     const pad = 12;
 
     page.drawRectangle({
