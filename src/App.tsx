@@ -66,6 +66,7 @@ import AdminDashboard from "./pages/admin/Dashboard";
 import AdminDoctors from "./pages/admin/Doctors";
 import AdminDoctorApprovals from "./pages/admin/DoctorApprovals";
 import AdminBookings from "./pages/admin/Bookings";
+import AdminOrders from "./pages/admin/Orders";
 import AdminUsers from "./pages/admin/Users";
 import AdminPrescriptions from "./pages/admin/Prescriptions";
 import AdminPrescriptionUploads from "./pages/admin/PrescriptionUploads";
@@ -167,6 +168,7 @@ const App = () => (
                 <Route path="doctors" element={<AdminDoctors />} />
                 <Route path="doctor-approvals" element={<AdminDoctorApprovals />} />
                 <Route path="bookings" element={<AdminBookings />} />
+                <Route path="orders" element={<AdminOrders />} />
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="prescriptions" element={<AdminPrescriptions />} />
                 <Route path="prescription-uploads" element={<AdminPrescriptionUploads />} />
