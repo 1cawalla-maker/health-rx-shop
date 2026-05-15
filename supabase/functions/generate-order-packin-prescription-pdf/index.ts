@@ -73,7 +73,7 @@ async function safeDownloadStorageObject(supabase: any, bucket: string, path: st
   }
 }
 
-const LAYOUT_VERSION = "2026-05-15-single-supplier-print-document";
+const LAYOUT_VERSION = "2026-05-15-border-security-section";
 
 function buildOrderShippingAddress(order: any): string {
   const shipping = order?.raw?.shipping_address || {};
@@ -340,6 +340,79 @@ async function generatePdfBytes(params: {
       }
     }
   }
+
+  const drawBorderSecuritySection = () => {
+    const boxX = marginX;
+    const boxW = leftW;
+    const boxH = 156;
+    const boxY = 86;
+    const pad = 12;
+
+    page.drawRectangle({
+      x: boxX,
+      y: boxY,
+      width: boxW,
+      height: boxH,
+      color: rgb(0.94, 0.98, 1),
+      borderColor: brand,
+      borderWidth: 1.8,
+    });
+    page.drawRectangle({
+      x: boxX,
+      y: boxY + boxH - 26,
+      width: boxW,
+      height: 26,
+      color: brand,
+    });
+    drawText("FOR BORDER SECURITY / CUSTOMS REVIEW", boxX + pad, boxY + boxH - 17, 10, true, rgb(1, 1, 1));
+
+    let by = boxY + boxH - 42;
+    by = drawParagraph(
+      "This parcel is addressed to the named Australian patient/importer and is accompanied by patient-specific prescription details.",
+      boxX + pad,
+      by,
+      boxW - (pad * 2),
+      { size: 8.7, bold: true, color: text, lineHeight: 11 },
+    );
+    by -= 2;
+
+    const bullets = [
+      "Prescription-supported personal importation pathway; not commercial distribution.",
+      `Declared quantity for this order: ${allowance.thisOrderCans} cans; prescription allowance limit: ${allowance.limitCans} cans / 3 months supply.`,
+      "Product is for the named patient's personal therapeutic use only; not for resale or supply to another person.",
+      "Document identifies prescriber, patient/importer, medicine, quantity, and delivery address for review.",
+    ];
+
+    for (const bullet of bullets) {
+      drawText("•", boxX + pad, by, 8.5, true, text);
+      by = drawParagraph(bullet, boxX + pad + 10, by, boxW - (pad * 2) - 10, {
+        size: 8.2,
+        bold: false,
+        color: text,
+        lineHeight: 10,
+      });
+      by -= 2;
+    }
+
+    page.drawLine({
+      start: { x: boxX + pad, y: by + 2 },
+      end: { x: boxX + boxW - pad, y: by + 2 },
+      thickness: 0.8,
+      color: border,
+    });
+    by -= 9;
+    drawText("TGA reference pathways:", boxX + pad, by, 7.8, true, muted);
+    by -= 9;
+    by = drawParagraph(
+      "Personal Importation Scheme; TGA nicotine pouches importation guidance.",
+      boxX + pad,
+      by,
+      boxW - (pad * 2),
+      { size: 7.4, bold: false, color: muted, lineHeight: 9 },
+    );
+  };
+
+  drawBorderSecuritySection();
 
   // RIGHT COLUMN
   let yr = y;
