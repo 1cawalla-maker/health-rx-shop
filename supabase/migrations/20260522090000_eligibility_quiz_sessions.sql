@@ -58,13 +58,6 @@ using (
       where c.patient_id = eligibility_quiz_sessions.patient_id
         and (c.doctor_id = auth.uid() or c.doctor_id = d.id or c.doctor_id is null)
     )
-    or exists (
-      select 1
-      from public.consultation_bookings cb
-      left join public.doctors d on d.user_id = auth.uid()
-      where cb.patient_id = eligibility_quiz_sessions.patient_id
-        and (cb.doctor_id = auth.uid() or cb.doctor_id = d.id or cb.doctor_id is null)
-    )
   )
 );
 
