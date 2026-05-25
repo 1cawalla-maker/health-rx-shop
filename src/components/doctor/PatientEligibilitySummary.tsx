@@ -48,7 +48,7 @@ export function PatientEligibilitySummary({ patientId }: PatientEligibilitySumma
     );
   }
 
-  const hasWarnings = quizData.result === 'may_not_suitable';
+  const hasWarnings = (quizData.riskFlags || []).length > 0;
 
   return (
     <Card className={hasWarnings ? 'border-warning/50' : ''}>
@@ -73,13 +73,21 @@ export function PatientEligibilitySummary({ patientId }: PatientEligibilitySumma
         {/* Quick Summary Grid */}
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div className="space-y-1">
-            <p className="text-muted-foreground">Nicotine Usage</p>
-            <p className="font-medium">{summary.intensity}</p>
-          </div>
-          <div className="space-y-1">
             <p className="text-muted-foreground">Current Use</p>
             <p className="font-medium">{summary.currentUse}</p>
           </div>
+          {quizData.answers.nicotine_use?.includes('nicotine_pouches') && (
+            <>
+              <div className="space-y-1">
+                <p className="text-muted-foreground">Pouch Strength</p>
+                <p className="font-medium">{summary.pouchStrength}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-muted-foreground">Pouches / Day</p>
+                <p className="font-medium">{summary.pouchDailyUse}</p>
+              </div>
+            </>
+          )}
           <div className="space-y-1">
             <p className="text-muted-foreground">Prior NRT Use</p>
             <p className="font-medium">{summary.priorNRTUse}</p>
@@ -106,17 +114,25 @@ export function PatientEligibilitySummary({ patientId }: PatientEligibilitySumma
                 <span className="text-muted-foreground">Current Nicotine Use</span>
                 <span className="font-medium">{summary.currentUse}</span>
               </div>
+              {quizData.answers.nicotine_use?.includes('nicotine_pouches') && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Current Pouch Strength</span>
+                    <span className="font-medium">{summary.pouchStrength}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Current Pouch Daily Use</span>
+                    <span className="font-medium">{summary.pouchDailyUse}</span>
+                  </div>
+                </>
+              )}
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Previous NRT Experience</span>
                 <span className="font-medium">{summary.priorNRTUse}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Daily Intensity</span>
-                <span className="font-medium">{summary.intensity}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Reason for Seeking Pouches</span>
-                <span className="font-medium text-right max-w-[60%]">{summary.reason}</span>
+                <span className="text-muted-foreground">Preferred Product</span>
+                <span className="font-medium text-right max-w-[60%]">{summary.preferredProduct}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Medical Safety Check</span>
@@ -124,20 +140,20 @@ export function PatientEligibilitySummary({ patientId }: PatientEligibilitySumma
                   {summary.safetyFlags}
                 </span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Current medicines/products</span>
+                <span className="font-medium text-right max-w-[60%]">{summary.medications}</span>
+              </div>
               <div className="pt-2 border-t">
-                <p className="text-muted-foreground mb-2">Consents Given:</p>
+                <p className="text-muted-foreground mb-2">Acknowledgements Given:</p>
                 <ul className="space-y-1 text-xs">
                   <li className="flex items-center gap-2">
                     <span className="text-success">✓</span>
-                    Understands nicotine risk
+                    Collection Notice and Privacy Policy
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="text-success">✓</span>
-                    No prescription guarantee
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-success">✓</span>
-                    Agrees to doctor discussion
+                    Final import/compliance acknowledgement
                   </li>
                 </ul>
               </div>

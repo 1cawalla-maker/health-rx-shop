@@ -1,44 +1,25 @@
 import type { EligibilityQuizResult } from '@/types/eligibility';
 
-const QUIZ_KEY = 'pouchcare_mock_quiz_results';
-
 export type StoredQuizResult = EligibilityQuizResult & { userId: string };
 
+/**
+ * Deprecated compatibility shim.
+ *
+ * Quiz answers are now stored in Supabase via eligibilityService.ts and linked
+ * to the patient account with link_eligibility_quiz_session. Do not store
+ * production questionnaire answers in localStorage/sessionStorage.
+ */
 class EligibilityQuizService {
-  getLatestResult(userId: string): StoredQuizResult | null {
-    if (!userId) return null;
-    try {
-      const raw = localStorage.getItem(QUIZ_KEY);
-      const all: StoredQuizResult[] = raw ? JSON.parse(raw) : [];
-      const mine = all.filter((r) => r.userId === userId);
-      if (!mine.length) return null;
-      return mine.sort((a, b) => b.completedAt.localeCompare(a.completedAt))[0];
-    } catch {
-      return null;
-    }
+  getLatestResult(_userId: string): StoredQuizResult | null {
+    return null;
   }
 
-  saveResult(userId: string, result: EligibilityQuizResult): void {
-    if (!userId) return;
-    try {
-      const raw = localStorage.getItem(QUIZ_KEY);
-      const all: StoredQuizResult[] = raw ? JSON.parse(raw) : [];
-      all.push({ ...result, userId });
-      localStorage.setItem(QUIZ_KEY, JSON.stringify(all));
-    } catch {
-      // ignore
-    }
+  saveResult(_userId: string, _result: EligibilityQuizResult): void {
+    // Intentionally no-op.
   }
 
-  // Called after auth to move the pre-signup session quiz into user-scoped storage.
-  importFromSession(userId: string): void {
-    if (!userId) return;
+  importFromSession(_userId: string): void {
     try {
-      const raw = sessionStorage.getItem('pouchcare_quiz_result');
-      if (!raw) return;
-      const result = JSON.parse(raw) as EligibilityQuizResult;
-      if (!result?.completedAt) return;
-      this.saveResult(userId, result);
       sessionStorage.removeItem('pouchcare_quiz_result');
     } catch {
       // ignore

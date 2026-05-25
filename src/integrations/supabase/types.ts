@@ -582,6 +582,48 @@ export type Database = {
         }
         Relationships: []
       }
+      eligibility_quiz_sessions: {
+        Row: {
+          answers: Json
+          completed_at: string
+          created_at: string
+          id: string
+          linked_at: string | null
+          notice_version: string
+          patient_id: string | null
+          privacy_policy_version: string
+          result: string
+          risk_flags: string[]
+          updated_at: string
+        }
+        Insert: {
+          answers: Json
+          completed_at?: string
+          created_at?: string
+          id?: string
+          linked_at?: string | null
+          notice_version: string
+          patient_id?: string | null
+          privacy_policy_version: string
+          result?: string
+          risk_flags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          answers?: Json
+          completed_at?: string
+          created_at?: string
+          id?: string
+          linked_at?: string | null
+          notice_version?: string
+          patient_id?: string | null
+          privacy_policy_version?: string
+          result?: string
+          risk_flags?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       patient_profiles: {
         Row: {
           additional_notes: string | null
@@ -685,6 +727,15 @@ export type Database = {
           full_name: string | null
           id: string
           phone: string | null
+          shipping_address_line1: string | null
+          shipping_address_line2: string | null
+          shipping_country: string | null
+          shipping_place_id: string | null
+          shipping_postcode: string | null
+          shipping_state: string | null
+          shipping_suburb: string | null
+          phone_verification_method: string | null
+          phone_verified_at: string | null
           updated_at: string
           user_id: string
         }
@@ -694,6 +745,15 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          shipping_address_line1?: string | null
+          shipping_address_line2?: string | null
+          shipping_country?: string | null
+          shipping_place_id?: string | null
+          shipping_postcode?: string | null
+          shipping_state?: string | null
+          shipping_suburb?: string | null
+          phone_verification_method?: string | null
+          phone_verified_at?: string | null
           updated_at?: string
           user_id: string
         }
@@ -703,6 +763,15 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          shipping_address_line1?: string | null
+          shipping_address_line2?: string | null
+          shipping_country?: string | null
+          shipping_place_id?: string | null
+          shipping_postcode?: string | null
+          shipping_state?: string | null
+          shipping_suburb?: string | null
+          phone_verification_method?: string | null
+          phone_verified_at?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -796,6 +865,10 @@ export type Database = {
           _provider_number: string
           _user_id: string
         }
+        Returns: boolean
+      }
+      link_eligibility_quiz_session: {
+        Args: { _quiz_session_id: string }
         Returns: boolean
       }
       get_available_slots: {
