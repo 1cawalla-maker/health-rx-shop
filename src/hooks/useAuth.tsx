@@ -3,7 +3,6 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import { cartService } from '@/services/cartService';
-import { eligibilityQuizService } from '@/services/eligibilityQuizService';
 
 export type AppRole = Database['public']['Enums']['app_role'];
 export type UserStatus = Database['public']['Enums']['user_status'];
@@ -96,10 +95,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session?.user) {
           const userId = session.user.id;
 
-          // Phase 1: if the user completed the public eligibility quiz pre-signup,
-          // import it into localStorage scoped to this user.
-          eligibilityQuizService.importFromSession(userId);
-
           // Best-effort welcome email on first SIGNED_IN event.
           // This covers:
           // - users who end up with a session right after signup
@@ -111,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const alreadySent = window.localStorage.getItem(sentKey);
 
               if (!alreadySent) {
-                const { error: welcomeErr } = await (supabase as any).functions.invoke(
+                const { error: welcomeErr } = await supabase.functions.invoke(
                   'send-welcome-email',
                   { body: {} }
                 );

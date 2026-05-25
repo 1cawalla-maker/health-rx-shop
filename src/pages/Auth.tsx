@@ -12,18 +12,22 @@ import { useAuth, AppRole } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import { Stethoscope, User, Mail, Lock, ArrowRight, Loader2, Phone, MapPin, FileText } from 'lucide-react';
+import { Stethoscope, User, Mail, Lock, ArrowRight, Loader2, Phone, MapPin, FileText, ShieldCheck } from 'lucide-react';
 import { getQuizFromSession, persistQuizToProfile } from '@/services/eligibilityService';
 import { AU_TIMEZONE_OPTIONS } from '@/lib/timezones';
 import { userPreferencesService } from '@/services/userPreferencesService';
 import { userProfileService } from '@/services/userProfileService';
 import { validateDob, formatDobForStorage, validateAuPhone } from '@/lib/validation';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
 const emailSchema = z.string().email('Please enter a valid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
 const nameSchema = z.string().min(2, 'Name must be at least 2 characters');
 const ahpraSchema = z.string().regex(/^MED\d{10}$/, 'AHPRA number must be MED followed by 10 digits');
 const providerSchema = z.string().min(6, 'Provider number must be at least 6 characters');
+const addressLineSchema = z.string().trim().min(3, 'Please enter your residential address');
+const suburbSchema = z.string().trim().min(2, 'Please enter your suburb');
+const postcodeSchema = z.string().regex(/^\d{4}$/, 'Please enter a valid 4-digit postcode');
 
 const AUSTRALIAN_STATES = [
   { value: 'NSW', label: 'New South Wales' },
@@ -70,6 +74,19 @@ export default function Auth() {
   const [dobError, setDobError] = useState('');
   const [phoneError, setPhoneError] = useState('');
   const [patientTimezone, setPatientTimezone] = useState('Australia/Brisbane');
+  const [patientAddressLine1, setPatientAddressLine1] = useState('');
+  const [patientAddressLine2, setPatientAddressLine2] = useState('');
+  const [patientSuburb, setPatientSuburb] = useState('');
+  const [patientState, setPatientState] = useState('');
+  const [patientPostcode, setPatientPostcode] = useState('');
+  const [patientSignupLocked, setPatientSignupLocked] = useState(false);
+  const [patientSmsStep, setPatientSmsStep] = useState<'details' | 'code'>('details');
+  const [pendingPatientPhone, setPendingPatientPhone] = useState('');
+  const [smsCode, setSmsCode] = useState('');
+  const [smsError, setSmsError] = useState('');
+  const [isSendingSms, setIsSendingSms] = useState(false);
+  const [isVerifyingSms, setIsVerifyingSms] = useState(false);
+  const [patientPostSignupRedirect, setPatientPostSignupRedirect] = useState('/patient/book');
 
   // Doctor-specific fields
   const [doctorPhone, setDoctorPhone] = useState('');
@@ -82,6 +99,7 @@ export default function Auth() {
 
   useEffect(() => {
     if (loading || !user || !userRole) return;
+    if (patientSignupLocked) return;
     if (userRole.status !== 'approved') return;
 
     // If the user just completed signup, allow a one-time post-signup redirect.
@@ -104,7 +122,7 @@ export default function Auth() {
         navigate('/admin/dashboard');
         break;
     }
-  }, [user, userRole, loading, navigate]);
+  }, [user, userRole, loading, navigate, patientSignupLocked]);
 
   useEffect(() => {
     // For patients, the pre-consultation questionnaire must be completed before signup.
@@ -125,6 +143,81 @@ export default function Auth() {
     const digits = value.replace(/\D/g, '').slice(0, 9);
     setDoctorPhone(digits);
     setDoctorPhoneError('');
+  };
+
+  const requestPatientSmsVerification = async (phoneE164: string): Promise<boolean> => {
+    setIsSendingSms(true);
+    setSmsError('');
+    const { error } = await supabase.auth.updateUser({ phone: phoneE164 });
+    setIsSendingSms(false);
+
+    if (error) {
+      console.error('Error sending SMS verification:', error);
+      setSmsError(error.message || 'Could not send the SMS verification code. Please try again.');
+      return false;
+    }
+
+    toast.success('Verification code sent by SMS.');
+    return true;
+  };
+
+  const handleResendPatientSms = async () => {
+    if (!pendingPatientPhone) return;
+    await requestPatientSmsVerification(pendingPatientPhone);
+  };
+
+  const handleVerifyPatientSms = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pendingPatientPhone) return;
+
+    const token = smsCode.replace(/\D/g, '');
+    if (token.length !== 6) {
+      setSmsError('Please enter the 6-digit SMS code.');
+      return;
+    }
+
+    setIsVerifyingSms(true);
+    setSmsError('');
+
+    const { error } = await supabase.auth.verifyOtp({
+      phone: pendingPatientPhone,
+      token,
+      type: 'phone_change'
+    });
+
+    if (error) {
+      console.error('Error verifying SMS code:', error);
+      setSmsError(error.message || 'The verification code was not accepted. Please try again.');
+      setIsVerifyingSms(false);
+      return;
+    }
+
+    const { data: { user: verifiedUser } } = await supabase.auth.getUser();
+    if (verifiedUser) {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          phone: pendingPatientPhone,
+          phone_verified_at: new Date().toISOString(),
+          phone_verification_method: 'supabase_sms_otp'
+        })
+        .eq('user_id', verifiedUser.id);
+
+      if (profileError) {
+        console.error('Error marking phone verified:', profileError);
+        setSmsError(profileError.message || 'Phone verified, but we could not update your profile. Please contact support.');
+        setIsVerifyingSms(false);
+        return;
+      }
+    }
+
+    setIsVerifyingSms(false);
+    setPatientSignupLocked(false);
+    setPatientSmsStep('details');
+    setSmsCode('');
+    toast.success('Phone verified. Account created successfully!');
+    sessionStorage.setItem('postSignupRedirect', patientPostSignupRedirect);
+    navigate(patientPostSignupRedirect);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -181,6 +274,11 @@ export default function Auth() {
           return;
         }
         setDobError('');
+
+        addressLineSchema.parse(patientAddressLine1);
+        suburbSchema.parse(patientSuburb);
+        if (!patientState) throw new Error('Please select your state or territory');
+        postcodeSchema.parse(patientPostcode);
       }
 
       if (selectedRole === 'doctor') {
@@ -207,10 +305,12 @@ export default function Auth() {
     }
 
     setIsSubmitting(true);
+    if (selectedRole === 'patient') setPatientSignupLocked(true);
     
     const { error, userId } = await signUp(email, password, fullName, selectedRole);
 
     if (error) {
+      if (selectedRole === 'patient') setPatientSignupLocked(false);
       setIsSubmitting(false);
       if (error.message.includes('User already registered')) {
         toast.error('An account with this email already exists. Please log in instead.');
@@ -242,7 +342,7 @@ export default function Auth() {
         if (doctorError) {
           console.error('Error saving doctor details:', doctorError);
           toast.error(
-            `Doctor registration failed: ${doctorError.message || 'doctors table write failed'}${(doctorError as any).code ? ` (code ${(doctorError as any).code})` : ''}`
+            `Doctor registration failed: ${doctorError.message || 'doctors table write failed'}${doctorError.code ? ` (code ${doctorError.code})` : ''}`
           );
           setIsSubmitting(false);
           return;
@@ -276,9 +376,8 @@ export default function Auth() {
       }
     }
 
-    setIsSubmitting(false);
-
     if (selectedRole === 'doctor') {
+      setIsSubmitting(false);
       toast.success('Account created successfully!');
       navigate('/doctor/dashboard');
     } else {
@@ -287,13 +386,29 @@ export default function Auth() {
         const storedPhone = `+61${patientPhone}`;
         const storedDob = formatDobForStorage(dobDay, dobMonth, dobYear);
         
-        await supabase
+        const { error: patientProfileError } = await supabase
           .from('profiles')
           .update({ 
             phone: storedPhone,
-            date_of_birth: storedDob
+            date_of_birth: storedDob,
+            phone_verified_at: null,
+            phone_verification_method: null,
+            shipping_address_line1: patientAddressLine1.trim(),
+            shipping_address_line2: patientAddressLine2.trim() || null,
+            shipping_suburb: patientSuburb.trim(),
+            shipping_state: patientState,
+            shipping_postcode: patientPostcode,
+            shipping_country: 'Australia'
           })
           .eq('user_id', newPatientUser.id);
+
+        if (patientProfileError) {
+          console.error('Error saving patient profile details:', patientProfileError);
+          toast.error(patientProfileError.message || 'Could not save your patient details. Please try again.');
+          setPatientSignupLocked(false);
+          setIsSubmitting(false);
+          return;
+        }
 
         // Persist local profile
         userProfileService.upsertProfile(newPatientUser.id, {
@@ -309,19 +424,28 @@ export default function Auth() {
           console.warn('Failed to persist timezone preference:', e);
         }
           
-        await persistQuizToProfile(newPatientUser.id);
+        const quizLinked = await persistQuizToProfile(newPatientUser.id);
+        if (!quizLinked) {
+          toast.error('We could not link your questionnaire to your account. Please complete it again before booking.');
+          setPatientSignupLocked(false);
+          setIsSubmitting(false);
+          navigate('/eligibility');
+          return;
+        }
+
+        const actionParam = searchParams.get('action');
+        setPatientPostSignupRedirect(actionParam === 'upload' ? '/patient/upload-prescription' : '/patient/book');
+        setPendingPatientPhone(storedPhone);
+        setPatientSmsStep('code');
+        setSmsCode('');
+        await requestPatientSmsVerification(storedPhone);
+        setIsSubmitting(false);
+        return;
       }
-      
-      const actionParam = searchParams.get('action');
-      if (actionParam === 'upload') {
-        toast.success('Account created! Now upload your prescription.');
-        sessionStorage.setItem('postSignupRedirect', '/patient/upload-prescription');
-      } else {
-        toast.success('Account created successfully!');
-        // Patient signup is allowed only after completing the questionnaire,
-        // so the next step is booking.
-        sessionStorage.setItem('postSignupRedirect', '/patient/book');
-      }
+
+      toast.error('Account created, but we could not start your session to verify your phone. Please log in and contact support.');
+      setPatientSignupLocked(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -505,6 +629,61 @@ export default function Auth() {
                     </TabsContent>
 
                     <TabsContent value="signup">
+                      {patientSmsStep === 'code' ? (
+                        <form onSubmit={handleVerifyPatientSms} className="space-y-5">
+                          <div className="rounded-lg border border-primary/20 bg-primary/5 p-5 text-center space-y-3">
+                            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                              <ShieldCheck className="h-6 w-6 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-foreground">Verify your mobile number</p>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                We sent a 6-digit code to {pendingPatientPhone}. You need to verify this number before booking.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="patient-sms-code">SMS verification code</Label>
+                            <InputOTP
+                              id="patient-sms-code"
+                              maxLength={6}
+                              value={smsCode}
+                              onChange={(value) => { setSmsCode(value.replace(/\D/g, '')); setSmsError(''); }}
+                              containerClassName="justify-center"
+                            >
+                              <InputOTPGroup>
+                                <InputOTPSlot index={0} />
+                                <InputOTPSlot index={1} />
+                                <InputOTPSlot index={2} />
+                                <InputOTPSlot index={3} />
+                                <InputOTPSlot index={4} />
+                                <InputOTPSlot index={5} />
+                              </InputOTPGroup>
+                            </InputOTP>
+                            {smsError && <p className="text-xs text-destructive text-center">{smsError}</p>}
+                          </div>
+
+                          <Button
+                            type="submit"
+                            variant="hero"
+                            className="w-full"
+                            disabled={isVerifyingSms || smsCode.length !== 6}
+                          >
+                            {isVerifyingSms ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Verify Phone & Continue'}
+                          </Button>
+
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="w-full"
+                            disabled={isSendingSms}
+                            onClick={handleResendPatientSms}
+                          >
+                            {isSendingSms ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Resend code'}
+                          </Button>
+                        </form>
+                      ) : (
                       <form onSubmit={handleSignup} className="space-y-4">
                         {/* Role Selection */}
                         <div className="space-y-3">
@@ -675,6 +854,68 @@ export default function Auth() {
                             </div>
 
                             <div className="space-y-2">
+                              <Label htmlFor="patient-address-line1">Residential Address</Label>
+                              <Input
+                                id="patient-address-line1"
+                                type="text"
+                                placeholder="Street address"
+                                value={patientAddressLine1}
+                                onChange={(e) => setPatientAddressLine1(e.target.value)}
+                                required
+                              />
+                              <Input
+                                id="patient-address-line2"
+                                type="text"
+                                placeholder="Apartment, suite, etc. (optional)"
+                                value={patientAddressLine2}
+                                onChange={(e) => setPatientAddressLine2(e.target.value)}
+                              />
+                              <p className="text-xs text-muted-foreground">
+                                Used for clinical records and as your default shipping address if treatment is prescribed. You can change shipping details later if needed.
+                              </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                              <div className="space-y-2 sm:col-span-1">
+                                <Label htmlFor="patient-suburb">Suburb</Label>
+                                <Input
+                                  id="patient-suburb"
+                                  type="text"
+                                  value={patientSuburb}
+                                  onChange={(e) => setPatientSuburb(e.target.value)}
+                                  required
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>State/Territory</Label>
+                                <Select value={patientState} onValueChange={setPatientState}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="State" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {AUSTRALIAN_STATES.map((state) => (
+                                      <SelectItem key={`patient-${state.value}`} value={state.value}>
+                                        {state.value}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="patient-postcode">Postcode</Label>
+                                <Input
+                                  id="patient-postcode"
+                                  type="text"
+                                  inputMode="numeric"
+                                  maxLength={4}
+                                  value={patientPostcode}
+                                  onChange={(e) => setPatientPostcode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                                  required
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
                               <Label>Timezone</Label>
                               <Select value={patientTimezone} onValueChange={setPatientTimezone}>
                                 <SelectTrigger>
@@ -825,6 +1066,7 @@ export default function Auth() {
                           )}
                         </Button>
                       </form>
+                      )}
                     </TabsContent>
                   </Tabs>
                 </>
