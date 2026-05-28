@@ -16,6 +16,7 @@ import FAQ from "./pages/FAQ";
 import EligibilityQuiz from "./pages/EligibilityQuiz";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
+import RefundPolicy from "./pages/RefundPolicy";
 import Disclaimer from "./pages/Disclaimer";
 import Contact from "./pages/Contact";
 import Auth from "./pages/Auth";
@@ -106,6 +107,7 @@ const App = () => (
               <Route path="/faq" element={<FAQ />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
+              <Route path="/refund-policy" element={<RefundPolicy />} />
               <Route path="/disclaimer" element={<Disclaimer />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/importation-basis" element={<ImportationBasis />} />
