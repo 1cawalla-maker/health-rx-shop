@@ -32,6 +32,9 @@ serve(async (req) => {
     const user = userData.user;
     if (!user?.id || !user.email) throw new Error("User not authenticated");
 
+    const reviewerEmail = (Deno.env.get("STRIPE_REVIEWER_EMAIL") ?? "stripetest@pouchcare.com.au").toLowerCase();
+    const isStripeReviewer = user.email.toLowerCase() === reviewerEmail;
+
     const body = await req.json();
     const consultationId = body?.consultationId as string | undefined;
     const amountCents = body?.amountCents as number | undefined;
@@ -85,8 +88,25 @@ serve(async (req) => {
       .maybeSingle();
 
     if (reservationError) throw new Error(reservationError.message);
-    if (!reservation) throw new Error("No active reservation for this consultation");
-    if (new Date(reservation.expires_at).getTime() <= Date.now()) throw new Error("Reservation expired");
+
+    if (!reservation && isStripeReviewer) {
+      const { error: createReviewReservationError } = await supabaseAdmin
+        .from("consultation_reservations")
+        .insert({
+          consultation_id: consultationId,
+          patient_id: user.id,
+          doctor_id: null,
+          scheduled_at: consultation.scheduled_at,
+          expires_at: new Date(Date.now() + 45 * 60 * 1000).toISOString(),
+          status: "active",
+        });
+
+      if (createReviewReservationError) throw new Error(createReviewReservationError.message);
+      logStep("Created Stripe reviewer reservation", { consultationId, reviewerEmail: user.email });
+    } else {
+      if (!reservation) throw new Error("No active reservation for this consultation");
+      if (new Date(reservation.expires_at).getTime() <= Date.now()) throw new Error("Reservation expired");
+    }
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");

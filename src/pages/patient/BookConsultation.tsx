@@ -15,6 +15,7 @@ import { format, addDays, isBefore, startOfDay } from 'date-fns';
 import { Phone, Loader2, CalendarDays, Clock, AlertTriangle, Info } from 'lucide-react';
 import type { FiveMinuteSlot } from '@/types/telehealth';
 import { CONSULTATION_FEE_CENTS } from '@/config/consultations';
+import { STRIPE_REVIEWER_EMAIL, isStripeReviewerEmail } from '@/config/stripeReview';
 import { formatAudFromCents } from '@/lib/money';
 
 export default function BookConsultation() {
@@ -36,6 +37,7 @@ export default function BookConsultation() {
     () => (user?.id ? userPreferencesService.getTimezone(user.id) : 'Australia/Brisbane'),
     [user?.id]
   );
+  const stripeReviewMode = isStripeReviewerEmail(user?.email);
 
   const formatHHmmInTz = (utcIso: string, tz: string): string => {
     const dtf = new Intl.DateTimeFormat('en-GB', {
@@ -71,6 +73,12 @@ export default function BookConsultation() {
   useEffect(() => {
     const run = async () => {
       try {
+        if (stripeReviewMode) {
+          const reviewDates = Array.from({ length: 14 }, (_, i) => format(addDays(minDate, i), 'yyyy-MM-dd'));
+          setDatesWithAvailability(new Set(reviewDates));
+          return;
+        }
+
         const dates = await supabaseAvailabilityService.getDatesWithAvailability(minDate, maxDate);
         setDatesWithAvailability(new Set(dates));
       } catch (e) {
@@ -86,7 +94,7 @@ export default function BookConsultation() {
       }
     };
     void run();
-  }, []);
+  }, [stripeReviewMode]);
 
   // Load slots when date changes
   useEffect(() => {
@@ -97,6 +105,21 @@ export default function BookConsultation() {
 
         const dateStr = format(selectedDate, 'yyyy-MM-dd');
         try {
+          if (stripeReviewMode) {
+            setAvailableSlots([
+              {
+                time: '10:00',
+                date: dateStr,
+                utcTimestamp: new Date(`${dateStr}T10:00:00+10:00`).toISOString(),
+                displayTimezone: patientTz,
+                timezoneAbbr: 'AEST',
+                isAvailable: true,
+                doctorIds: ['stripe-review-doctor'],
+              },
+            ]);
+            return;
+          }
+
           const slots = await supabaseAvailabilityService.getAggregatedSlotsForDate(dateStr);
           // Display times in the patient's timezone (MVP expectation)
           const display = (slots || [])
@@ -132,7 +155,7 @@ export default function BookConsultation() {
     };
 
     void run();
-  }, [selectedDate]);
+  }, [selectedDate, patientTz, stripeReviewMode]);
 
   // Group slots by hour for better display
   const slotsByHour = useMemo(() => {
@@ -199,16 +222,20 @@ export default function BookConsultation() {
           timezone: selectedSlot.displayTimezone,
         });
 
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-        const { data: reservation, error: reservationError } = await supabase.rpc(
-          'create_fair_consultation_reservation' as any,
-          {
-            _consultation_id: consultationId,
-            _expires_at: expiresAt,
-          } as any
-        ).single();
+        let reservation: any = null;
+        if (!stripeReviewMode) {
+          const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+          const { data, error: reservationError } = await supabase.rpc(
+            'create_fair_consultation_reservation' as any,
+            {
+              _consultation_id: consultationId,
+              _expires_at: expiresAt,
+            } as any
+          ).single();
 
-        if (reservationError) throw reservationError;
+          if (reservationError) throw reservationError;
+          reservation = data;
+        }
 
         const booking = mockBookingService.createPendingBookingFromServerReservation({
           id: consultationId,
@@ -218,7 +245,7 @@ export default function BookConsultation() {
           time: selectedSlot.time,
           utcTimestamp: selectedSlot.utcTimestamp,
           displayTimezone: selectedSlot.displayTimezone,
-          reservationId: (reservation as any)?.reservation_id,
+          reservationId: (reservation as any)?.reservation_id ?? (stripeReviewMode ? `stripe-review-${consultationId}` : undefined),
         });
 
         // Keep payment in-app and start embedded Stripe Checkout from the Proceed to Payment action.
@@ -269,12 +296,38 @@ export default function BookConsultation() {
     return 'AEST';
   };
 
+  if (!stripeReviewMode) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Consultation bookings temporarily paused</CardTitle>
+            <CardDescription>
+              We are temporarily pausing public consultation bookings while our payment review is underway.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <p>If you need help, please contact PouchCare support.</p>
+            <p>Reviewer access is available using the dedicated Stripe review account.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
         <h1 className="font-display text-3xl font-bold text-foreground">Book Consultation</h1>
         <p className="text-muted-foreground mt-1">Schedule a phone consultation with a doctor</p>
       </div>
+
+      <Alert className="border-blue-500/50 bg-blue-500/10">
+        <Info className="h-4 w-4 text-blue-500" />
+        <AlertDescription className="text-blue-700 dark:text-blue-400">
+          <strong>Stripe review mode:</strong> public bookings are paused. This reviewer account can access a controlled booking flow to review the PouchCare consultation payment page.
+        </AlertDescription>
+      </Alert>
 
       {/* Reschedule Mode Banner */}
       {isReschedule && rescheduleParamsValid && (
