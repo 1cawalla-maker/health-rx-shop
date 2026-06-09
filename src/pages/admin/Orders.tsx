@@ -22,6 +22,7 @@ import { Separator } from '@/components/ui/separator';
 interface ShopifyOrderRow {
   id: string;
   user_id: string;
+  prescription_id?: string | null;
   shopify_order_id: number;
   shopify_order_gid: string | null;
   order_name: string | null;
@@ -56,9 +57,25 @@ interface OrderPdfRow {
   created_at: string;
 }
 
+interface PrescriptionContextRow {
+  id: string;
+  file_url: string | null;
+  file_name?: string | null;
+  status: string | null;
+  allowed_strength_max: number | null;
+  max_units_per_order: number | null;
+  max_units_per_month: number | null;
+  total_units_allowed?: number | null;
+  ocr_status?: string | null;
+  ocr_confidence?: number | null;
+  ocr_raw_text?: string | null;
+}
+
 type AdminOrder = ShopifyOrderRow & {
   items: ShopifyOrderItemRow[];
   pdfs: OrderPdfRow[];
+  prescription?: PrescriptionContextRow | null;
+  prescriptionUsedCans?: number;
 };
 
 function formatMoney(amount: number | null | undefined, currency: string | null | undefined) {
@@ -160,6 +177,10 @@ function orderAdminUrl(order: ShopifyOrderRow) {
 function buildFulfilmentPackText(order: AdminOrder) {
   const customer = getCustomer(order);
   const supplierPdfReady = order.pdfs.some((pdf) => pdf.kind === 'prescription');
+  const prescription = order.prescription;
+  const totalAllowed = Number(prescription?.total_units_allowed ?? prescription?.max_units_per_month ?? prescription?.max_units_per_order ?? 0) || null;
+  const usedCans = Number(order.prescriptionUsedCans ?? 0);
+  const remainingCans = totalAllowed == null ? null : Math.max(0, totalAllowed - usedCans);
 
   return [
     `PouchCare fulfilment pack`,
@@ -175,7 +196,15 @@ function buildFulfilmentPackText(order: AdminOrder) {
     `Ship to: ${customer.address}`,
     ``,
     `Products`,
-    ...order.items.map((item) => `- ${itemLabel(item)} x ${item.quantity}`),
+    ...order.items.map((item) => `- ${itemLabel(item)} x ${item.quantity}${item.strength_mg ? ` (${item.strength_mg}mg)` : ''}`),
+    ``,
+    `Prescription entitlement`,
+    `Prescription ID: ${order.prescription_id || 'not linked'}`,
+    `Max strength: ${prescription?.allowed_strength_max ? `${prescription.allowed_strength_max}mg` : 'unknown'}`,
+    `Total allowance: ${totalAllowed ?? 'unknown'} cans/units`,
+    `Used against prescription: ${usedCans || 0} cans/units`,
+    `Remaining after synced paid orders: ${remainingCans ?? 'unknown'} cans/units`,
+    `Prescription file: ${prescription?.file_url || 'missing'}`,
     ``,
     `Required parcel document`,
     `- Supplier Print PDF: ${supplierPdfReady ? 'ready' : 'missing'}`,
@@ -210,9 +239,12 @@ export default function AdminOrders() {
 
       let itemRows: ShopifyOrderItemRow[] = [];
       let pdfRows: OrderPdfRow[] = [];
+      let prescriptionRows: PrescriptionContextRow[] = [];
+      let prescriptionUsageRows: ShopifyOrderItemRow[] = [];
+      const prescriptionIds = [...new Set(baseOrders.map((order) => order.prescription_id).filter(Boolean))] as string[];
 
       if (orderIds.length > 0) {
-        const [{ data: items, error: itemError }, { data: pdfs, error: pdfError }] = await Promise.all([
+        const queries: Promise<any>[] = [
           (supabase as any)
             .from('shopify_order_items')
             .select('*')
@@ -221,13 +253,56 @@ export default function AdminOrders() {
             .from('order_pdfs')
             .select('*')
             .in('shopify_order_id', orderIds),
-        ]);
+        ];
 
-        if (itemError) throw itemError;
-        if (pdfError) throw pdfError;
+        if (prescriptionIds.length > 0) {
+          queries.push(
+            (supabase as any)
+              .from('prescriptions')
+              .select('id,file_url,file_name,status,allowed_strength_max,max_units_per_order,max_units_per_month,total_units_allowed,ocr_status,ocr_confidence,ocr_raw_text')
+              .in('id', prescriptionIds),
+          );
+          queries.push(
+            (supabase as any)
+              .from('shopify_orders')
+              .select('id,prescription_id')
+              .eq('financial_status', 'paid')
+              .in('prescription_id', prescriptionIds),
+          );
+        }
 
-        itemRows = (items || []) as ShopifyOrderItemRow[];
-        pdfRows = (pdfs || []) as OrderPdfRow[];
+        const [itemsRes, pdfsRes, prescriptionsRes, paidOrdersForPrescriptionsRes] = await Promise.all(queries);
+
+        if (itemsRes.error) throw itemsRes.error;
+        if (pdfsRes.error) throw pdfsRes.error;
+        if (prescriptionsRes?.error) throw prescriptionsRes.error;
+        if (paidOrdersForPrescriptionsRes?.error) throw paidOrdersForPrescriptionsRes.error;
+
+        itemRows = (itemsRes.data || []) as ShopifyOrderItemRow[];
+        pdfRows = (pdfsRes.data || []) as OrderPdfRow[];
+        prescriptionRows = (prescriptionsRes?.data || []) as PrescriptionContextRow[];
+
+        const paidOrdersForPrescriptions = (paidOrdersForPrescriptionsRes?.data || []) as Array<{ id: string; prescription_id: string | null }>;
+        const paidOrderIdsForPrescriptions = paidOrdersForPrescriptions.map((order) => order.id);
+
+        if (paidOrderIdsForPrescriptions.length > 0) {
+          const { data: usageItems, error: usageItemsError } = await (supabase as any)
+            .from('shopify_order_items')
+            .select('*')
+            .in('shopify_order_id', paidOrderIdsForPrescriptions);
+
+          if (usageItemsError) throw usageItemsError;
+          prescriptionUsageRows = (usageItems || []) as ShopifyOrderItemRow[];
+
+          const orderPrescriptionById = new Map(paidOrdersForPrescriptions.map((order) => [order.id, order.prescription_id]));
+          prescriptionUsageRows = prescriptionUsageRows.map((item) => ({
+            ...item,
+            raw: {
+              ...(item.raw || {}),
+              _prescription_id: orderPrescriptionById.get(item.shopify_order_id) || null,
+            },
+          }));
+        }
       }
 
       const itemsByOrder = new Map<string, ShopifyOrderItemRow[]>();
@@ -244,11 +319,24 @@ export default function AdminOrders() {
         pdfsByOrder.set(pdf.shopify_order_id, arr);
       }
 
+      const prescriptionsById = new Map(prescriptionRows.map((prescription) => [prescription.id, prescription]));
+      const usedCansByPrescription = new Map<string, number>();
+      for (const item of prescriptionUsageRows) {
+        const prescriptionId = item.raw?._prescription_id;
+        if (!prescriptionId) continue;
+        usedCansByPrescription.set(
+          prescriptionId,
+          (usedCansByPrescription.get(prescriptionId) || 0) + Number(item.quantity || 0),
+        );
+      }
+
       setOrders(
         baseOrders.map((order) => ({
           ...order,
           items: itemsByOrder.get(order.id) || [],
           pdfs: pdfsByOrder.get(order.id) || [],
+          prescription: order.prescription_id ? prescriptionsById.get(order.prescription_id) || null : null,
+          prescriptionUsedCans: order.prescription_id ? usedCansByPrescription.get(order.prescription_id) || 0 : 0,
         })),
       );
     } catch (error) {
@@ -300,6 +388,27 @@ export default function AdminOrders() {
       toast.error(`Could not open supplier PDF: ${message}`);
     } finally {
       setGeneratingPdfOrderId(null);
+    }
+  };
+
+
+  const openPrescriptionFile = async (order: AdminOrder) => {
+    const path = order.prescription?.file_url;
+    if (!path) {
+      toast.error('No prescription file linked to this order');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.storage
+        .from('prescriptions')
+        .createSignedUrl(path, 300);
+
+      if (error || !data?.signedUrl) throw error || new Error('No signed URL returned');
+      window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error(`Could not open prescription file: ${message}`);
     }
   };
 
@@ -408,6 +517,10 @@ export default function AdminOrders() {
                         {generatingPdfOrderId === order.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                         {supplierPdfReady ? 'Open PDF' : 'Generate PDF'}
                       </Button>
+                      <Button variant="outline" size="sm" onClick={() => openPrescriptionFile(order)} disabled={!order.prescription?.file_url}>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Prescription
+                      </Button>
                       <Button variant="outline" size="sm" asChild>
                         <a href={orderAdminUrl(order)} target="_blank" rel="noopener noreferrer">
                           Shopify
@@ -419,6 +532,7 @@ export default function AdminOrders() {
 
                   <div className="flex flex-wrap gap-2">
                     {docBadge('Supplier Print PDF', supplierPdfReady)}
+                    {order.prescription ? docBadge('Prescription linked', true) : docBadge('Prescription link', false)}
                     {tracking.number ? (
                       <Badge className="bg-green-500/10 text-green-700 border-green-500/20">Tracking added</Badge>
                     ) : (
@@ -428,7 +542,7 @@ export default function AdminOrders() {
                 </CardHeader>
 
                 <CardContent className="space-y-5">
-                  <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
+                  <div className="grid gap-4 lg:grid-cols-3">
                     <div className="rounded-lg border bg-muted/20 p-4">
                       <p className="mb-2 text-sm font-semibold">Customer</p>
                       <div className="space-y-1 text-sm text-muted-foreground">
@@ -461,6 +575,26 @@ export default function AdminOrders() {
                         )}
                       </div>
                     </div>
+
+                    <div className="rounded-lg border bg-muted/20 p-4">
+                      <p className="mb-2 text-sm font-semibold">Prescription</p>
+                      {order.prescription ? (() => {
+                        const totalAllowed = Number(order.prescription.total_units_allowed ?? order.prescription.max_units_per_month ?? order.prescription.max_units_per_order ?? 0) || null;
+                        const used = Number(order.prescriptionUsedCans ?? 0);
+                        const remaining = totalAllowed == null ? null : Math.max(0, totalAllowed - used);
+                        return (
+                          <div className="space-y-1 text-sm text-muted-foreground">
+                            <p>Max strength: {order.prescription.allowed_strength_max ? `${order.prescription.allowed_strength_max}mg` : '—'}</p>
+                            <p>Total allowance: {totalAllowed ?? '—'} cans/units</p>
+                            <p>Used: {used} cans/units</p>
+                            <p>Remaining: {remaining ?? '—'} cans/units</p>
+                            <p>OCR: {order.prescription.ocr_status || '—'}{order.prescription.ocr_confidence != null ? ` (${Math.round(order.prescription.ocr_confidence * 100)}%)` : ''}</p>
+                          </div>
+                        );
+                      })() : (
+                        <p className="text-sm text-muted-foreground">No prescription linked to this order.</p>
+                      )}
+                    </div>
                   </div>
 
                   <Separator />
@@ -473,7 +607,7 @@ export default function AdminOrders() {
                       <div className="space-y-2">
                         {order.items.map((item) => (
                           <div key={item.id} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
-                            <span>{itemLabel(item)}</span>
+                            <span>{itemLabel(item)}{item.strength_mg ? ` (${item.strength_mg}mg)` : ''}</span>
                             <span className="font-medium">x{item.quantity}</span>
                           </div>
                         ))}

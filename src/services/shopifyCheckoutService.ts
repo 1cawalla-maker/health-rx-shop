@@ -4,7 +4,7 @@ import type { CartItem } from '@/types/shop';
 export type ShopifyLineItemInput = {
   merchandiseId: string;
   quantity: number;
-  /** Strength in mg (server-side gate) */
+  /** Strength in mg for UI/debug context; backend derives strength from Shopify variant data. */
   strengthMg: number;
 };
 

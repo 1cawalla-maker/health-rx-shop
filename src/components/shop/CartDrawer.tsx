@@ -7,20 +7,21 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { useCart } from '@/contexts/CartContext';
-import { PRESCRIPTION_TOTAL_CANS } from '@/types/shop';
 
 interface CartDrawerProps {
   remainingCans?: number;
+  totalCansAllowed?: number;
   maxContainers?: number; // Legacy prop
 }
 
-export function CartDrawer({ remainingCans, maxContainers }: CartDrawerProps) {
+export function CartDrawer({ remainingCans, totalCansAllowed, maxContainers }: CartDrawerProps) {
   const navigate = useNavigate();
   const { cart, isCartOpen, setIsCartOpen, updateQuantity, removeFromCart } = useCart();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
-  // Use remainingCans if provided, otherwise fall back to maxContainers for backwards compatibility
+  // Use prescription allowance if provided, otherwise fall back to maxContainers for backwards compatibility.
   const allowanceRemaining = remainingCans ?? (maxContainers ? maxContainers - cart.totalCans : undefined);
+  const allowanceTotal = totalCansAllowed ?? maxContainers;
   const isOverLimit = allowanceRemaining !== undefined && allowanceRemaining < 0;
   const canCheckout = !isOverLimit && cart.items.length > 0;
 
@@ -57,14 +58,14 @@ export function CartDrawer({ remainingCans, maxContainers }: CartDrawerProps) {
                 {(() => {
                   // allowanceRemaining is the remaining cans after taking the current cart into account.
                   // So total used (ordered + in cart) = total - remaining.
-                  const usedTotal = PRESCRIPTION_TOTAL_CANS - allowanceRemaining;
-                  const pct = Math.min(100, (usedTotal / PRESCRIPTION_TOTAL_CANS) * 100);
+                  const usedTotal = allowanceTotal ? allowanceTotal - allowanceRemaining : cart.totalCans;
+                  const pct = allowanceTotal ? Math.min(100, (usedTotal / allowanceTotal) * 100) : 0;
                   return (
                     <>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Allowance used</span>
                         <span className={isOverLimit ? 'text-destructive' : ''}>
-                          {usedTotal} / {PRESCRIPTION_TOTAL_CANS} cans
+                          {usedTotal} / {allowanceTotal || '—'} cans
                         </span>
                       </div>
                       <Progress value={pct} className="h-2" />

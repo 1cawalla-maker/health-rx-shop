@@ -12,6 +12,7 @@ export type ShopifyOrderRow = {
   financial_status: string | null;
   fulfillment_status: string | null;
   processed_at: string | null;
+  prescription_id?: string | null;
   raw: any;
 };
 
@@ -60,15 +61,21 @@ export const shopifyOrderMirrorService = {
     return { orders: orderRows, itemsByOrderId };
   },
 
-  async getPaidCansOrdered(userId: string): Promise<number> {
+  async getPaidCansOrdered(userId: string, prescriptionId?: string): Promise<number> {
     if (!userId) return 0;
 
     // Match backend allowance logic: only PAID orders count.
-    const { data: paidOrders, error: paidErr } = await (supabase as any)
+    let query = (supabase as any)
       .from('shopify_orders')
       .select('id')
       .eq('user_id', userId)
       .eq('financial_status', 'paid');
+
+    if (prescriptionId) {
+      query = query.eq('prescription_id', prescriptionId);
+    }
+
+    const { data: paidOrders, error: paidErr } = await query;
 
     if (paidErr) {
       // Don’t hard-fail the UI; backend still enforces allowance.

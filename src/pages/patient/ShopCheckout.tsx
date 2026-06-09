@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, Loader2, Minus, Plus, ShieldCheck, ShoppingBag, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -14,8 +14,6 @@ import { usePrescriptionStatus } from '@/hooks/usePrescriptionStatus';
 import { useCart } from '@/contexts/CartContext';
 import { allowanceUtils } from '@/lib/allowanceUtils';
 import { shopifyCheckoutService } from '@/services/shopifyCheckoutService';
-import { shopifyOrderMirrorService } from '@/services/shopifyOrderMirrorService';
-import { PRESCRIPTION_TOTAL_CANS } from '@/types/shop';
 
 function formatMoney(cents: number) {
   return `$${(cents / 100).toFixed(2)} AUD`;
@@ -28,48 +26,31 @@ export default function PatientShopCheckout() {
   const {
     hasActivePrescription,
     allowedStrengthMg,
+    totalCansAllowed,
+    remainingCans,
     isLoading: prescriptionLoading,
   } = usePrescriptionStatus();
 
-  const [paidCansOrdered, setPaidCansOrdered] = useState(0);
-  const [allowanceLoading, setAllowanceLoading] = useState(true);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
-  useEffect(() => {
-    const loadAllowance = async () => {
-      if (!user) {
-        setAllowanceLoading(false);
-        return;
-      }
-
-      try {
-        const total = await shopifyOrderMirrorService.getPaidCansOrdered(user.id);
-        setPaidCansOrdered(total);
-      } catch (error) {
-        console.error('ShopCheckout: failed to load paid cans ordered', error);
-        toast.error('Could not refresh your prescription allowance. Please try again.');
-      } finally {
-        setAllowanceLoading(false);
-      }
-    };
-
-    loadAllowance();
-  }, [user?.id]);
-
-  const remainingBeforeCart = allowanceUtils.remainingAtCheckout(paidCansOrdered);
+  const totalAllowance = totalCansAllowed ?? 0;
+  const remainingBeforeCart = remainingCans ?? 0;
+  const usedBeforeCart = Math.max(0, totalAllowance - remainingBeforeCart);
   const remainingAfterCart = Math.max(0, remainingBeforeCart - cart.totalCans);
-  const allowancePercentUsed = allowanceUtils.percentageUsed(paidCansOrdered, cart.totalCans);
+  const allowancePercentUsed = totalAllowance > 0
+    ? Math.min(100, ((usedBeforeCart + cart.totalCans) / totalAllowance) * 100)
+    : 0;
 
   const disallowedItems = useMemo(() => {
     if (!allowedStrengthMg) return [];
     return cart.items.filter((item) => !allowanceUtils.isVariantAllowed(item.strengthMg, allowedStrengthMg));
   }, [allowedStrengthMg, cart.items]);
 
-  const cartExceedsAllowance = allowanceUtils.cartExceedsAllowance(paidCansOrdered, cart.totalCans);
+  const cartExceedsAllowance = cart.totalCans > remainingBeforeCart;
   const canContinue =
     !prescriptionLoading &&
-    !allowanceLoading &&
     hasActivePrescription &&
+    totalAllowance > 0 &&
     cart.items.length > 0 &&
     !cartExceedsAllowance &&
     disallowedItems.length === 0 &&
@@ -81,12 +62,7 @@ export default function PatientShopCheckout() {
     setIsRedirecting(true);
 
     try {
-      // Refresh allowance immediately before creating the Shopify cart. The Edge Function
-      // repeats these checks server-side, but this keeps the review page honest too.
-      const freshPaidCans = user ? await shopifyOrderMirrorService.getPaidCansOrdered(user.id) : 0;
-      setPaidCansOrdered(freshPaidCans);
-
-      if (allowanceUtils.cartExceedsAllowance(freshPaidCans, cart.totalCans)) {
+      if (cart.totalCans > remainingBeforeCart) {
         toast.error('Your cart exceeds your remaining prescription allowance. Please reduce items.');
         setIsRedirecting(false);
         return;
@@ -229,7 +205,7 @@ export default function PatientShopCheckout() {
                 <div className="space-y-1">
                   <p className="font-medium">Secure Shopify handoff</p>
                   <p className="text-muted-foreground">
-                    PouchCare validates your prescription, strength limit, and 60-can allowance before Shopify opens for payment and shipping.
+                    PouchCare validates your prescription, strength limit, and remaining prescription allowance before Shopify opens for payment and shipping.
                   </p>
                 </div>
                 <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
@@ -272,12 +248,12 @@ export default function PatientShopCheckout() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium">Allowance</span>
                   <span className={cartExceedsAllowance ? 'text-destructive' : 'text-muted-foreground'}>
-                    {PRESCRIPTION_TOTAL_CANS - remainingAfterCart} / {PRESCRIPTION_TOTAL_CANS} cans used
+                    {usedBeforeCart + cart.totalCans} / {totalAllowance || '—'} cans used
                   </span>
                 </div>
                 <Progress value={allowancePercentUsed} className="h-2" />
                 <p className="text-xs text-muted-foreground">
-                  {paidCansOrdered} already ordered • {cart.totalCans} in cart • {remainingAfterCart} remaining after this order
+                  {usedBeforeCart} already ordered • {cart.totalCans} in cart • {remainingAfterCart} remaining after this order
                 </p>
               </div>
 
@@ -290,6 +266,12 @@ export default function PatientShopCheckout() {
               {cartExceedsAllowance && (
                 <Alert variant="destructive">
                   <AlertDescription>Your cart exceeds your remaining prescription allowance. Remove {cart.totalCans - remainingBeforeCart} cans to continue.</AlertDescription>
+                </Alert>
+              )}
+
+              {!prescriptionLoading && hasActivePrescription && totalAllowance <= 0 && (
+                <Alert variant="destructive">
+                  <AlertDescription>Your prescription allowance could not be read. Please upload your prescription again or contact support.</AlertDescription>
                 </Alert>
               )}
 

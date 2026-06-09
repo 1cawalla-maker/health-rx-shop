@@ -11,13 +11,11 @@ import { ShopExpiredOverlay } from '@/components/shop/ShopExpiredOverlay';
 import { ShopLockedOverlay } from '@/components/shop/ShopLockedOverlay';
 import { ShopPendingOverlay } from '@/components/shop/ShopPendingOverlay';
 import { catalogService } from '@/services/catalogService';
-import { shopifyOrderMirrorService } from '@/services/shopifyOrderMirrorService';
 import { allowanceUtils } from '@/lib/allowanceUtils';
 import { useCart } from '@/contexts/CartContext';
 import { usePrescriptionStatus } from '@/hooks/usePrescriptionStatus';
 import { useAuth } from '@/hooks/useAuth';
 import type { Product, ProductVariant } from '@/types/shop';
-import { PRESCRIPTION_TOTAL_CANS } from '@/types/shop';
 import { toast } from 'sonner';
 
 interface OutletContext {
@@ -41,6 +39,8 @@ export default function PatientProductDetail() {
   const {
     hasActivePrescription: rxHasActive,
     allowedStrengthMg,
+    totalCansAllowed,
+    remainingCans: remainingBeforeCart,
     isExpired,
     expiredAt,
   } = usePrescriptionStatus();
@@ -51,14 +51,14 @@ export default function PatientProductDetail() {
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-  const [cansOrdered, setCansOrdered] = useState(0);
+  const totalAllowance = totalCansAllowed ?? 0;
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [qty, setQty] = useState(1);
   const [adding, setAdding] = useState(false);
 
   const remainingCans = useMemo(() => {
-    return allowanceUtils.remainingForAddToCart(cansOrdered, cart.totalCans);
-  }, [cansOrdered, cart.totalCans]);
+    return Math.max(0, (remainingBeforeCart ?? 0) - cart.totalCans);
+  }, [remainingBeforeCart, cart.totalCans]);
 
   useEffect(() => {
     const load = async () => {
@@ -88,15 +88,6 @@ export default function PatientProductDetail() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId, maxStrengthMg]);
-
-  useEffect(() => {
-    const loadCansOrdered = async () => {
-      if (!user) return;
-      const total = await shopifyOrderMirrorService.getPaidCansOrdered(user.id);
-      setCansOrdered(total);
-    };
-    loadCansOrdered();
-  }, [user?.id]);
 
   // Keep qty within bounds if allowance changes
   useEffect(() => {
@@ -142,17 +133,14 @@ export default function PatientProductDetail() {
       return;
     }
 
-    // Recalc allowance fresh before mutation
     setAdding(true);
     try {
-      const freshCansOrdered = await shopifyOrderMirrorService.getPaidCansOrdered(user.id);
-      const freshRemaining = allowanceUtils.remainingForAddToCart(freshCansOrdered, cart.totalCans);
-      if (freshRemaining <= 0) {
+      if (remainingCans <= 0) {
         toast.error('No remaining allowance - you have used your full prescription');
         return;
       }
 
-      const qtyToAdd = clampInt(qty, 1, freshRemaining);
+      const qtyToAdd = clampInt(qty, 1, remainingCans);
       await addToCart(product, selectedVariant, qtyToAdd);
     } finally {
       setAdding(false);
@@ -300,7 +288,7 @@ export default function PatientProductDetail() {
 
                   {hasActivePrescription && (
                     <p className="text-xs text-muted-foreground">
-                      {remainingCans} of {PRESCRIPTION_TOTAL_CANS} cans remaining (including items already in your cart)
+                      {remainingCans} of {totalAllowance || '—'} cans remaining (including items already in your cart)
                     </p>
                   )}
                 </div>
@@ -352,7 +340,7 @@ export default function PatientProductDetail() {
         {!hasActivePrescription && !hasPendingPrescription && !isExpired && <ShopLockedOverlay />}
       </div>
 
-      <CartDrawer remainingCans={remainingCans} />
+      <CartDrawer remainingCans={remainingCans} totalCansAllowed={totalAllowance} />
     </div>
   );
 }

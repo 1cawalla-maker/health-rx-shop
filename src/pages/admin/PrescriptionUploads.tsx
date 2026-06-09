@@ -32,11 +32,17 @@ interface PrescriptionRecord {
   allowed_strength_max: number | null;
   max_units_per_order: number | null;
   max_units_per_month: number | null;
+  total_units_allowed?: number | null;
   review_reason: string | null;
   issued_at: string | null;
   expires_at: string | null;
   created_at: string;
   updated_at: string;
+  file_name?: string | null;
+  ocr_status?: 'not_started' | 'processing' | 'completed' | 'failed' | 'needs_review' | null;
+  ocr_confidence?: number | null;
+  ocr_error?: string | null;
+  ocr_raw_text?: string | null;
   patient_name?: string | null;
   patient_email?: string | null;
 }
@@ -68,6 +74,7 @@ export default function AdminPrescriptionUploads() {
     allowedStrengthMax: 12,
     maxUnitsPerOrder: 10,
     maxUnitsPerMonth: 20,
+    totalUnitsAllowed: 60,
   });
   const [approvalLoading, setApprovalLoading] = useState(false);
 
@@ -158,9 +165,6 @@ export default function AdminPrescriptionUploads() {
     
     setApprovalLoading(true);
     
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 90); // 90 days validity
-
     const { error } = await supabase
       .from('prescriptions')
       .update({
@@ -168,9 +172,10 @@ export default function AdminPrescriptionUploads() {
         allowed_strength_min: approvalData.allowedStrengthMin,
         allowed_strength_max: approvalData.allowedStrengthMax,
         max_units_per_order: approvalData.maxUnitsPerOrder,
-        max_units_per_month: approvalData.maxUnitsPerMonth,
+        max_units_per_month: null,
+        total_units_allowed: approvalData.totalUnitsAllowed,
         issued_at: new Date().toISOString(),
-        expires_at: expiresAt.toISOString(),
+        expires_at: null,
       })
       .eq('id', approvalPrescription.id);
     
@@ -301,13 +306,27 @@ export default function AdminPrescriptionUploads() {
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Uploaded</p>
                     <p className="font-medium">{format(new Date(prescription.created_at), 'dd MMM yyyy')}</p>
                   </div>
-                  {prescription.status === 'active' && prescription.expires_at && (
+                  {prescription.status === 'active' && prescription.total_units_allowed && (
                     <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide">Expires</p>
-                      <p className="font-medium">{format(new Date(prescription.expires_at), 'dd MMM yyyy')}</p>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Allowance</p>
+                      <p className="font-medium">{prescription.total_units_allowed} units</p>
                     </div>
                   )}
                 </div>
+
+                {(prescription.ocr_status || prescription.ocr_raw_text || prescription.ocr_error) && (
+                  <div className="mb-4 p-3 bg-muted/50 rounded-lg space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide">OCR</p>
+                      {prescription.ocr_status && <Badge variant="outline">{prescription.ocr_status.replace('_', ' ')}</Badge>}
+                      {prescription.ocr_confidence != null && (
+                        <span className="text-xs text-muted-foreground">Confidence {Math.round(prescription.ocr_confidence * 100)}%</span>
+                      )}
+                    </div>
+                    {prescription.ocr_raw_text && <p className="text-sm text-muted-foreground">{prescription.ocr_raw_text}</p>}
+                    {prescription.ocr_error && <p className="text-sm text-destructive">{prescription.ocr_error}</p>}
+                  </div>
+                )}
 
                 {/* Approval limits for approved prescriptions */}
                 {prescription.status === 'active' && (
@@ -321,8 +340,8 @@ export default function AdminPrescriptionUploads() {
                       <p className="font-medium">{prescription.max_units_per_order} units</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Per Month</p>
-                      <p className="font-medium">{prescription.max_units_per_month} units</p>
+                      <p className="text-xs text-muted-foreground">Total Allowance</p>
+                      <p className="font-medium">{prescription.total_units_allowed ?? prescription.max_units_per_month ?? prescription.max_units_per_order} units</p>
                     </div>
                   </div>
                 )}
@@ -353,10 +372,11 @@ export default function AdminPrescriptionUploads() {
                         onClick={() => {
                           setApprovalPrescription(prescription);
                           setApprovalData({
-                            allowedStrengthMin: 3,
-                            allowedStrengthMax: 12,
-                            maxUnitsPerOrder: 10,
-                            maxUnitsPerMonth: 20,
+                            allowedStrengthMin: prescription.allowed_strength_min ?? 3,
+                            allowedStrengthMax: prescription.allowed_strength_max ?? 12,
+                            maxUnitsPerOrder: prescription.max_units_per_order ?? 10,
+                            maxUnitsPerMonth: prescription.max_units_per_month ?? 20,
+                            totalUnitsAllowed: prescription.total_units_allowed ?? prescription.max_units_per_month ?? prescription.max_units_per_order ?? 60,
                           });
                         }}
                         className="gap-1"
@@ -431,14 +451,14 @@ export default function AdminPrescriptionUploads() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="perMonth">Max Units Per Month</Label>
+                <Label htmlFor="totalUnits">Total Units Allowed</Label>
                 <Input
-                  id="perMonth"
+                  id="totalUnits"
                   type="number"
                   min={1}
-                  max={100}
-                  value={approvalData.maxUnitsPerMonth}
-                  onChange={(e) => setApprovalData(d => ({ ...d, maxUnitsPerMonth: parseInt(e.target.value) || 20 }))}
+                  max={500}
+                  value={approvalData.totalUnitsAllowed}
+                  onChange={(e) => setApprovalData(d => ({ ...d, totalUnitsAllowed: parseInt(e.target.value) || 60 }))}
                 />
               </div>
             </div>

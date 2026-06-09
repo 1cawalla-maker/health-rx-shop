@@ -6,15 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 
-import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/contexts/CartContext';
 import { usePrescriptionStatus } from '@/hooks/usePrescriptionStatus';
 
 import { catalogService } from '@/services/catalogService';
-import { shopifyOrderMirrorService } from '@/services/shopifyOrderMirrorService';
-
-import { allowanceUtils } from '@/lib/allowanceUtils';
-
 import { CartButton } from '@/components/shop/CartButton';
 import { CartDrawer } from '@/components/shop/CartDrawer';
 import { ShopLockedOverlay } from '@/components/shop/ShopLockedOverlay';
@@ -22,7 +17,6 @@ import { ShopPendingOverlay } from '@/components/shop/ShopPendingOverlay';
 import { ShopExpiredOverlay } from '@/components/shop/ShopExpiredOverlay';
 
 import type { Product } from '@/types/shop';
-import { PRESCRIPTION_TOTAL_CANS } from '@/types/shop';
 
 interface OutletContext {
   hasActivePrescription: boolean;
@@ -32,16 +26,16 @@ interface OutletContext {
 
 export default function PatientShop() {
   const outletContext = useOutletContext<OutletContext>();
-  const { user } = useAuth();
   const { cart } = useCart();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
-  const [cansOrdered, setCansOrdered] = useState(0);
 
   const {
     hasActivePrescription: rxHasActive,
     allowedStrengthMg,
+    totalCansAllowed,
+    remainingCans: remainingBeforeCart,
     isExpired,
     expiredAt,
   } = usePrescriptionStatus();
@@ -52,9 +46,11 @@ export default function PatientShop() {
 
   const maxStrengthMg = allowedStrengthMg || 0;
 
-  // Calculate remaining allowance
-  const remainingCans = allowanceUtils.remainingForAddToCart(cansOrdered, cart.totalCans);
-  const allowancePercentUsed = allowanceUtils.percentageUsed(cansOrdered, cart.totalCans);
+  // Calculate remaining allowance from the active prescription entitlement.
+  const totalAllowance = totalCansAllowed ?? 0;
+  const usedBeforeCart = Math.max(0, totalAllowance - (remainingBeforeCart ?? 0));
+  const remainingCans = Math.max(0, (remainingBeforeCart ?? 0) - cart.totalCans);
+  const allowancePercentUsed = totalAllowance > 0 ? Math.min(100, ((usedBeforeCart + cart.totalCans) / totalAllowance) * 100) : 0;
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -69,19 +65,6 @@ export default function PatientShop() {
     };
     loadProducts();
   }, []);
-
-  useEffect(() => {
-    const loadCansOrdered = async () => {
-      if (!user) return;
-      try {
-        const totalCans = await shopifyOrderMirrorService.getPaidCansOrdered(user.id);
-        setCansOrdered(totalCans);
-      } catch (error) {
-        console.error('Error loading cans ordered:', error);
-      }
-    };
-    loadCansOrdered();
-  }, [user?.id]);
 
   const productsForGrid = useMemo(() => {
     // In Phase 1 we show the full catalogue even if locked.
@@ -108,12 +91,12 @@ export default function PatientShop() {
                 <span className="font-medium">Prescription Allowance</span>
               </div>
               <span className="text-sm text-muted-foreground">
-                {remainingCans} of {PRESCRIPTION_TOTAL_CANS} cans remaining
+                {remainingCans} of {totalAllowance || '—'} cans remaining
               </span>
             </div>
             <Progress value={allowancePercentUsed} className="h-2" />
             <div className="flex justify-between mt-2 text-sm">
-              <span className="font-medium">{cansOrdered} ordered</span>
+              <span className="font-medium">{usedBeforeCart} ordered</span>
               <span className="text-muted-foreground">|</span>
               <span className="font-medium">{cart.totalCans} in cart</span>
               <span className="text-muted-foreground">|</span>
@@ -137,7 +120,7 @@ export default function PatientShop() {
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            <strong>Allowance Exhausted:</strong> You've used your full prescription allowance of {PRESCRIPTION_TOTAL_CANS} cans.
+            <strong>Allowance Exhausted:</strong> You've used your full prescription allowance of {totalAllowance || '—'} cans.
           </AlertDescription>
         </Alert>
       )}
@@ -197,7 +180,7 @@ export default function PatientShop() {
         {!hasActivePrescription && !hasPendingPrescription && !isExpired && <ShopLockedOverlay />}
       </div>
 
-      <CartDrawer remainingCans={remainingCans} />
+      <CartDrawer remainingCans={remainingCans} totalCansAllowed={totalAllowance} />
     </div>
   );
 }

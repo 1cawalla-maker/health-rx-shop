@@ -1,16 +1,34 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { prescriptionBlobService, type PrescriptionBlob } from '@/services/prescriptionBlobService';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Calendar, Upload, Trash2, Eye, Download } from 'lucide-react';
+import { FileText, Calendar, Upload, Eye, Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
 const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
 const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+
+type PrescriptionUploadRow = {
+  id: string;
+  patient_id: string;
+  file_url: string | null;
+  file_name?: string | null;
+  status: 'pending_review' | 'active' | 'rejected' | 'expired';
+  allowed_strength_max: number | null;
+  max_units_per_order: number | null;
+  max_units_per_month: number | null;
+  total_units_allowed?: number | null;
+  review_reason: string | null;
+  expires_at: string | null;
+  created_at: string;
+  ocr_status?: 'not_started' | 'processing' | 'completed' | 'failed' | 'needs_review' | null;
+  ocr_confidence?: number | null;
+  ocr_error?: string | null;
+};
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -18,59 +36,56 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function statusBadge(row: PrescriptionUploadRow) {
+  if (row.status === 'active') return <Badge>Active</Badge>;
+  if (row.status === 'rejected') return <Badge variant="destructive">Rejected</Badge>;
+  if (row.status === 'expired') return <Badge variant="outline">Expired</Badge>;
+  if (row.ocr_status === 'processing') return <Badge variant="secondary">OCR processing</Badge>;
+  if (row.ocr_status === 'needs_review') return <Badge variant="secondary">Needs review</Badge>;
+  if (row.ocr_status === 'failed') return <Badge variant="destructive">OCR failed</Badge>;
+  return <Badge variant="outline">Pending</Badge>;
+}
+
 export default function UploadPrescription() {
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploads, setUploads] = useState<PrescriptionBlob[]>([]);
+  const [uploads, setUploads] = useState<PrescriptionUploadRow[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-
-  // Track object URLs so we can revoke them (avoid memory leaks on mobile).
-  const objectUrlsRef = useRef<Map<string, string>>(new Map());
 
   const loadUploads = useCallback(async () => {
     if (!user?.id) return;
-    const list = await prescriptionBlobService.listBlobs(user.id);
-    setUploads(list);
+
+    const { data, error } = await (supabase as any)
+      .from('prescriptions')
+      .select('id,patient_id,file_url,file_name,status,allowed_strength_max,max_units_per_order,max_units_per_month,total_units_allowed,review_reason,expires_at,created_at,ocr_status,ocr_confidence,ocr_error')
+      .eq('patient_id', user.id)
+      .eq('prescription_type', 'uploaded')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Failed to load prescriptions:', error);
+      toast.error('Could not load prescription uploads');
+      return;
+    }
+
+    setUploads((data ?? []) as PrescriptionUploadRow[]);
   }, [user?.id]);
 
   useEffect(() => {
     loadUploads();
   }, [loadUploads]);
 
-  // Revoke all object URLs on unmount
-  useEffect(() => {
-    return () => {
-      objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
-      objectUrlsRef.current.clear();
-    };
-  }, []);
-
-  const getObjectUrl = async (id: string): Promise<string | null> => {
-    const existing = objectUrlsRef.current.get(id);
-    if (existing) return existing;
-
-    const blob = await prescriptionBlobService.getBlob(id);
-    if (!blob) return null;
-
-    const url = URL.createObjectURL(blob);
-    objectUrlsRef.current.set(id, url);
-    return url;
-  };
-
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user?.id) return;
 
-    // Reset input so the same file can be re-selected
     if (fileInputRef.current) fileInputRef.current.value = '';
 
-    // Validate type
     if (!ALLOWED_TYPES.includes(file.type)) {
       toast.error('Invalid file type. Please upload a PDF, JPG, or PNG file.');
       return;
     }
 
-    // Validate size
     if (file.size > MAX_SIZE_BYTES) {
       toast.error('File is too large. Maximum size is 10 MB.');
       return;
@@ -78,61 +93,90 @@ export default function UploadPrescription() {
 
     setIsUploading(true);
     try {
-      await prescriptionBlobService.saveBlob(user.id, file);
-      toast.success('Prescription uploaded successfully');
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'upload';
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path = `${user.id}/${Date.now()}-${safeName || `prescription.${ext}`}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('prescriptions')
+        .upload(path, file, { contentType: file.type, upsert: false });
+
+      if (uploadError) throw uploadError;
+
+      const { data: row, error: insertError } = await (supabase as any)
+        .from('prescriptions')
+        .insert({
+          patient_id: user.id,
+          prescription_type: 'uploaded',
+          status: 'pending_review',
+          file_url: path,
+          file_name: file.name,
+          ocr_status: 'not_started',
+        })
+        .select('id')
+        .single();
+
+      if (insertError) throw insertError;
+
+      toast.success('Prescription uploaded. Reading limits now...');
+      await loadUploads();
+
+      const { error: ocrError } = await supabase.functions.invoke('extract-prescription-entitlement', {
+        body: { prescriptionId: row.id },
+      });
+
+      if (ocrError) {
+        console.error('OCR error:', ocrError);
+        toast.error('Prescription uploaded, but OCR failed. It can still be reviewed manually.');
+      } else {
+        toast.success('Prescription limits extracted');
+      }
+
       await loadUploads();
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error('Failed to upload prescription. Please try again.');
+      toast.error(error instanceof Error ? error.message : 'Failed to upload prescription. Please try again.');
     } finally {
       setIsUploading(false);
     }
   };
 
-  const handleView = async (upload: PrescriptionBlob) => {
-    const url = await getObjectUrl(upload.id);
-    if (url) {
-      window.open(url, '_blank');
-    } else {
+  const getSignedUrl = async (upload: PrescriptionUploadRow): Promise<string | null> => {
+    if (!upload.file_url) return null;
+    const { data, error } = await supabase.storage
+      .from('prescriptions')
+      .createSignedUrl(upload.file_url, 300);
+
+    if (error || !data?.signedUrl) {
       toast.error('Could not load file');
+      return null;
     }
+    return data.signedUrl;
   };
 
-  const handleDownload = async (upload: PrescriptionBlob) => {
-    const url = await getObjectUrl(upload.id);
-    if (!url) {
-      toast.error('Could not load file');
-      return;
-    }
+  const handleView = async (upload: PrescriptionUploadRow) => {
+    const url = await getSignedUrl(upload);
+    if (url) window.open(url, '_blank');
+  };
+
+  const handleDownload = async (upload: PrescriptionUploadRow) => {
+    const url = await getSignedUrl(upload);
+    if (!url) return;
     const a = document.createElement('a');
     a.href = url;
-    a.download = upload.fileName;
+    a.download = upload.file_name || upload.file_url?.split('/').pop() || 'prescription';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-  };
-
-  const handleRemove = async (upload: PrescriptionBlob) => {
-    // Revoke the object URL if it exists
-    const url = objectUrlsRef.current.get(upload.id);
-    if (url) {
-      URL.revokeObjectURL(url);
-      objectUrlsRef.current.delete(upload.id);
-    }
-
-    await prescriptionBlobService.removeBlob(upload.id);
-    toast.success('Prescription removed');
-    await loadUploads();
   };
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div>
         <h1 className="font-display text-3xl font-bold text-foreground">Upload Prescription</h1>
-        <p className="text-muted-foreground mt-1">Submit your prescription documents</p>
+        <p className="text-muted-foreground mt-1">Submit your prescription documents so PouchCare can unlock ordering limits.</p>
       </div>
 
-      {/* Upload Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -156,13 +200,12 @@ export default function UploadPrescription() {
             disabled={isUploading}
             className="gap-2"
           >
-            <Upload className="h-4 w-4" />
-            {isUploading ? 'Uploading...' : 'Select File'}
+            {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            {isUploading ? 'Uploading and reading...' : 'Select File'}
           </Button>
         </CardContent>
       </Card>
 
-      {/* Uploads List */}
       {uploads.length > 0 ? (
         <Card>
           <CardHeader>
@@ -179,17 +222,25 @@ export default function UploadPrescription() {
                 className="flex items-center justify-between gap-4 rounded-lg border p-3"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-sm truncate">{upload.fileName}</p>
-                  <div className="flex items-center gap-2 mt-1">
+                  <p className="font-medium text-sm truncate">{upload.file_name || upload.file_url?.split('/').pop() || 'Prescription'}</p>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
                     <span className="text-xs text-muted-foreground">
-                      {formatFileSize(upload.sizeBytes)}
+                      {format(new Date(upload.created_at), 'dd MMM yyyy, h:mm a')}
                     </span>
-                    <span className="text-xs text-muted-foreground">•</span>
-                    <span className="text-xs text-muted-foreground">
-                      {format(new Date(upload.uploadedAt), 'dd MMM yyyy, h:mm a')}
-                    </span>
-                    <Badge variant="outline" className="text-xs">Pending Review</Badge>
+                    {statusBadge(upload)}
+                    {upload.ocr_confidence != null && (
+                      <span className="text-xs text-muted-foreground">OCR {Math.round(upload.ocr_confidence * 100)}%</span>
+                    )}
                   </div>
+                  {upload.status === 'active' && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Limit: up to {upload.allowed_strength_max ?? '—'}mg
+                      {upload.total_units_allowed ? `, ${upload.total_units_allowed} total units` : ''}
+                    </p>
+                  )}
+                  {(upload.review_reason || upload.ocr_error) && (
+                    <p className="text-xs text-destructive mt-2">{upload.review_reason || upload.ocr_error}</p>
+                  )}
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleView(upload)} title="View">
@@ -197,9 +248,6 @@ export default function UploadPrescription() {
                   </Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownload(upload)} title="Download">
                     <Download className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleRemove(upload)} title="Remove">
-                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>

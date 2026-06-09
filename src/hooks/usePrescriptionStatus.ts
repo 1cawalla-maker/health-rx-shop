@@ -1,10 +1,10 @@
 // usePrescriptionStatus hook
-// Phase 2: derives prescription status from Supabase-issued prescriptions (and falls back to mock localStorage).
+// MVP shop source of truth: active uploaded/OCR prescription entitlement in Supabase.
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { shopPrescriptionService } from '@/services/shopPrescriptionService';
-import { patientIssuedPrescriptionsSupabaseService } from '@/services/patientIssuedPrescriptionsSupabaseService';
+import { supabase } from '@/integrations/supabase/client';
+import { shopifyOrderMirrorService } from '@/services/shopifyOrderMirrorService';
 import type { PrescriptionStatus } from '@/types/shop';
 
 interface ExtendedPrescriptionStatus extends PrescriptionStatus {
@@ -15,7 +15,7 @@ interface ExtendedPrescriptionStatus extends PrescriptionStatus {
 
 export function usePrescriptionStatus() {
   const { user } = useAuth();
-  const [status, setStatus] = useState<ExtendedPrescriptionStatus>({ 
+  const [status, setStatus] = useState<ExtendedPrescriptionStatus>({
     hasActivePrescription: false,
     isExpired: false,
   });
@@ -29,73 +29,43 @@ export function usePrescriptionStatus() {
     }
 
     try {
-      // Primary source of truth: Supabase-issued prescriptions.
-      const latest = await patientIssuedPrescriptionsSupabaseService.getLatestForPatient(user.id);
+      const { data: uploaded, error: uploadedError } = await (supabase as any)
+        .from('prescriptions')
+        .select('id,allowed_strength_max,total_units_allowed,created_at')
+        .eq('patient_id', user.id)
+        .eq('prescription_type', 'uploaded')
+        .eq('status', 'active')
+        .not('allowed_strength_max', 'is', null)
+        .not('total_units_allowed', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      if (latest) {
-        // MVP rule: any issued prescription unlocks shop; allowance is always 60 cans.
-        const totalCansAllowed = 60;
-        const allowance = await shopPrescriptionService.getRemainingAllowance(user.id);
+      if (uploadedError) throw uploadedError;
+
+      const activeUpload = uploaded?.[0];
+      const allowedStrengthMg = Number(activeUpload?.allowed_strength_max ?? 0);
+      const totalCansAllowed = Number(activeUpload?.total_units_allowed ?? 0);
+
+      if (activeUpload?.id && allowedStrengthMg > 0 && totalCansAllowed > 0) {
+        const cansUsed = await shopifyOrderMirrorService.getPaidCansOrdered(user.id, String(activeUpload.id));
 
         setStatus({
           hasActivePrescription: true,
           isExpired: false,
-          allowedStrengthMg: latest.maxStrengthMg,
-          prescriptionId: latest.id,
+          allowedStrengthMg,
+          prescriptionId: String(activeUpload.id),
           expiresAt: undefined,
           totalCansAllowed,
-          remainingCans: allowance.remainingCans,
-          referenceId: latest.id,
-        });
-
-        setIsLoading(false);
-        return;
-      }
-
-      // No Supabase prescription: fall back to mock/local history (helps in dev).
-      const mock = shopPrescriptionService.getActivePrescription(user.id);
-      if (mock) {
-        const allowance = await shopPrescriptionService.getRemainingAllowance(user.id);
-        setStatus({
-          hasActivePrescription: true,
-          isExpired: false,
-          allowedStrengthMg: mock.maxStrengthMg,
-          prescriptionId: mock.id,
-          expiresAt: mock.expiresAt ? new Date(mock.expiresAt) : undefined,
-          totalCansAllowed: mock.totalCansAllowed,
-          remainingCans: allowance.remainingCans,
-          referenceId: mock.id,
-        });
-      } else {
-        const { prescription: latestMock, isExpired } = shopPrescriptionService.getLatestPrescription(user.id);
-        setStatus({
-          hasActivePrescription: false,
-          isExpired,
-          expiredAt: isExpired && latestMock?.expiresAt ? new Date(latestMock.expiresAt) : undefined,
-          latestPrescriptionId: latestMock?.id,
-        });
-      }
-
-      setIsLoading(false);
-    } catch (e) {
-      console.error('Failed to load prescription status from Supabase:', e);
-      // On any Supabase error, fall back to mock/local.
-      const mock = shopPrescriptionService.getActivePrescription(user.id);
-      if (mock) {
-        const allowance = await shopPrescriptionService.getRemainingAllowance(user.id);
-        setStatus({
-          hasActivePrescription: true,
-          isExpired: false,
-          allowedStrengthMg: mock.maxStrengthMg,
-          prescriptionId: mock.id,
-          expiresAt: mock.expiresAt ? new Date(mock.expiresAt) : undefined,
-          totalCansAllowed: mock.totalCansAllowed,
-          remainingCans: allowance.remainingCans,
-          referenceId: mock.id,
+          remainingCans: Math.max(0, totalCansAllowed - cansUsed),
+          referenceId: String(activeUpload.id),
         });
       } else {
         setStatus({ hasActivePrescription: false, isExpired: false });
       }
+    } catch (e) {
+      console.error('Failed to load uploaded prescription status from Supabase:', e);
+      setStatus({ hasActivePrescription: false, isExpired: false });
+    } finally {
       setIsLoading(false);
     }
   }, [user]);
