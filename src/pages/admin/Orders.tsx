@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import {
+  AlertTriangle,
   CheckCircle2,
   ClipboardCopy,
   Download,
@@ -172,6 +173,37 @@ function orderAdminUrl(order: ShopifyOrderRow) {
     if (id) return `https://admin.shopify.com/store/pouchcare/orders/${id}`;
   }
   return `https://admin.shopify.com/store/pouchcare/orders/${order.shopify_order_id}`;
+}
+
+function getOrderAttentionIssues(order: AdminOrder) {
+  const issues: string[] = [];
+  const isPaid = (order.financial_status || '').toLowerCase() === 'paid';
+
+  if (isPaid && order.items.length === 0) {
+    issues.push('Paid order has no mirrored item rows yet');
+  }
+
+  if (order.prescription_id && !order.prescription) {
+    issues.push('Linked prescription could not be loaded');
+  }
+
+  if (order.prescription && !order.prescription.file_url) {
+    issues.push('Linked prescription is missing a file path');
+  }
+
+  if (order.items.some((item) => item.strength_mg == null)) {
+    issues.push('One or more order items are missing parsed strength');
+  }
+
+  if (order.prescription) {
+    const totalAllowed = Number(order.prescription.total_units_allowed ?? order.prescription.max_units_per_month ?? order.prescription.max_units_per_order ?? 0) || null;
+    const used = Number(order.prescriptionUsedCans ?? 0);
+    if (totalAllowed != null && used > totalAllowed) {
+      issues.push('Synced paid orders exceed prescription allowance');
+    }
+  }
+
+  return issues;
 }
 
 function hasOriginalPrescriptionFile(order: AdminOrder) {
@@ -369,8 +401,8 @@ export default function AdminOrders() {
   const stats = useMemo(() => {
     const paid = orders.filter((order) => (order.financial_status || '').toLowerCase() === 'paid').length;
     const unfulfilled = orders.filter((order) => (order.financial_status || '').toLowerCase() === 'paid' && (order.fulfillment_status || '').toLowerCase() !== 'fulfilled').length;
-    const missingDocs = orders.filter((order) => !hasRequiredSupplierDocument(order)).length;
-    return { paid, unfulfilled, missingDocs };
+    const needsAttention = orders.filter((order) => getOrderAttentionIssues(order).length > 0).length;
+    return { paid, unfulfilled, needsAttention };
   }, [orders]);
 
   const copyFulfilmentPack = async (order: AdminOrder) => {
@@ -554,10 +586,30 @@ export default function AdminOrders() {
                     ) : (
                       <Badge variant="outline">No tracking yet</Badge>
                     )}
+                    {attentionIssues.length > 0 && (
+                      <Badge className="bg-amber-500/10 text-amber-800 border-amber-500/30">
+                        <AlertTriangle className="mr-1 h-3 w-3" />
+                        Needs attention
+                      </Badge>
+                    )}
                   </div>
                 </CardHeader>
 
                 <CardContent className="space-y-5">
+                  {attentionIssues.length > 0 && (
+                    <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-900">
+                      <div className="mb-2 flex items-center gap-2 font-semibold">
+                        <AlertTriangle className="h-4 w-4" />
+                        Check before supplier handoff
+                      </div>
+                      <ul className="list-disc space-y-1 pl-5">
+                        {attentionIssues.map((issue) => (
+                          <li key={issue}>{issue}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   <div className="grid gap-4 lg:grid-cols-3">
                     <div className="rounded-lg border bg-muted/20 p-4">
                       <p className="mb-2 text-sm font-semibold">Customer</p>

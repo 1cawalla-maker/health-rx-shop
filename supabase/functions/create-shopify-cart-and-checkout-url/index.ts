@@ -142,6 +142,7 @@ serve(async (req) => {
             id
             title
             selectedOptions { name value }
+            metafield(namespace: "pouchcare", key: "strength_mg") { value }
           }
         }
       }
@@ -162,11 +163,15 @@ serve(async (req) => {
         .join(" | ");
 
       const raw = [
+        node?.metafield?.value,
         rawOptions,
         node?.title,
       ].filter(Boolean).join(" | ");
 
-      const parsed = Number(raw.match(/(\d+)\s*mg/i)?.[1] ?? NaN);
+      const meta = node?.metafield?.value ? Number(node.metafield.value) : NaN;
+      const parsed = Number.isFinite(meta) && meta > 0
+        ? meta
+        : Number(raw.match(/(\d+)\s*mg/i)?.[1] ?? NaN);
 
       if (Number.isFinite(parsed) && parsed > 0) {
         if (requestedId) strengthById.set(requestedId, parsed);
