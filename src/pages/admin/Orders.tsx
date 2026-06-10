@@ -265,6 +265,7 @@ export default function AdminOrders() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [generatingPdfOrderId, setGeneratingPdfOrderId] = useState<string | null>(null);
+  const [showNeedsAttentionOnly, setShowNeedsAttentionOnly] = useState(false);
 
   const loadOrders = async () => {
     setIsLoading(true);
@@ -405,6 +406,11 @@ export default function AdminOrders() {
     return { paid, unfulfilled, needsAttention };
   }, [orders]);
 
+  const visibleOrders = useMemo(
+    () => showNeedsAttentionOnly ? orders.filter((order) => getOrderAttentionIssues(order).length > 0) : orders,
+    [orders, showNeedsAttentionOnly],
+  );
+
   const copyFulfilmentPack = async (order: AdminOrder) => {
     try {
       await navigator.clipboard.writeText(buildFulfilmentPackText(order));
@@ -475,10 +481,20 @@ export default function AdminOrders() {
             Shopify orders, fulfilment documents and supplier handoff status.
           </p>
         </div>
-        <Button variant="outline" onClick={loadOrders}>
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Refresh
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={showNeedsAttentionOnly ? 'default' : 'outline'}
+            onClick={() => setShowNeedsAttentionOnly((value) => !value)}
+            disabled={stats.needsAttention === 0}
+          >
+            <AlertTriangle className="mr-2 h-4 w-4" />
+            {showNeedsAttentionOnly ? 'Show all orders' : `Needs attention (${stats.needsAttention})`}
+          </Button>
+          <Button variant="outline" onClick={loadOrders}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -528,9 +544,17 @@ export default function AdminOrders() {
             <p className="mt-2 text-muted-foreground">Paid Shopify orders will appear here after the webhook syncs.</p>
           </CardContent>
         </Card>
+      ) : visibleOrders.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <AlertTriangle className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+            <h3 className="text-lg font-medium">No orders need attention</h3>
+            <p className="mt-2 text-muted-foreground">All currently loaded orders have the required mirror and prescription context.</p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-4">
-          {orders.map((order) => {
+          {visibleOrders.map((order) => {
             const customer = getCustomer(order);
             const tracking = getTracking(order);
             const supplierPdfReady = order.pdfs.some((pdf) => pdf.kind === 'prescription');
