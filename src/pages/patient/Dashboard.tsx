@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { shopPrescriptionService } from '@/services/shopPrescriptionService';
+import { supabase } from '@/integrations/supabase/client';
 import { mockBookingService } from '@/services/consultationService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -89,10 +89,23 @@ export default function PatientDashboard() {
   const fetchPrescriptionData = async () => {
     if (!user) return;
 
-    // Local-only prescription entitlement (no network).
-    const latest = shopPrescriptionService.getLatestPrescription(user.id);
-    setPrescriptionStatus(latest.prescription);
-    setLoading(false);
+    try {
+      const { data, error } = await (supabase as any)
+        .from('prescriptions')
+        .select('id,prescription_type,status,allowed_strength_max,total_units_allowed,expires_at,created_at')
+        .eq('patient_id', user.id)
+        .eq('prescription_type', 'uploaded')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+      setPrescriptionStatus(data?.[0] ?? null);
+    } catch (error) {
+      console.error('Failed to load prescription data:', error);
+      setPrescriptionStatus(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -225,6 +238,12 @@ export default function PatientDashboard() {
                 <p className="text-sm text-muted-foreground capitalize">
                   {prescriptionStatus.prescription_type} prescription
                 </p>
+                {prescriptionStatus.allowed_strength_max && (
+                  <p className="text-xs text-muted-foreground">
+                    Max strength: {prescriptionStatus.allowed_strength_max}mg
+                    {prescriptionStatus.total_units_allowed ? ` • ${prescriptionStatus.total_units_allowed} total cans/units` : ''}
+                  </p>
+                )}
                 {prescriptionStatus.expires_at && (
                   <p className="text-xs text-muted-foreground">
                     Expires: {format(new Date(prescriptionStatus.expires_at), 'MMM d, yyyy')}

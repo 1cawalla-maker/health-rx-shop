@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { shopPrescriptionService } from '@/services/shopPrescriptionService';
-import { patientIssuedPrescriptionsSupabaseService } from '@/services/patientIssuedPrescriptionsSupabaseService';
+import { usePrescriptionStatus } from '@/hooks/usePrescriptionStatus';
 import {
   Stethoscope,
   LayoutDashboard,
@@ -32,37 +31,13 @@ const navItems = [
 
 export function PatientLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [hasActivePrescription, setHasActivePrescription] = useState(false);
-  const [hasPendingPrescription, setHasPendingPrescription] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-
-  useEffect(() => {
-    if (user) {
-      checkActivePrescription();
-    }
-  }, [user]);
-
-  const checkActivePrescription = async () => {
-    if (!user) return;
-
-    try {
-      const latest = await patientIssuedPrescriptionsSupabaseService.getLatestForPatient(user.id);
-      if (latest) {
-        setHasActivePrescription(true);
-        setHasPendingPrescription(false);
-        return;
-      }
-    } catch (e) {
-      console.error('Failed to check Supabase prescription status:', e);
-      // fall back to mock/local
-    }
-
-    const active = shopPrescriptionService.getActivePrescription(user.id);
-    setHasActivePrescription(!!active);
-    setHasPendingPrescription(false);
-  };
+  const prescriptionStatus = usePrescriptionStatus();
+  const hasActivePrescription = prescriptionStatus.hasActivePrescription;
+  const hasPendingPrescription = false;
+  const checkActivePrescription = prescriptionStatus.refreshStatus;
 
   const handleSignOut = async () => {
     await signOut();
