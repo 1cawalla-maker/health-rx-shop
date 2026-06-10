@@ -8,7 +8,10 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "pouchcare:audit:catalog": "node scripts/pouchcare-catalog-audit.mjs",
+    "pouchcare:guard:mvp": "node scripts/pouchcare-mvp-regression-guard.mjs",
+    "pouchcare:check:safe": "npm run pouchcare:audit:catalog && npm run pouchcare:guard:mvp && npm run build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
