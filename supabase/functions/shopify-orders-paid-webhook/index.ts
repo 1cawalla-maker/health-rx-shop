@@ -180,6 +180,7 @@ serve(async (req) => {
       const rows = lineItems
         .map((li: any) => ({
           shopify_order_id: internalOrderId,
+          shopify_line_item_id: li?.id ? Number(li.id) : null,
           shopify_variant_id: li?.variant_id ?? null,
           shopify_variant_gid: productVariantGidFromVariantId(li?.variant_id),
           title: li?.title ?? null,
@@ -192,7 +193,7 @@ serve(async (req) => {
 
       const { error: itemsErr } = await supabase
         .from("shopify_order_items")
-        .insert(rows);
+        .upsert(rows, { onConflict: "shopify_order_id,shopify_line_item_id" });
       if (itemsErr)
         throw new Error(
           `Failed to insert shopify_order_items: ${itemsErr.message}`,
