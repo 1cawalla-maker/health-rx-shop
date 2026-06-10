@@ -3,6 +3,7 @@
 // Flavour = Product, Variant = Flavour × Strength
 export interface ProductVariant {
   id: string;
+  shopifyId?: string | null;
   strengthMg: 3 | 6 | 9;
   priceCents: number;
   currency: 'AUD';
@@ -30,6 +31,7 @@ export interface CartItem {
   id: string;
   productId: string;
   variantId: string;
+  shopifyVariantId?: string | null;
   name: string;
   brand: string;
   flavor: string;
