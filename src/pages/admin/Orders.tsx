@@ -174,9 +174,18 @@ function orderAdminUrl(order: ShopifyOrderRow) {
   return `https://admin.shopify.com/store/pouchcare/orders/${order.shopify_order_id}`;
 }
 
+function hasOriginalPrescriptionFile(order: AdminOrder) {
+  return Boolean(order.prescription?.file_url);
+}
+
+function hasRequiredSupplierDocument(order: AdminOrder) {
+  return order.pdfs.some((pdf) => pdf.kind === 'prescription') || hasOriginalPrescriptionFile(order);
+}
+
 function buildFulfilmentPackText(order: AdminOrder) {
   const customer = getCustomer(order);
   const supplierPdfReady = order.pdfs.some((pdf) => pdf.kind === 'prescription');
+  const originalPrescriptionReady = hasOriginalPrescriptionFile(order);
   const prescription = order.prescription;
   const totalAllowed = Number(prescription?.total_units_allowed ?? prescription?.max_units_per_month ?? prescription?.max_units_per_order ?? 0) || null;
   const usedCans = Number(order.prescriptionUsedCans ?? 0);
@@ -206,11 +215,16 @@ function buildFulfilmentPackText(order: AdminOrder) {
     `Remaining after synced paid orders: ${remainingCans ?? 'unknown'} cans/units`,
     `Prescription file: ${prescription?.file_url || 'missing'}`,
     ``,
-    `Required parcel document`,
-    `- Supplier Print PDF: ${supplierPdfReady ? 'ready' : 'missing'}`,
+    `Required supplier document`,
+    originalPrescriptionReady
+      ? `- Original uploaded prescription: ready (${prescription?.file_url})`
+      : `- Original uploaded prescription: missing`,
+    `- Legacy supplier print PDF: ${supplierPdfReady ? 'ready' : (originalPrescriptionReady ? 'not required for uploaded/OCR prescription orders' : 'missing')}`,
     ``,
     `Packing instruction`,
-    `Print one copy of the Supplier Print PDF and include it inside the parcel. Ship directly to the named customer only. Do not combine patients, prescriptions or orders in one parcel.`,
+    originalPrescriptionReady
+      ? `Send the Shopify order details and original uploaded prescription file to the supplier. Perform final human sanity check before handoff. Ship directly to the named customer only. Do not combine patients, prescriptions or orders in one parcel.`
+      : `Print one copy of the Supplier Print PDF and include it inside the parcel. Ship directly to the named customer only. Do not combine patients, prescriptions or orders in one parcel.`,
   ].join('\n');
 }
 
@@ -355,7 +369,7 @@ export default function AdminOrders() {
   const stats = useMemo(() => {
     const paid = orders.filter((order) => (order.financial_status || '').toLowerCase() === 'paid').length;
     const unfulfilled = orders.filter((order) => (order.financial_status || '').toLowerCase() === 'paid' && (order.fulfillment_status || '').toLowerCase() !== 'fulfilled').length;
-    const missingDocs = orders.filter((order) => !order.pdfs.some((pdf) => pdf.kind === 'prescription')).length;
+    const missingDocs = orders.filter((order) => !hasRequiredSupplierDocument(order)).length;
     return { paid, unfulfilled, missingDocs };
   }, [orders]);
 
@@ -488,6 +502,7 @@ export default function AdminOrders() {
             const customer = getCustomer(order);
             const tracking = getTracking(order);
             const supplierPdfReady = order.pdfs.some((pdf) => pdf.kind === 'prescription');
+            const originalPrescriptionReady = hasOriginalPrescriptionFile(order);
             const processedAt = order.processed_at ? new Date(order.processed_at) : null;
             const totalCans = order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
 
@@ -513,9 +528,9 @@ export default function AdminOrders() {
                         <ClipboardCopy className="mr-2 h-4 w-4" />
                         Copy pack
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => openSupplierPdf(order)} disabled={generatingPdfOrderId === order.id}>
+                      <Button variant="outline" size="sm" onClick={() => openSupplierPdf(order)} disabled={generatingPdfOrderId === order.id || (originalPrescriptionReady && !supplierPdfReady)}>
                         {generatingPdfOrderId === order.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                        {supplierPdfReady ? 'Open PDF' : 'Generate PDF'}
+                        {supplierPdfReady ? 'Open PDF' : (originalPrescriptionReady ? 'PDF not needed' : 'Generate PDF')}
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => openPrescriptionFile(order)} disabled={!order.prescription?.file_url}>
                         <FileText className="mr-2 h-4 w-4" />
@@ -531,7 +546,8 @@ export default function AdminOrders() {
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-                    {docBadge('Supplier Print PDF', supplierPdfReady)}
+                    {originalPrescriptionReady ? docBadge('Original prescription file', true) : docBadge('Original prescription file', false)}
+                    {supplierPdfReady ? docBadge('Legacy Supplier PDF', true) : originalPrescriptionReady ? <Badge variant="outline">Legacy PDF not required</Badge> : docBadge('Legacy Supplier PDF', false)}
                     {order.prescription ? docBadge('Prescription linked', true) : docBadge('Prescription link', false)}
                     {tracking.number ? (
                       <Badge className="bg-green-500/10 text-green-700 border-green-500/20">Tracking added</Badge>
