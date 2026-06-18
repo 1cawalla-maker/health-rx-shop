@@ -199,7 +199,7 @@ export default function EligibilityQuiz() {
   };
 
   const handleContinueToSignup = () => {
-    navigate('/auth?mode=signup&from=eligibility');
+    navigate('/start-consult');
   };
 
   if (blockedUnder18) {

@@ -20,11 +20,11 @@ export function ProtectedRoute({ children, allowedRoles, requireApproval = true 
   }
 
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to={`/phone-login?role=${allowedRoles[0] || 'patient'}`} replace />;
   }
 
   if (!userRole) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to={`/phone-login?role=${allowedRoles[0] || 'patient'}`} replace />;
   }
 
   if (!allowedRoles.includes(userRole.role)) {
@@ -37,13 +37,13 @@ export function ProtectedRoute({ children, allowedRoles, requireApproval = true 
       case 'admin':
         return <Navigate to="/admin/dashboard" replace />;
       default:
-        return <Navigate to="/auth" replace />;
+        return <Navigate to={`/phone-login?role=${allowedRoles[0] || 'patient'}`} replace />;
     }
   }
 
   // TODO(phase2): restore pending_approval redirect for doctors
   if (userRole.status === 'deactivated') {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to={`/phone-login?role=${allowedRoles[0] || 'patient'}`} replace />;
   }
 
   return <>{children}</>;

@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/contexts/CartContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -19,7 +19,6 @@ import Privacy from "./pages/Privacy";
 import RefundPolicy from "./pages/RefundPolicy";
 import Disclaimer from "./pages/Disclaimer";
 import Contact from "./pages/Contact";
-import Auth from "./pages/Auth";
 import PhoneLogin from "./pages/PhoneLogin";
 import StartConsultation from "./pages/StartConsultation";
 import ImportationBasis from "./pages/ImportationBasis";
@@ -114,7 +113,7 @@ const App = () => (
               <Route path="/disclaimer" element={<Disclaimer />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/importation-basis" element={<ImportationBasis />} />
-              <Route path="/auth" element={<Auth />} />
+              <Route path="/auth" element={<Navigate to="/phone-login" replace />} />
               <Route path="/phone-login" element={<PhoneLogin />} />
               <Route path="/start-consult" element={<StartConsultation />} />
               <Route path="/eligibility" element={<EligibilityQuiz />} />

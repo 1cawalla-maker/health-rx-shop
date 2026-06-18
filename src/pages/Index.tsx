@@ -116,7 +116,7 @@ export default function Index() {
                 </Link>
               </Button>
               <Button variant="hero-outline" size="xl" asChild>
-                <Link to="/auth">Log In</Link>
+                <Link to="/phone-login">Log In</Link>
               </Button>
             </div>
 

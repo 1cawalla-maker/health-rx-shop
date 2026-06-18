@@ -100,7 +100,7 @@ export default function Pricing() {
                     ))}
                   </ul>
                   <Button variant="hero" size="lg" className="w-full" asChild>
-                    <Link to="/auth?mode=signup">
+                    <Link to="/start-consult">
                       Book Consultation
                       <ArrowRight className="h-5 w-5" />
                     </Link>
@@ -142,7 +142,7 @@ export default function Pricing() {
                     </li>
                   </ul>
                   <Button variant="outline" size="lg" className="w-full" asChild>
-                    <Link to="/auth">
+                    <Link to="/phone-login">
                       Log In to Book
                     </Link>
                   </Button>

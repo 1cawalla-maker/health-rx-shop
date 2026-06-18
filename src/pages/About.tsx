@@ -279,7 +279,7 @@ export default function About() {
               className="bg-background text-primary hover:bg-background/90 shadow-lg"
               asChild
             >
-              <Link to="/auth?mode=signup">
+              <Link to="/start-consult">
                 Start Your Consultation
                 <ArrowRight className="h-5 w-5" />
               </Link>

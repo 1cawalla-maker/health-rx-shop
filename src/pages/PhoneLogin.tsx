@@ -31,7 +31,7 @@ export default function PhoneLogin() {
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [busy, setBusy] = useState(false);
 
-  const title = useMemo(() => intendedRole === 'doctor' ? 'Doctor phone login' : 'Phone login', [intendedRole]);
+  const title = useMemo(() => intendedRole === 'doctor' ? 'Doctor phone login' : intendedRole === 'admin' ? 'Admin phone login' : 'Phone login', [intendedRole]);
 
   const sendCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,11 +117,11 @@ export default function PhoneLogin() {
                     <Label htmlFor="phone">Mobile number</Label>
                     <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="04xx xxx xxx" inputMode="tel" required />
                   </div>
-                  {intendedRole === 'doctor' && (
+                  {(intendedRole === 'doctor' || intendedRole === 'admin') && (
                     <Alert>
                       <Phone className="h-4 w-4" />
                       <AlertDescription>
-                        Doctors must be created by a PouchCare admin before phone login will work.
+                        Admin and doctor accounts must already exist before phone login will work.
                       </AlertDescription>
                     </Alert>
                   )}

@@ -300,7 +300,7 @@ export default function HowItWorks() {
               Start your journey today with a consultation with one of our registered doctors.
             </p>
             <Button variant="hero" size="xl" asChild>
-              <Link to="/auth?mode=signup">
+              <Link to="/start-consult">
                 Book Your Consultation
                 <ArrowRight className="h-5 w-5" />
               </Link>
