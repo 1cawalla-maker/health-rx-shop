@@ -20,6 +20,7 @@ import RefundPolicy from "./pages/RefundPolicy";
 import Disclaimer from "./pages/Disclaimer";
 import Contact from "./pages/Contact";
 import Auth from "./pages/Auth";
+import PhoneLogin from "./pages/PhoneLogin";
 import StartConsultation from "./pages/StartConsultation";
 import ImportationBasis from "./pages/ImportationBasis";
 import NotFound from "./pages/NotFound";
@@ -48,7 +49,6 @@ import PatientOrderSuccess from "./pages/patient/OrderSuccess";
 // Doctor pages
 import DoctorDashboard from "./pages/doctor/Dashboard";
 import DoctorPending from "./pages/doctor/Pending";
-import DoctorRegistration from "./pages/doctor/Registration";
 import DoctorConsultations from "./pages/doctor/Consultations";
 import DoctorPrescriptions from "./pages/doctor/Prescriptions";
 import DoctorCalendar from "./pages/doctor/Calendar";
@@ -62,6 +62,7 @@ import DoctorEarnings from "./pages/doctor/Earnings";
 import DoctorInfo from "./pages/doctor/Info";
 import DoctorAccount from "./pages/doctor/Account";
 import DoctorOnboarding from "./pages/doctor/Onboarding";
+import DoctorHalaxyConsults from "./pages/doctor/HalaxyConsults";
 // Payslip print removed (contractor remittances model)
 
 // Admin pages
@@ -114,6 +115,7 @@ const App = () => (
               <Route path="/contact" element={<Contact />} />
               <Route path="/importation-basis" element={<ImportationBasis />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/phone-login" element={<PhoneLogin />} />
               <Route path="/start-consult" element={<StartConsultation />} />
               <Route path="/eligibility" element={<EligibilityQuiz />} />
 
@@ -150,7 +152,6 @@ const App = () => (
 
               {/* Doctor routes */}
               <Route path="/doctor/pending" element={<DoctorPending />} />
-              <Route path="/doctor/registration" element={<DoctorRegistration />} />
               {/* Payslip print removed (contractor remittances model). */}
               <Route path="/doctor" element={<ProtectedRoute allowedRoles={['doctor']}><DoctorLayout /></ProtectedRoute>}>
                 <Route path="dashboard" element={<DoctorDashboard />} />
@@ -160,6 +161,7 @@ const App = () => (
                 <Route path="bookings" element={<DoctorBookings />} />
                 <Route path="booking/:id" element={<DoctorBookingDetail />} />
                 <Route path="consultations" element={<DoctorConsultations />} />
+                <Route path="halaxy-consults" element={<DoctorHalaxyConsults />} />
                 <Route path="consultation/:id" element={<DoctorConsultationView />} />
                 <Route path="patients" element={<DoctorPatients />} />
                 <Route path="patient/:id" element={<DoctorPatientDetail />} />

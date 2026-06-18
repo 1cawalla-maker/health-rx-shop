@@ -6,6 +6,7 @@ import { PRE_ONBOARDING_ALLOWED_ROUTE_PREFIXES } from '@/constants/routing';
 import {
   Stethoscope,
   Phone,
+  ClipboardList,
   Clock,
   FileText,
   DollarSign,
@@ -22,6 +23,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 
 const navItems = [
+  { href: '/doctor/halaxy-consults', label: 'Halaxy Queue', icon: ClipboardList },
   { href: '/doctor/consultations', label: 'Consultations', icon: Phone },
   { href: '/doctor/availability', label: 'Availability', icon: Clock },
   { href: '/doctor/prescriptions', label: 'Prescriptions', icon: FileText },

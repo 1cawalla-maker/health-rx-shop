@@ -1,261 +1,162 @@
-import { useEffect, useMemo, useState } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { mockBookingService } from '@/services/consultationService';
-import { userPreferencesService } from '@/services/userPreferencesService';
-import { getTimezoneAbbr } from '@/lib/datetime';
+import { halaxyConsultationService } from '@/services/halaxyConsultationService';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, Phone, Loader2, User, Eye, Settings } from 'lucide-react';
-import { format, isPast } from 'date-fns';
-import { formatDoctorName } from '@/lib/utils';
-import { ConsultationDetailDialog } from '@/components/patient/ConsultationDetailDialog';
-import { ManageBookingDialog } from '@/components/patient/ManageBookingDialog';
-import { CountdownChip } from '@/components/bookings/CountdownChip';
-import type { MockBooking, BookingStatus } from '@/types/telehealth';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { CalendarClock, ExternalLink, FileText, Loader2 } from 'lucide-react';
+import { format } from 'date-fns';
+import type { HalaxyConsultationSummary } from '@/types/halaxy';
 
-interface CombinedBooking {
+type PrescriptionRow = {
   id: string;
-  scheduledAt: Date;
-  status: BookingStatus;
-  doctorName: string | null;
-  displayTimezone?: string;
-  isMock: boolean;
-  amountPaid?: number;
+  consultation_id: string | null;
+  status: string | null;
+  ocr_status: string | null;
+  created_at: string;
+};
+
+function statusCopy(status: string | null | undefined) {
+  switch (status) {
+    case 'sent_to_booking': return 'Continue booking in Halaxy';
+    case 'booking_in_progress': return 'Waiting for Halaxy confirmation';
+    case 'webhook_pending': return 'Waiting for Halaxy confirmation';
+    case 'booked': return 'Booked';
+    case 'completed': return 'Consult completed';
+    case 'cancelled': return 'Cancelled';
+    case 'manual_review': return 'Manual review';
+    case 'failed': return 'Needs support';
+    default: return 'Started';
+  }
+}
+
+function statusVariant(status: string | null | undefined): 'default' | 'secondary' | 'destructive' | 'outline' {
+  if (status === 'booked' || status === 'completed') return 'default';
+  if (status === 'cancelled' || status === 'failed') return 'destructive';
+  if (status === 'manual_review' || status === 'webhook_pending') return 'secondary';
+  return 'outline';
 }
 
 export default function PatientConsultations() {
   const { user } = useAuth();
-  const [mockBookings, setMockBookings] = useState<MockBooking[]>([]);
+  const [consults, setConsults] = useState<HalaxyConsultationSummary[]>([]);
+  const [prescriptions, setPrescriptions] = useState<Record<string, PrescriptionRow>>({});
   const [loading, setLoading] = useState(true);
-  const [selectedBooking, setSelectedBooking] = useState<CombinedBooking | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [manageDialogOpen, setManageDialogOpen] = useState(false);
-  const [selectedBookingForManage, setSelectedBookingForManage] = useState<CombinedBooking | null>(null);
 
-  const patientTz = useMemo(() => user?.id ? userPreferencesService.getTimezone(user.id) : 'Australia/Brisbane', [user?.id]);
+  const load = useCallback(async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    try {
+      const rows = await halaxyConsultationService.listForPatient(user.id);
+      setConsults(rows);
 
-  const refreshBookings = () => {
-    if (!user) return;
-    const bookings = mockBookingService.getPatientBookings(user.id);
-    setMockBookings(bookings);
-  };
-
-  useEffect(() => {
-    if (!user) {
-      setMockBookings([]);
+      const { data: rxRows } = await (supabase as any)
+        .from('prescriptions')
+        .select('id,consultation_id,status,ocr_status,created_at')
+        .eq('patient_id', user.id)
+        .order('created_at', { ascending: false });
+      const byConsult: Record<string, PrescriptionRow> = {};
+      for (const rx of ((rxRows || []) as PrescriptionRow[])) {
+        if (rx.consultation_id && !byConsult[rx.consultation_id]) byConsult[rx.consultation_id] = rx;
+      }
+      setPrescriptions(byConsult);
+    } finally {
       setLoading(false);
-      return;
     }
-    refreshBookings();
-    setLoading(false);
   }, [user?.id]);
 
-  const allBookings: CombinedBooking[] = useMemo(
-    () =>
-      mockBookings.map((b) => ({
-        id: b.id,
-        scheduledAt: new Date(`${b.scheduledDate}T${b.timeWindowStart}:00`),
-        status: b.status,
-        doctorName: b.doctorName,
-        displayTimezone: b.displayTimezone,
-        isMock: true,
-        amountPaid: ['booked', 'confirmed', 'completed', 'in_progress', 'no_answer'].includes(b.status) ? 49 : undefined,
-      })),
-    [mockBookings]
-  );
+  useEffect(() => { void load(); }, [load]);
 
-  const openDetails = (booking: CombinedBooking) => {
-    setSelectedBooking(booking);
-    setDialogOpen(true);
-  };
-
-  const upcomingBookings = allBookings.filter(
-    (b) => !isPast(b.scheduledAt) && ['booked', 'pending_payment', 'in_progress', 'requested', 'confirmed'].includes(b.status)
-  );
-
-  const pastBookings = allBookings.filter(
-    (b) => isPast(b.scheduledAt) || ['completed', 'cancelled', 'no_answer'].includes(b.status)
-  );
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending_payment':
-        return <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">Pending Payment</Badge>;
-      case 'booked':
-      case 'confirmed':
-        return <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">Confirmed</Badge>;
-      case 'requested':
-        return <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">Requested</Badge>;
-      case 'in_progress':
-        return <Badge className="bg-purple-500/10 text-purple-600 border-purple-500/20">In Progress</Badge>;
-      case 'completed':
-        return <Badge className="bg-green-500/10 text-green-600 border-green-500/20">Completed</Badge>;
-      case 'cancelled':
-        return <Badge className="bg-red-500/10 text-red-600 border-red-500/20">Cancelled</Badge>;
-      case 'no_answer':
-        return <Badge className="bg-orange-500/10 text-orange-600 border-orange-500/20">No Answer</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
-  const BookingCard = ({ booking }: { booking: CombinedBooking }) => {
-    const isPastBooking = isPast(booking.scheduledAt);
-
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex items-start gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                <Phone className="h-5 w-5 text-primary" />
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-3">
-                  <h3 className="font-medium leading-tight">Phone Consultation</h3>
-
-                  {/* On small screens, show status inline with title for a cleaner layout */}
-                  <div className="sm:hidden shrink-0">
-                    {getStatusBadge(booking.status)}
-                  </div>
-                </div>
-
-                <div className="mt-2 grid grid-cols-1 gap-y-2 text-sm text-muted-foreground sm:grid-cols-2 sm:gap-x-6">
-                  <span className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <span className="truncate">{format(booking.scheduledAt, 'MMM d, yyyy')}</span>
-                  </span>
-
-                  <span className="flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    <span className="truncate">
-                      {format(booking.scheduledAt, 'h:mm a')} {getTimezoneAbbr(booking.scheduledAt, patientTz)}
-                    </span>
-                  </span>
-
-                  <div className="sm:col-span-2">
-                    <CountdownChip targetMs={booking.scheduledAt.getTime()} />
-                  </div>
-                </div>
-
-                {!isPastBooking && ['booked', 'confirmed'].includes(booking.status) && (
-                  <p className="text-sm text-primary mt-2">You'll receive a call from the doctor at this time.</p>
-                )}
-
-                {booking.doctorName && (
-                  <div className="flex items-center gap-2 mt-3 text-sm">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="truncate">{formatDoctorName(booking.doctorName)}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 sm:justify-start">
-              <div className="hidden sm:block">{getStatusBadge(booking.status)}</div>
-
-              {!isPastBooking && ['booked', 'confirmed'].includes(booking.status) && (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => {
-                    setSelectedBookingForManage(booking);
-                    setManageDialogOpen(true);
-                  }}
-                  title="Manage booking"
-                >
-                  <Settings className="h-4 w-4" />
-                </Button>
-              )}
-
-              <Button variant="ghost" size="icon" onClick={() => openDetails(booking)} title="View details">
-                <Eye className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
+  const latest = useMemo(() => consults[0] || null, [consults]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-3xl font-bold text-foreground">Consultations</h1>
-          <p className="text-muted-foreground mt-1">Times shown in {patientTz}</p>
+          <h1 className="font-display text-3xl font-bold text-foreground">Consultation status</h1>
+          <p className="text-muted-foreground mt-1">Your PouchCare/Halaxy consultation pathway.</p>
         </div>
-        <Button asChild className="w-full sm:w-auto">
-          <Link to="/patient/book">Book New</Link>
-        </Button>
+        <Button asChild><Link to="/start-consult">Start another consult</Link></Button>
       </div>
 
-      <Tabs defaultValue="upcoming" className="w-full">
-        <TabsList>
-          <TabsTrigger value="upcoming">Upcoming ({upcomingBookings.length})</TabsTrigger>
-          <TabsTrigger value="past">Past ({pastBookings.length})</TabsTrigger>
-        </TabsList>
+      {!latest && (
+        <Card>
+          <CardHeader className="text-center">
+            <CardTitle>No consultation started yet</CardTitle>
+            <CardDescription>Start a consultation to book with Halaxy and link your prescription to PouchCare.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center"><Button asChild><Link to="/start-consult">Start consultation</Link></Button></CardContent>
+        </Card>
+      )}
 
-        <TabsContent value="upcoming" className="mt-6">
-          {upcomingBookings.length > 0 ? (
-            <div className="space-y-4">
-              {upcomingBookings.map((booking) => (
-                <BookingCard key={booking.id} booking={booking} />
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardHeader className="text-center">
-                <CardTitle className="text-lg">No upcoming consultations</CardTitle>
-                <CardDescription>Book a consultation to speak with a doctor</CardDescription>
+      {latest && !prescriptions[latest.id] && ['booked', 'completed'].includes(latest.bookingStatus) && (
+        <Alert>
+          <FileText className="h-4 w-4" />
+          <AlertDescription>
+            Your booking is linked. Once the doctor uploads your prescription, PouchCare will read it and update your shop access.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="space-y-4">
+        {consults.map((consult) => {
+          const rx = prescriptions[consult.id];
+          return (
+            <Card key={consult.id}>
+              <CardHeader>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <CardTitle>GP consultation</CardTitle>
+                    <CardDescription>
+                      {consult.scheduledAt ? format(new Date(consult.scheduledAt), 'PPp') : 'Booking time pending'} · {consult.timezone || 'Australia/Brisbane'}
+                    </CardDescription>
+                  </div>
+                  <Badge variant={statusVariant(consult.bookingStatus)}>{statusCopy(consult.bookingStatus)}</Badge>
+                </div>
               </CardHeader>
-              <CardContent className="flex justify-center">
-                <Button asChild>
-                  <Link to="/patient/book">Book Consultation</Link>
-                </Button>
+              <CardContent className="space-y-4">
+                <div className="grid gap-3 text-sm md:grid-cols-2">
+                  <p><strong>Halaxy appointment:</strong> {consult.halaxyAppointmentId || 'Pending'}</p>
+                  <p><strong>Halaxy status:</strong> {consult.halaxyAppointmentStatus || 'Pending'}</p>
+                  <p><strong>Practitioner:</strong> {consult.practitionerName || 'Pending'}</p>
+                  <p><strong>Location:</strong> {consult.locationName || 'Pending'}</p>
+                </div>
+
+                {rx ? (
+                  <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+                    Prescription received · status: <strong>{rx.status || 'pending'}</strong> · OCR: <strong>{rx.ocr_status || 'not started'}</strong>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+                    Prescription not received in PouchCare yet.
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  {consult.halaxyBookingUrl && ['sent_to_booking', 'booking_in_progress', 'webhook_pending'].includes(consult.bookingStatus) && (
+                    <Button asChild><a href={consult.halaxyBookingUrl} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4 mr-2" />Continue in Halaxy</a></Button>
+                  )}
+                  {consult.halaxyManageUrl && (
+                    <Button variant="outline" asChild><a href={consult.halaxyManageUrl} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4 mr-2" />Manage in Halaxy</a></Button>
+                  )}
+                </div>
+
+                <div className="text-xs text-muted-foreground flex items-center gap-2">
+                  <CalendarClock className="h-3 w-3" /> PouchCare consult ID: {consult.id}
+                </div>
               </CardContent>
             </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="past" className="mt-6">
-          {pastBookings.length > 0 ? (
-            <div className="space-y-4">
-              {pastBookings.map((booking) => (
-                <BookingCard key={booking.id} booking={booking} />
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardHeader className="text-center">
-                <CardTitle className="text-lg">No past consultations</CardTitle>
-                <CardDescription>Your completed consultations will appear here</CardDescription>
-              </CardHeader>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
-
-      <ConsultationDetailDialog booking={selectedBooking} open={dialogOpen} onOpenChange={setDialogOpen} />
-
-      <ManageBookingDialog
-        booking={selectedBookingForManage}
-        open={manageDialogOpen}
-        onOpenChange={setManageDialogOpen}
-        onBookingCancelled={refreshBookings}
-      />
+          );
+        })}
+      </div>
     </div>
   );
 }

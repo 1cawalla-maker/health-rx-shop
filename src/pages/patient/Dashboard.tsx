@@ -1,338 +1,167 @@
-import { useEffect, useState, useMemo } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { mockBookingService } from '@/services/consultationService';
+import { halaxyConsultationService } from '@/services/halaxyConsultationService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { BookingStatusBadge } from '@/components/bookings/BookingStatusBadge';
-import { CountdownChip } from '@/components/bookings/CountdownChip';
-import { ManageBookingDialog } from '@/components/patient/ManageBookingDialog';
-import { Calendar, FileText, ShoppingBag, Upload, Clock, CheckCircle, AlertCircle, User } from 'lucide-react';
+import { Calendar, FileText, ShoppingBag, CheckCircle, AlertCircle, Clock, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
-import { formatDoctorName } from '@/lib/utils';
-import type { MockBooking, BookingStatus } from '@/types/telehealth';
+import type { HalaxyConsultationSummary } from '@/types/halaxy';
 
 interface OutletContext {
   hasActivePrescription: boolean;
   checkActivePrescription: () => void;
 }
 
-interface CombinedBooking {
+type PrescriptionRow = {
   id: string;
-  scheduledAt: Date;
-  status: BookingStatus;
-  doctorName: string | null;
-  displayTimezone?: string;
-  amountPaid?: number;
+  consultation_id: string | null;
+  prescription_type: string | null;
+  status: string | null;
+  ocr_status: string | null;
+  allowed_strength_max: number | null;
+  total_units_allowed: number | null;
+  created_at: string;
+};
+
+function consultStatusLabel(status: string | null | undefined) {
+  switch (status) {
+    case 'sent_to_booking': return 'Booking link ready';
+    case 'booking_in_progress': return 'Booking in progress';
+    case 'webhook_pending': return 'Waiting for Halaxy';
+    case 'booked': return 'Booked';
+    case 'completed': return 'Consult completed';
+    case 'manual_review': return 'Manual review';
+    case 'cancelled': return 'Cancelled';
+    default: return 'Not started';
+  }
 }
 
-// Helper to get timezone abbreviation (AEST/AEDT)
-const getTimezoneLabel = (date: Date, timezone: string = 'Australia/Sydney'): string => {
-  const formatter = new Intl.DateTimeFormat('en-AU', {
-    timeZone: timezone,
-    timeZoneName: 'short'
-  });
-  const parts = formatter.formatToParts(date);
-  const tzPart = parts.find(p => p.type === 'timeZoneName');
-  return tzPart?.value || 'AEST';
-};
+function badgeVariant(status: string | null | undefined): 'default' | 'secondary' | 'destructive' | 'outline' {
+  if (status === 'booked' || status === 'completed' || status === 'active') return 'default';
+  if (status === 'cancelled' || status === 'rejected') return 'destructive';
+  if (status === 'manual_review' || status === 'webhook_pending' || status === 'pending_review') return 'secondary';
+  return 'outline';
+}
 
 export default function PatientDashboard() {
   const { user } = useAuth();
   const { hasActivePrescription } = useOutletContext<OutletContext>();
-  const [mockBookings, setMockBookings] = useState<MockBooking[]>([]);
-  const [prescriptionStatus, setPrescriptionStatus] = useState<any>(null);
+  const [consults, setConsults] = useState<HalaxyConsultationSummary[]>([]);
+  const [prescriptionStatus, setPrescriptionStatus] = useState<PrescriptionRow | null>(null);
   const [loading, setLoading] = useState(true);
-  const [manageDialogOpen, setManageDialogOpen] = useState(false);
-  const [selectedBookingForManage, setSelectedBookingForManage] = useState<CombinedBooking | null>(null);
 
-  const refreshBookings = () => {
-    if (user) {
-      const bookings = mockBookingService.getPatientBookings(user.id);
-      setMockBookings(bookings);
-    }
-  };
+  const latestConsult = useMemo(() => consults[0] || null, [consults]);
 
-  useEffect(() => {
-    if (user) {
-      // Load bookings from localStorage
-      refreshBookings();
-      fetchPrescriptionData();
-    }
-  }, [user]);
-
-  // Combine bookings into unified format
-  const allBookings: CombinedBooking[] = useMemo(() => {
-    return mockBookings.map(b => ({
-      id: b.id,
-      scheduledAt: new Date(`${b.scheduledDate}T${b.timeWindowStart}:00`),
-      status: b.status,
-      doctorName: b.doctorName,
-      displayTimezone: b.displayTimezone,
-      amountPaid: ['booked', 'confirmed', 'completed', 'in_progress', 'no_answer'].includes(b.status) ? 49 : undefined,
-    }));
-  }, [mockBookings]);
-
-  // Derive next upcoming booking
-  const nextBooking: CombinedBooking | null = useMemo(() => {
-    // 'booked' represents confirmed bookings
-    const upcomingStatuses: BookingStatus[] = ['booked'];
-    const now = new Date();
-    
-    return allBookings
-      .filter(b => upcomingStatuses.includes(b.status) && new Date(b.scheduledAt) >= now)
-      .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())[0] || null;
-  }, [allBookings]);
-
-  const fetchPrescriptionData = async () => {
-    if (!user) return;
-
+  const load = useCallback(async () => {
+    if (!user?.id) return;
+    setLoading(true);
     try {
+      const rows = await halaxyConsultationService.listForPatient(user.id);
+      setConsults(rows);
+
       const { data, error } = await (supabase as any)
         .from('prescriptions')
-        .select('id,prescription_type,status,allowed_strength_max,total_units_allowed,expires_at,created_at')
+        .select('id,consultation_id,prescription_type,status,ocr_status,allowed_strength_max,total_units_allowed,created_at')
         .eq('patient_id', user.id)
         .eq('prescription_type', 'uploaded')
         .order('created_at', { ascending: false })
         .limit(1);
-
       if (error) throw error;
       setPrescriptionStatus(data?.[0] ?? null);
     } catch (error) {
-      console.error('Failed to load prescription data:', error);
+      console.error('Failed to load patient dashboard:', error);
+      setConsults([]);
       setPrescriptionStatus(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <Badge className="bg-green-500/10 text-green-600 border-green-500/20">Active</Badge>;
-      case 'pending_review':
-        return <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">Pending Review</Badge>;
-      case 'rejected':
-        return <Badge className="bg-red-500/10 text-red-600 border-red-500/20">Rejected</Badge>;
-      case 'expired':
-        return <Badge className="bg-gray-500/10 text-gray-600 border-gray-500/20">Expired</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
+  useEffect(() => { void load(); }, [load]);
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-3xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Welcome back to your patient portal</p>
+        <p className="text-muted-foreground mt-1">Your PouchCare consultation, prescription, and shop status.</p>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2">
-          <Link to="/patient/book">
-            <Calendar className="h-6 w-6 text-primary" />
-            <span>Book Consultation</span>
-          </Link>
+          <Link to="/start-consult"><Calendar className="h-6 w-6 text-primary" /><span>Start Consultation</span></Link>
         </Button>
         <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2">
-          <Link to="/patient/upload-prescription">
-            <Upload className="h-6 w-6 text-primary" />
-            <span>Upload Prescription</span>
-          </Link>
+          <Link to="/patient/consultations"><FileText className="h-6 w-6 text-primary" /><span>Consultation Status</span></Link>
         </Button>
-        <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2">
-          <Link to="/patient/prescriptions">
-            <FileText className="h-6 w-6 text-primary" />
-            <span>View Prescriptions</span>
-          </Link>
-        </Button>
-        <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2">
-          <Link to="/patient/shop">
-            <ShoppingBag className="h-6 w-6 text-primary" />
-            <span>Shop Products</span>
-          </Link>
+        <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2" disabled={!hasActivePrescription}>
+          <Link to="/patient/shop"><ShoppingBag className="h-6 w-6 text-primary" /><span>Shop Products</span></Link>
         </Button>
       </div>
 
-      {/* Status Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Next Consultation */}
+      <div className="grid gap-6 md:grid-cols-2">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Next Consultation</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between text-base">
+              Latest consultation
+              {latestConsult && <Badge variant={badgeVariant(latestConsult.bookingStatus)}>{consultStatusLabel(latestConsult.bookingStatus)}</Badge>}
+            </CardTitle>
+            <CardDescription>Halaxy booking and PouchCare matching status.</CardDescription>
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="h-16 bg-muted animate-pulse rounded" />
-            ) : nextBooking ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="font-medium">
-                    {new Date(nextBooking.scheduledAt).toLocaleDateString('en-AU', {
-                      weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
-                    })}
-                  </p>
-                  <BookingStatusBadge status={nextBooking.status} />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {new Date(nextBooking.scheduledAt).toLocaleTimeString('en-AU', {
-                    hour: '2-digit', minute: '2-digit'
-                  })} ({getTimezoneLabel(new Date(nextBooking.scheduledAt), nextBooking.displayTimezone)})
-                </p>
-                <CountdownChip targetMs={nextBooking.scheduledAt.getTime()} />
-                {nextBooking.doctorName && (
-                  <p className="text-sm flex items-center gap-1">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span>{formatDoctorName(nextBooking.doctorName)}</span>
-                  </p>
-                )}
-                <div className="pt-2">
-                  <Button 
-                    size="sm" 
-                    onClick={() => {
-                      setSelectedBookingForManage(nextBooking);
-                      setManageDialogOpen(true);
-                    }}
-                  >
-                    Manage
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-4">
-                <p className="text-muted-foreground mb-4">No upcoming consultations</p>
-                <Button asChild>
-                  <Link to="/patient/book">Book a Consultation</Link>
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Prescription Status */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Prescription Status</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="h-16 bg-muted animate-pulse rounded" />
-            ) : prescriptionStatus ? (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  {prescriptionStatus.status === 'active' ? (
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                  ) : prescriptionStatus.status === 'pending_review' ? (
-                    <Clock className="h-5 w-5 text-yellow-500" />
-                  ) : (
-                    <AlertCircle className="h-5 w-5 text-red-500" />
+            {loading ? <div className="h-20 bg-muted animate-pulse rounded" /> : latestConsult ? (
+              <div className="space-y-3 text-sm">
+                <p><strong>Time:</strong> {latestConsult.scheduledAt ? format(new Date(latestConsult.scheduledAt), 'PPp') : 'Pending from Halaxy'}</p>
+                <p><strong>Appointment:</strong> {latestConsult.halaxyAppointmentId || 'Pending'}</p>
+                <p><strong>Practitioner:</strong> {latestConsult.practitionerName || 'Pending'}</p>
+                <div className="flex gap-2 pt-2">
+                  <Button size="sm" asChild><Link to="/patient/consultations">View details</Link></Button>
+                  {latestConsult.halaxyBookingUrl && ['sent_to_booking', 'booking_in_progress', 'webhook_pending'].includes(latestConsult.bookingStatus) && (
+                    <Button size="sm" variant="outline" asChild><a href={latestConsult.halaxyBookingUrl} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4 mr-2" />Halaxy</a></Button>
                   )}
-                  {getStatusBadge(prescriptionStatus.status)}
                 </div>
-                <p className="text-sm text-muted-foreground capitalize">
-                  {prescriptionStatus.prescription_type} prescription
-                </p>
-                {prescriptionStatus.allowed_strength_max && (
-                  <p className="text-xs text-muted-foreground">
-                    Max strength: {prescriptionStatus.allowed_strength_max}mg
-                    {prescriptionStatus.total_units_allowed ? ` • ${prescriptionStatus.total_units_allowed} total cans/units` : ''}
-                  </p>
-                )}
-                {prescriptionStatus.expires_at && (
-                  <p className="text-xs text-muted-foreground">
-                    Expires: {format(new Date(prescriptionStatus.expires_at), 'MMM d, yyyy')}
-                  </p>
-                )}
               </div>
             ) : (
-              <div className="space-y-2">
-                <p className="text-muted-foreground">No prescriptions yet</p>
-                <Button asChild size="sm" variant="outline">
-                  <Link to="/patient/upload-prescription">Upload</Link>
-                </Button>
+              <div className="space-y-3 text-sm text-muted-foreground">
+                <p>No consultation started yet.</p>
+                <Button size="sm" asChild><Link to="/start-consult">Start consultation</Link></Button>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Shop Access */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Shop Access</CardTitle>
-            <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between text-base">
+              Prescription status
+              {prescriptionStatus && <Badge variant={badgeVariant(prescriptionStatus.status)}>{prescriptionStatus.status}</Badge>}
+            </CardTitle>
+            <CardDescription>Prescription entitlement controls shop access.</CardDescription>
           </CardHeader>
           <CardContent>
-            {hasActivePrescription ? (
-              <div className="space-y-2">
+            {loading ? <div className="h-20 bg-muted animate-pulse rounded" /> : prescriptionStatus ? (
+              <div className="space-y-3 text-sm">
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <Badge className="bg-green-500/10 text-green-600 border-green-500/20">Unlocked</Badge>
+                  {prescriptionStatus.status === 'active' ? <CheckCircle className="h-5 w-5 text-green-500" /> : prescriptionStatus.status === 'pending_review' ? <Clock className="h-5 w-5 text-yellow-500" /> : <AlertCircle className="h-5 w-5 text-red-500" />}
+                  <span>OCR: {prescriptionStatus.ocr_status || 'not started'}</span>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  You can now order products
-                </p>
-                <Button asChild size="sm">
-                  <Link to="/patient/shop">Browse Shop</Link>
-                </Button>
+                {prescriptionStatus.allowed_strength_max && (
+                  <p>Max strength: {prescriptionStatus.allowed_strength_max}mg{prescriptionStatus.total_units_allowed ? ` · ${prescriptionStatus.total_units_allowed} total cans/units` : ''}</p>
+                )}
+                <Button size="sm" asChild disabled={!hasActivePrescription}><Link to="/patient/shop">Go to shop</Link></Button>
               </div>
             ) : (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="h-5 w-5 text-yellow-500" />
-                  <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">Locked</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Get a prescription to unlock
-                </p>
+              <div className="space-y-3 text-sm text-muted-foreground">
+                <p>No prescription received in PouchCare yet. Your doctor/admin will upload it after the Halaxy consultation.</p>
+                <Button size="sm" variant="outline" asChild><Link to="/patient/consultations">View consultation status</Link></Button>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
-
-      {/* Info Card */}
-      <Card className="bg-primary/5 border-primary/20">
-        <CardHeader>
-          <CardTitle className="text-lg">How to get started</CardTitle>
-          <CardDescription>
-            Follow these steps to access nicotine pouch products
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ol className="space-y-3 text-sm">
-            <li className="flex items-start gap-3">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">1</span>
-              <span>Book a consultation with one of our doctors or upload an existing prescription</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">2</span>
-              <span>Complete your medical assessment during the consultation</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">3</span>
-              <span>If clinically appropriate, receive a prescription that unlocks the shop</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">4</span>
-              <span>Order products within your prescription limits</span>
-            </li>
-          </ol>
-        </CardContent>
-      </Card>
-
-      {/* Manage Booking Dialog */}
-      <ManageBookingDialog
-        booking={selectedBookingForManage}
-        open={manageDialogOpen}
-        onOpenChange={setManageDialogOpen}
-        onBookingCancelled={refreshBookings}
-      />
     </div>
   );
 }

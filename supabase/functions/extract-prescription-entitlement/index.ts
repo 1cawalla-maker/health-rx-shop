@@ -86,7 +86,7 @@ serve(async (req) => {
 
     const { data: prescription, error: rxErr } = await supabase
       .from("prescriptions")
-      .select("id, patient_id, file_url, status")
+      .select("id, patient_id, consultation_id, file_url, status")
       .eq("id", prescriptionId)
       .single();
 
@@ -106,7 +106,26 @@ serve(async (req) => {
         .maybeSingle();
       isAdmin = Boolean(roleRow);
     }
-    if (!isOwner && !isAdmin) throw new Error("Not allowed to extract this prescription");
+    let isAssignedDoctor = false;
+    if (!isOwner && !isAdmin && prescription.consultation_id) {
+      const { data: doctorRow } = await supabase
+        .from("doctors")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (doctorRow?.id) {
+        const { data: consultRow } = await supabase
+          .from("consultations")
+          .select("id")
+          .eq("id", prescription.consultation_id)
+          .eq("patient_id", prescription.patient_id)
+          .eq("doctor_id", doctorRow.id)
+          .maybeSingle();
+        isAssignedDoctor = Boolean(consultRow);
+      }
+    }
+    if (!isOwner && !isAdmin && !isAssignedDoctor) throw new Error("Not allowed to extract this prescription");
 
     const storagePath = String(prescription.file_url ?? "");
     if (!storagePath) throw new Error("Prescription has no file_url");

@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Plus, Calendar, User } from 'lucide-react';
+import { Loader2, Plus, Calendar, User, UserPlus, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -45,6 +45,10 @@ export default function AdminDoctors() {
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [availabilityOpen, setAvailabilityOpen] = useState(false);
   const [availability, setAvailability] = useState<DoctorAvailability[]>([]);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [creatingDoctor, setCreatingDoctor] = useState(false);
+  const [newDoctor, setNewDoctor] = useState({ fullName: '', phone: '', email: '', providerNumber: '', halaxyPractitionerId: '' });
+  const [lastLoginUrl, setLastLoginUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDoctors();
@@ -73,6 +77,47 @@ export default function AdminDoctors() {
       setDoctors(doctorsWithProfiles);
     }
     setLoading(false);
+  };
+
+
+  const createDoctor = async () => {
+    if (!newDoctor.fullName.trim() || !newDoctor.phone.trim()) {
+      toast.error('Full name and mobile are required');
+      return;
+    }
+
+    setCreatingDoctor(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-create-doctor', {
+        body: {
+          fullName: newDoctor.fullName.trim(),
+          phone: newDoctor.phone.trim(),
+          email: newDoctor.email.trim() || undefined,
+          providerNumber: newDoctor.providerNumber.trim() || undefined,
+          halaxyPractitionerId: newDoctor.halaxyPractitionerId.trim() || undefined,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      setLastLoginUrl(data?.loginUrl || 'https://www.pouchcare.com.au/phone-login?role=doctor');
+      toast.success('Doctor account created');
+      setNewDoctor({ fullName: '', phone: '', email: '', providerNumber: '', halaxyPractitionerId: '' });
+      await fetchDoctors();
+    } catch (error) {
+      console.error('Failed to create doctor:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to create doctor');
+    } finally {
+      setCreatingDoctor(false);
+    }
+  };
+
+  const copyDoctorInvite = async () => {
+    const loginUrl = lastLoginUrl || 'https://www.pouchcare.com.au/phone-login?role=doctor';
+    const text = `Hi ${newDoctor.fullName || 'Doctor'},\n\nYour PouchCare doctor account has been created.\n\nLog in here: ${loginUrl}\nUse the mobile number registered with PouchCare. You will receive a one-time SMS code; no shared password is needed.\n\nPouchCare`;
+    await navigator.clipboard.writeText(text);
+    toast.success('Onboarding message copied');
   };
 
   const toggleDoctorStatus = async (doctorId: string, isActive: boolean) => {
@@ -139,13 +184,17 @@ export default function AdminDoctors() {
     setAvailabilityOpen(false);
   };
 
-  const updateSlot = (dayIndex: number, field: string, value: any) => {
-    setAvailability(prev => 
-      prev.map(slot => 
-        slot.day_of_week === dayIndex 
-          ? { ...slot, [field]: value }
-          : slot
-      )
+  const updateSlot = (
+    dayIndex: number,
+    field: 'start_time' | 'end_time' | 'is_available',
+    value: string | boolean,
+  ) => {
+    setAvailability(prev =>
+      prev.map(slot => {
+        if (slot.day_of_week !== dayIndex) return slot;
+        if (field === 'is_available') return { ...slot, is_available: Boolean(value) };
+        return { ...slot, [field]: String(value) };
+      })
     );
   };
 
@@ -159,8 +208,56 @@ export default function AdminDoctors() {
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <h1 className="font-display text-3xl font-bold">Doctor Management</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-bold">Doctor Management</h1>
+          <p className="text-muted-foreground mt-1">Create doctor accounts and map them to Halaxy practitioners. Doctors log in by SMS code.</p>
+        </div>
+        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2"><UserPlus className="h-4 w-4" />Create doctor</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create doctor account</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Full name</Label>
+                <Input value={newDoctor.fullName} onChange={(e) => setNewDoctor((d) => ({ ...d, fullName: e.target.value }))} placeholder="Dr Jane Smith" />
+              </div>
+              <div className="space-y-2">
+                <Label>Mobile number</Label>
+                <Input value={newDoctor.phone} onChange={(e) => setNewDoctor((d) => ({ ...d, phone: e.target.value }))} placeholder="04xx xxx xxx" inputMode="tel" />
+                <p className="text-xs text-muted-foreground">This becomes their secure OTP login. No shared password is created.</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Email (optional)</Label>
+                <Input value={newDoctor.email} onChange={(e) => setNewDoctor((d) => ({ ...d, email: e.target.value }))} placeholder="doctor@example.com" inputMode="email" />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Provider number (optional)</Label>
+                  <Input value={newDoctor.providerNumber} onChange={(e) => setNewDoctor((d) => ({ ...d, providerNumber: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Halaxy practitioner ID (optional)</Label>
+                  <Input value={newDoctor.halaxyPractitionerId} onChange={(e) => setNewDoctor((d) => ({ ...d, halaxyPractitionerId: e.target.value }))} />
+                </div>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button onClick={createDoctor} disabled={creatingDoctor} className="flex-1">
+                  {creatingDoctor ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UserPlus className="h-4 w-4 mr-2" />}
+                  Create doctor
+                </Button>
+                <Button variant="outline" onClick={copyDoctorInvite} className="flex-1 gap-2">
+                  <Copy className="h-4 w-4" />Copy login message
+                </Button>
+              </div>
+              {lastLoginUrl && <p className="text-xs text-muted-foreground">Login URL: {lastLoginUrl}</p>}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="grid gap-4">

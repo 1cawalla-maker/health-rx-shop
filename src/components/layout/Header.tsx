@@ -38,7 +38,7 @@ export function Header() {
     return (
       <>
         <Button variant={isMobile ? "outline" : "ghost"} asChild className={isMobile ? "w-full" : undefined}>
-          <Link to="/auth" onClick={() => isMobile && setIsMenuOpen(false)}>Log in</Link>
+          <Link to="/phone-login" onClick={() => isMobile && setIsMenuOpen(false)}>Log in</Link>
         </Button>
         <Button asChild className={isMobile ? "w-full" : undefined}>
           <Link to="/start-consult" onClick={() => isMobile && setIsMenuOpen(false)}>Start consult</Link>
