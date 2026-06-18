@@ -4,6 +4,7 @@ import { Stethoscope } from "lucide-react";
 const footerLinks = {
   product: [
     { href: "/how-it-works", label: "How It Works" },
+    { href: "/start-consult", label: "Start Consultation" },
     { href: "/pricing", label: "Pricing" },
     { href: "/faq", label: "FAQ" },
     { href: "/guides", label: "Guides" },

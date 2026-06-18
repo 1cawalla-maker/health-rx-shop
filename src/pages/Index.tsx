@@ -110,7 +110,7 @@ export default function Index() {
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up animation-delay-200">
               <Button variant="hero" size="xl" asChild>
-                <Link to="/eligibility">
+                <Link to="/start-consult">
                   Start Consultation
                   <ArrowRight className="h-5 w-5" />
                 </Link>
@@ -257,7 +257,7 @@ export default function Index() {
                 className="bg-background text-primary hover:bg-background/90 shadow-lg"
                 asChild
               >
-                <Link to="/eligibility">
+                <Link to="/start-consult">
                   Start Your Consultation
                   <ArrowRight className="h-5 w-5" />
                 </Link>

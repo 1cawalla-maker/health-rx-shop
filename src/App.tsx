@@ -20,6 +20,7 @@ import RefundPolicy from "./pages/RefundPolicy";
 import Disclaimer from "./pages/Disclaimer";
 import Contact from "./pages/Contact";
 import Auth from "./pages/Auth";
+import StartConsultation from "./pages/StartConsultation";
 import ImportationBasis from "./pages/ImportationBasis";
 import NotFound from "./pages/NotFound";
 
@@ -72,6 +73,7 @@ import AdminOrders from "./pages/admin/Orders";
 import AdminUsers from "./pages/admin/Users";
 import AdminPrescriptions from "./pages/admin/Prescriptions";
 import AdminPrescriptionUploads from "./pages/admin/PrescriptionUploads";
+import AdminHalaxyConsults from "./pages/admin/HalaxyConsults";
 
 // SEO / Guides (public)
 import GuideZynAustralia from "./pages/guides/ZynAustralia";
@@ -112,6 +114,7 @@ const App = () => (
               <Route path="/contact" element={<Contact />} />
               <Route path="/importation-basis" element={<ImportationBasis />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/start-consult" element={<StartConsultation />} />
               <Route path="/eligibility" element={<EligibilityQuiz />} />
 
               {/* SEO guides (public) */}
@@ -172,6 +175,7 @@ const App = () => (
                 <Route path="doctors" element={<AdminDoctors />} />
                 <Route path="doctor-approvals" element={<AdminDoctorApprovals />} />
                 <Route path="bookings" element={<AdminBookings />} />
+                <Route path="halaxy-consults" element={<AdminHalaxyConsults />} />
                 <Route path="orders" element={<AdminOrders />} />
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="prescriptions" element={<AdminPrescriptions />} />

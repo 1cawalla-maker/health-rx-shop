@@ -1,0 +1,3 @@
+# Halaxy webhook authenticity is checked by HALAXY_WEBHOOK_SECRET in the function.
+# Halaxy cannot send a Supabase user JWT.
+verify_jwt = false

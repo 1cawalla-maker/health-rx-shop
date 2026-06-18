@@ -11,7 +11,8 @@ import {
   LogOut,
   Settings,
   Calendar,
-  Package
+  Package,
+  ClipboardList
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -19,6 +20,7 @@ const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/doctors', label: 'Doctors', icon: Stethoscope },
   { href: '/admin/bookings', label: 'Bookings', icon: Calendar },
+  { href: '/admin/halaxy-consults', label: 'Halaxy Queue', icon: ClipboardList },
   { href: '/admin/orders', label: 'Orders', icon: Package },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/prescriptions', label: 'Prescriptions', icon: FileText },
