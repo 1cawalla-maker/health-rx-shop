@@ -43,19 +43,7 @@ import PatientOrderSuccess from "./pages/patient/OrderSuccess";
 // Doctor pages
 import DoctorDashboard from "./pages/doctor/Dashboard";
 import DoctorPending from "./pages/doctor/Pending";
-import DoctorConsultations from "./pages/doctor/Consultations";
-import DoctorPrescriptions from "./pages/doctor/Prescriptions";
-import DoctorCalendar from "./pages/doctor/Calendar";
-import DoctorAvailability from "./pages/doctor/Availability";
-import DoctorBookings from "./pages/doctor/Bookings";
-import DoctorBookingDetail from "./pages/doctor/BookingDetail";
-import DoctorPatients from "./pages/doctor/Patients";
-import DoctorPatientDetail from "./pages/doctor/PatientDetail";
-import DoctorConsultationView from "./pages/doctor/ConsultationView";
-import DoctorEarnings from "./pages/doctor/Earnings";
-import DoctorInfo from "./pages/doctor/Info";
 import DoctorAccount from "./pages/doctor/Account";
-import DoctorOnboarding from "./pages/doctor/Onboarding";
 import DoctorHalaxyConsults from "./pages/doctor/HalaxyConsults";
 // Payslip print removed (contractor remittances model)
 

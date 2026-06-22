@@ -5,7 +5,7 @@ export function getDashboardPathForRole(role: AppRole | null | undefined) {
     case 'patient':
       return '/patient/dashboard';
     case 'doctor':
-      return '/doctor/dashboard';
+      return '/doctor/halaxy-consults';
     case 'admin':
       return '/admin/dashboard';
     default:
