@@ -37,13 +37,15 @@ function formatFileSize(bytes: number): string {
 }
 
 function statusBadge(row: PrescriptionUploadRow) {
-  if (row.status === 'active') return <Badge>Active</Badge>;
-  if (row.status === 'rejected') return <Badge variant="destructive">Rejected</Badge>;
-  if (row.status === 'expired') return <Badge variant="outline">Expired</Badge>;
-  if (row.ocr_status === 'processing') return <Badge variant="secondary">OCR processing</Badge>;
-  if (row.ocr_status === 'needs_review') return <Badge variant="secondary">Needs review</Badge>;
-  if (row.ocr_status === 'failed') return <Badge variant="destructive">OCR failed</Badge>;
-  return <Badge variant="outline">Pending</Badge>;
+  if (row.status === 'active') return <Badge>Approved</Badge>;
+  if (row.status === 'rejected' || row.status === 'expired') return <Badge variant="destructive">Rejected</Badge>;
+  return <Badge variant="secondary">Reviewing prescription</Badge>;
+}
+
+function statusDescription(row: PrescriptionUploadRow) {
+  if (row.status === 'active') return 'Approved. Ordering access is based on the prescription limits we can verify.';
+  if (row.status === 'rejected' || row.status === 'expired') return row.review_reason || 'Rejected. This prescription could not be approved for ordering access.';
+  return 'Reviewing prescription. This is usually completed within 24 hours.';
 }
 
 export default function UploadPrescription() {
@@ -118,7 +120,7 @@ export default function UploadPrescription() {
 
       if (insertError) throw insertError;
 
-      toast.success('Prescription uploaded. Reading limits now...');
+      toast.success('Prescription uploaded. We will review it within 24 hours.');
       await loadUploads();
 
       const { error: ocrError } = await supabase.functions.invoke('extract-prescription-entitlement', {
@@ -127,9 +129,9 @@ export default function UploadPrescription() {
 
       if (ocrError) {
         console.error('OCR error:', ocrError);
-        toast.error('Prescription uploaded, but OCR failed. It can still be reviewed manually.');
+        toast.success('Prescription uploaded. We will review it within 24 hours.');
       } else {
-        toast.success('Prescription limits extracted');
+        toast.success('Prescription submitted for review.');
       }
 
       await loadUploads();
@@ -173,18 +175,18 @@ export default function UploadPrescription() {
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div>
-        <h1 className="font-display text-3xl font-bold text-foreground">Upload Prescription</h1>
-        <p className="text-muted-foreground mt-1">Submit your prescription documents so PouchCare can unlock ordering limits.</p>
+        <h1 className="font-display text-3xl font-bold text-foreground">Upload prescription</h1>
+        <p className="text-muted-foreground mt-1">Submit an existing prescription for review. If approved, ordering access is enabled according to your prescription limits.</p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5 text-primary" />
-            Upload a Prescription
+            Upload a prescription
           </CardTitle>
           <CardDescription>
-            Upload a prescription PDF or image from your doctor. Accepted formats: PDF, JPG, PNG (max 10 MB).
+            Upload a clear prescription PDF or image from your doctor. Accepted formats: PDF, JPG, PNG (max 10 MB).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -201,7 +203,7 @@ export default function UploadPrescription() {
             className="gap-2"
           >
             {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            {isUploading ? 'Uploading and reading...' : 'Select File'}
+            {isUploading ? 'Uploading...' : 'Select file'}
           </Button>
         </CardContent>
       </Card>
@@ -211,7 +213,7 @@ export default function UploadPrescription() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary" />
-              Your Prescriptions
+              Your prescriptions
             </CardTitle>
             <CardDescription>{uploads.length} document{uploads.length !== 1 ? 's' : ''} uploaded</CardDescription>
           </CardHeader>
@@ -228,18 +230,14 @@ export default function UploadPrescription() {
                       {format(new Date(upload.created_at), 'dd MMM yyyy, h:mm a')}
                     </span>
                     {statusBadge(upload)}
-                    {upload.ocr_confidence != null && (
-                      <span className="text-xs text-muted-foreground">OCR {Math.round(upload.ocr_confidence * 100)}%</span>
-                    )}
                   </div>
-                  {upload.status === 'active' && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Limit: up to {upload.allowed_strength_max ?? '—'}mg
-                      {upload.total_units_allowed ? `, ${upload.total_units_allowed} total units` : ''}
+                  <p className={upload.status === 'rejected' || upload.status === 'expired' ? 'text-xs text-destructive mt-2' : 'text-xs text-muted-foreground mt-2'}>
+                    {statusDescription(upload)}
+                  </p>
+                  {upload.status === 'active' && upload.allowed_strength_max != null && upload.total_units_allowed != null && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Approved limit: up to {upload.allowed_strength_max}mg, {upload.total_units_allowed} total units.
                     </p>
-                  )}
-                  {(upload.review_reason || upload.ocr_error) && (
-                    <p className="text-xs text-destructive mt-2">{upload.review_reason || upload.ocr_error}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
@@ -261,13 +259,13 @@ export default function UploadPrescription() {
             <div>
               <p className="font-medium">No prescriptions uploaded yet</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Upload an existing prescription above, or book a consultation to have one issued by a doctor.
+                Upload an existing prescription above, or start a consultation if you need a prescription.
               </p>
             </div>
             <Button asChild variant="outline">
-              <Link to="/patient/book">
+              <Link to="/start-consult">
                 <Calendar className="h-4 w-4 mr-2" />
-                Book a Consultation
+                Start consultation
               </Link>
             </Button>
           </CardContent>

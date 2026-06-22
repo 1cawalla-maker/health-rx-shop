@@ -11,28 +11,28 @@ export function ShopLockedOverlay() {
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mx-auto mb-4">
             <Lock className="h-8 w-8 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Prescription Required</CardTitle>
+          <CardTitle className="text-2xl">Prescription required</CardTitle>
           <CardDescription className="text-base">
-            To purchase nicotine pouches, you must upload a valid prescription or book a consultation.
+            To order nicotine pouches, you need an approved prescription on your PouchCare account.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <Button asChild className="w-full" size="lg">
             <Link to="/patient/upload-prescription">
               <Upload className="h-4 w-4 mr-2" />
-              Upload Prescription
+              Upload existing prescription
             </Link>
           </Button>
           <Button asChild variant="outline" className="w-full" size="lg">
-            <Link to="/patient/book">
+            <Link to="/start-consult">
               <Calendar className="h-4 w-4 mr-2" />
-              Book Consultation
+              Need a prescription? Start consultation
             </Link>
           </Button>
         </CardContent>
         <CardFooter>
           <p className="text-xs text-muted-foreground text-center w-full">
-            Products are only available with a valid prescription from a registered doctor.
+            Uploads are reviewed before ordering access is enabled.
           </p>
         </CardFooter>
       </Card>

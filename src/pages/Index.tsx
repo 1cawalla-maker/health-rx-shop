@@ -13,7 +13,9 @@ import {
   UserCheck, 
   Clock,
   CheckCircle,
-  ArrowRight
+  ArrowRight,
+  Upload,
+  FileText
 } from "lucide-react";
 
 const steps = [
@@ -139,6 +141,66 @@ export default function Index() {
                   Browse all guides
                 </Link>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      {/* Prescription Pathways Section */}
+      <section className="py-16 md:py-20 bg-background">
+        <div className="container">
+          <div className="text-center max-w-2xl mx-auto mb-10">
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Already have a prescription?
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Choose the path that matches where you are now. Existing prescriptions can be uploaded for review, and new patients who need a prescription can start with a Halaxy consultation.
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="rounded-2xl border bg-card p-6 shadow-sm">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary mb-5">
+                <Upload className="h-6 w-6" />
+              </div>
+              <h3 className="font-display text-2xl font-bold text-foreground mb-3">I already have a prescription</h3>
+              <p className="text-muted-foreground mb-5">
+                Create a patient account, upload a clear copy of your prescription, and PouchCare will review it before ordering access is enabled.
+              </p>
+              <div className="rounded-lg bg-muted/50 p-4 mb-5">
+                <p className="font-medium text-sm mb-2">Your prescription should clearly show:</p>
+                <ul className="space-y-1 text-sm text-muted-foreground list-disc pl-5">
+                  <li>your name and the prescriber or clinic details</li>
+                  <li>the date issued</li>
+                  <li>the prescribed product/category details</li>
+                  <li>the maximum strength in mg</li>
+                  <li>the total quantity, units, or cans allowed</li>
+                </ul>
+              </div>
+              <Button asChild size="lg" className="w-full sm:w-auto">
+                <Link to="/phone-login?role=patient&mode=signup&next=/patient/upload-prescription">
+                  Upload prescription
+                  <ArrowRight className="h-5 w-5" />
+                </Link>
+              </Button>
+              <p className="text-xs text-muted-foreground mt-3">Patient status will show as Reviewing prescription, Approved, or Rejected.</p>
+            </div>
+
+            <div className="rounded-2xl border bg-card p-6 shadow-sm">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary mb-5">
+                <FileText className="h-6 w-6" />
+              </div>
+              <h3 className="font-display text-2xl font-bold text-foreground mb-3">I need a prescription</h3>
+              <p className="text-muted-foreground mb-5">
+                Start a consultation request and continue through Halaxy for the clinical appointment. A prescription is not guaranteed and depends on the doctor's assessment.
+              </p>
+              <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
+                <Link to="/start-consult">
+                  Start consultation
+                  <ArrowRight className="h-5 w-5" />
+                </Link>
+              </Button>
             </div>
           </div>
         </div>

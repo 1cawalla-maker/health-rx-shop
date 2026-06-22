@@ -7,11 +7,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Phone, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { getDashboardPathForRole } from '@/lib/roleRoutes';
+
+const PRIVACY_POLICY_VERSION = '2026-06-18-existing-prescription-upload';
+const COLLECTION_NOTICE_VERSION = '2026-06-18-existing-prescription-upload';
+const AGE_ATTESTATION_VERSION = '2026-06-18-adult-only';
 
 function normalizeAuMobile(value: string): string | null {
   const digits = value.replace(/\D/g, '');
@@ -21,17 +26,69 @@ function normalizeAuMobile(value: string): string | null {
   return null;
 }
 
+function safeNextPath(value: string | null): string | null {
+  if (!value) return null;
+  if (!value.startsWith('/') || value.startsWith('//')) return null;
+  return value;
+}
+
 export default function PhoneLogin() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const intendedRole = searchParams.get('role');
+  const intendedRole = searchParams.get('role') || 'patient';
+  const nextPath = safeNextPath(searchParams.get('next'));
+  const isPatient = intendedRole === 'patient';
+  const createPatientAccount = isPatient && (searchParams.get('mode') === 'signup' || searchParams.get('create') === '1');
   const [phone, setPhone] = useState('');
   const [pendingPhone, setPendingPhone] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [busy, setBusy] = useState(false);
 
-  const title = useMemo(() => intendedRole === 'doctor' ? 'Doctor phone login' : intendedRole === 'admin' ? 'Admin phone login' : 'Phone login', [intendedRole]);
+  const title = useMemo(() => {
+    if (intendedRole === 'doctor') return 'Doctor phone login';
+    if (intendedRole === 'admin') return 'Admin phone login';
+    if (createPatientAccount) return 'Create patient account';
+    return 'Patient phone login';
+  }, [createPatientAccount, intendedRole]);
+
+  const destinationDescription = nextPath === '/patient/upload-prescription'
+    ? 'After verification, you will go straight to prescription upload.'
+    : 'After verification, you will continue to your patient account.';
+
+  const savePatientAccount = async (userId: string, phoneE164: string) => {
+    const now = new Date().toISOString();
+
+    const { error: roleError } = await (supabase as any)
+      .from('user_roles')
+      .upsert({ user_id: userId, role: 'patient', status: 'approved' }, { onConflict: 'user_id,role' });
+    if (roleError) throw roleError;
+
+    const { error: patientProfileError } = await (supabase as any)
+      .from('patient_profiles')
+      .upsert({ user_id: userId }, { onConflict: 'user_id' });
+    if (patientProfileError) throw patientProfileError;
+
+    const { error: profileError } = await (supabase as any)
+      .from('profiles')
+      .upsert({
+        user_id: userId,
+        full_name: fullName.trim(),
+        phone: phoneE164,
+        phone_verified_at: now,
+        phone_verification_method: 'supabase_sms_otp',
+        age_attested_at: now,
+        age_attestation_version: AGE_ATTESTATION_VERSION,
+        privacy_notice_accepted_at: now,
+        privacy_policy_version: PRIVACY_POLICY_VERSION,
+        collection_notice_version: COLLECTION_NOTICE_VERSION,
+        minimal_onboarding_completed_at: now,
+      }, { onConflict: 'user_id' });
+    if (profileError) throw profileError;
+  };
 
   const sendCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,11 +98,22 @@ export default function PhoneLogin() {
       return;
     }
 
+    if (createPatientAccount) {
+      if (!fullName.trim()) {
+        toast.error('Enter your full name.');
+        return;
+      }
+      if (!ageConfirmed || !privacyAccepted) {
+        toast.error('Please confirm the required patient account acknowledgements.');
+        return;
+      }
+    }
+
     setBusy(true);
     try {
       const { error } = await supabase.auth.signInWithOtp({
         phone: phoneE164,
-        options: { shouldCreateUser: false },
+        options: { shouldCreateUser: createPatientAccount },
       });
       if (error) throw error;
       setPendingPhone(phoneE164);
@@ -77,6 +145,10 @@ export default function PhoneLogin() {
       const userId = data.user?.id;
       if (!userId) throw new Error('Login succeeded but no session was returned.');
 
+      if (createPatientAccount) {
+        await savePatientAccount(userId, pendingPhone);
+      }
+
       const { data: roleRow, error: roleError } = await supabase
         .from('user_roles')
         .select('role,status')
@@ -86,7 +158,7 @@ export default function PhoneLogin() {
       if (!roleRow || roleRow.status !== 'approved') throw new Error('This account is not approved yet.');
       if (intendedRole && roleRow.role !== intendedRole) throw new Error(`This mobile is not registered as a ${intendedRole}.`);
 
-      const path = getDashboardPathForRole(roleRow.role) || '/';
+      const path = nextPath || getDashboardPathForRole(roleRow.role) || '/';
       navigate(path, { replace: true });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not verify code.');
@@ -94,6 +166,11 @@ export default function PhoneLogin() {
       setBusy(false);
     }
   };
+
+  const loginPath = nextPath
+    ? `/phone-login?role=patient&next=${encodeURIComponent(nextPath)}`
+    : '/phone-login?role=patient';
+  const uploadSignupPath = '/phone-login?role=patient&mode=signup&next=/patient/upload-prescription';
 
   return (
     <PublicLayout>
@@ -107,16 +184,37 @@ export default function PhoneLogin() {
                 {title}
               </CardTitle>
               <CardDescription>
-                Use the mobile number registered with PouchCare. No shared passwords.
+                {createPatientAccount
+                  ? 'Create a patient account with SMS verification before uploading your prescription.'
+                  : 'Use the mobile number registered with PouchCare. No shared passwords.'}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {step === 'phone' ? (
                 <form onSubmit={sendCode} className="space-y-5">
+                  {createPatientAccount && (
+                    <div className="space-y-2">
+                      <Label htmlFor="fullName">Full name</Label>
+                      <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your legal name" required />
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="phone">Mobile number</Label>
                     <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="04xx xxx xxx" inputMode="tel" required />
                   </div>
+                  {createPatientAccount && (
+                    <div className="space-y-3 rounded-lg border p-3 text-sm">
+                      <label className="flex items-start gap-3">
+                        <Checkbox checked={ageConfirmed} onCheckedChange={(checked) => setAgeConfirmed(checked === true)} />
+                        <span>I confirm I am 18 years or older.</span>
+                      </label>
+                      <label className="flex items-start gap-3">
+                        <Checkbox checked={privacyAccepted} onCheckedChange={(checked) => setPrivacyAccepted(checked === true)} />
+                        <span>I agree to PouchCare collecting and using my details to create my account and review prescription access.</span>
+                      </label>
+                      <p className="text-xs text-muted-foreground">{destinationDescription}</p>
+                    </div>
+                  )}
                   {(intendedRole === 'doctor' || intendedRole === 'admin') && (
                     <Alert>
                       <Phone className="h-4 w-4" />
@@ -129,9 +227,16 @@ export default function PhoneLogin() {
                     {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Send code
                   </Button>
-                  <p className="text-center text-sm text-muted-foreground">
-                    New patient? <Link className="underline" to="/start-consult">Start a consult</Link>
-                  </p>
+                  {createPatientAccount ? (
+                    <p className="text-center text-sm text-muted-foreground">
+                      Already have an account? <Link className="underline" to={loginPath}>Log in instead</Link>
+                    </p>
+                  ) : (
+                    <div className="space-y-2 text-center text-sm text-muted-foreground">
+                      <p>New patient with a prescription? <Link className="underline" to={uploadSignupPath}>Create an account to upload</Link></p>
+                      <p>Need a prescription? <Link className="underline" to="/start-consult">Start a consult</Link></p>
+                    </div>
+                  )}
                 </form>
               ) : (
                 <form onSubmit={verifyCode} className="space-y-5">
@@ -151,7 +256,7 @@ export default function PhoneLogin() {
                   </div>
                   <Button type="submit" className="w-full" disabled={busy}>
                     {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Log in
+                    {createPatientAccount ? 'Verify and continue' : 'Log in'}
                   </Button>
                   <Button type="button" variant="ghost" className="w-full" onClick={() => setStep('phone')} disabled={busy}>
                     Change mobile

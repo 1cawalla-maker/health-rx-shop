@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth, AppRole } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
 
@@ -8,8 +8,22 @@ interface ProtectedRouteProps {
   requireApproval?: boolean;
 }
 
+function loginPathFor(role: AppRole | undefined, pathname: string, search: string) {
+  const intendedRole = role || 'patient';
+  const next = `${pathname}${search}`;
+  const params = new URLSearchParams({ role: intendedRole, next });
+
+  if (intendedRole === 'patient' && pathname === '/patient/upload-prescription') {
+    params.set('mode', 'signup');
+  }
+
+  return `/phone-login?${params.toString()}`;
+}
+
 export function ProtectedRoute({ children, allowedRoles, requireApproval = true }: ProtectedRouteProps) {
   const { user, userRole, loading } = useAuth();
+  const location = useLocation();
+  const loginPath = loginPathFor(allowedRoles[0], location.pathname, location.search);
 
   if (loading) {
     return (
@@ -20,11 +34,11 @@ export function ProtectedRoute({ children, allowedRoles, requireApproval = true 
   }
 
   if (!user) {
-    return <Navigate to={`/phone-login?role=${allowedRoles[0] || 'patient'}`} replace />;
+    return <Navigate to={loginPath} replace />;
   }
 
   if (!userRole) {
-    return <Navigate to={`/phone-login?role=${allowedRoles[0] || 'patient'}`} replace />;
+    return <Navigate to={loginPath} replace />;
   }
 
   if (!allowedRoles.includes(userRole.role)) {
@@ -37,13 +51,13 @@ export function ProtectedRoute({ children, allowedRoles, requireApproval = true 
       case 'admin':
         return <Navigate to="/admin/dashboard" replace />;
       default:
-        return <Navigate to={`/phone-login?role=${allowedRoles[0] || 'patient'}`} replace />;
+        return <Navigate to={loginPath} replace />;
     }
   }
 
   // TODO(phase2): restore pending_approval redirect for doctors
   if (userRole.status === 'deactivated') {
-    return <Navigate to={`/phone-login?role=${allowedRoles[0] || 'patient'}`} replace />;
+    return <Navigate to={loginPath} replace />;
   }
 
   return <>{children}</>;
