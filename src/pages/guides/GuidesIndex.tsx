@@ -19,7 +19,7 @@ const guides = [
   },
   {
     title: 'How to get nicotine pouches in Australia',
-    description: 'Step-by-step from questionnaire to consultation.',
+    description: 'Step-by-step from Halaxy booking to consultation.',
     to: '/guides/how-to-get-nicotine-pouches-in-australia',
   },
   {
@@ -111,7 +111,7 @@ export default function GuidesIndex() {
               “are Zyns legal in Australia”.
             </p>
             <p className="text-muted-foreground">
-              Want the fastest start? <Link className="text-primary underline underline-offset-4" to="/eligibility">Start the questionnaire</Link>.
+              Want the fastest start? <Link className="text-primary underline underline-offset-4" to="/start-consult">Start a consultation</Link>.
             </p>
           </header>
 

@@ -27,7 +27,7 @@ export default function GuideZynVsOtherNicotinePouches() {
     {
       question: 'What should I do if I’m unsure?',
       answer:
-        'Start with the questionnaire and book a consultation so a qualified doctor can advise you based on your history and goals.',
+        'Start a Halaxy booking and complete Halaxy’s clinical intake so a qualified doctor can assess suitability.',
     },
   ];
 
@@ -77,7 +77,7 @@ export default function GuideZynVsOtherNicotinePouches() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Button asChild size="lg">
-                <Link to="/eligibility">Start consultation</Link>
+                <Link to="/start-consult">Start consultation</Link>
               </Button>
               <Button asChild variant="outline" size="lg">
                 <Link to="/guides/zyn-australia">Read: Zyn in Australia</Link>
@@ -169,11 +169,11 @@ export default function GuideZynVsOtherNicotinePouches() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-muted-foreground">
-                  Start with the questionnaire and book a consultation. A qualified doctor will make the final
+                  Start a Halaxy booking and complete the clinical intake there. A qualified doctor will make the final
                   clinical assessment.
                 </p>
                 <Button asChild size="lg" className="w-full sm:w-auto">
-                  <Link to="/eligibility">Start consultation</Link>
+                  <Link to="/start-consult">Start consultation</Link>
                 </Button>
               </CardContent>
             </Card>

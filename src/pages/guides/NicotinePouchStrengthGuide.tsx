@@ -84,7 +84,7 @@ export default function GuideNicotinePouchStrengthGuide() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Button asChild size="lg">
-                <Link to="/eligibility">Start consultation</Link>
+                <Link to="/start-consult">Start consultation</Link>
               </Button>
               <Button asChild variant="outline" size="lg">
                 <Link to="/guides/nicotine-pouches-australia">Read: Nicotine pouches in Australia</Link>
@@ -173,11 +173,11 @@ export default function GuideNicotinePouchStrengthGuide() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-muted-foreground">
-                  Start with the questionnaire and book a consultation. A qualified doctor will make the final
+                  Start a Halaxy booking and complete the clinical intake there. A qualified doctor will make the final
                   clinical assessment.
                 </p>
                 <Button asChild size="lg" className="w-full sm:w-auto">
-                  <Link to="/eligibility">Start consultation</Link>
+                  <Link to="/start-consult">Start consultation</Link>
                 </Button>
               </CardContent>
             </Card>

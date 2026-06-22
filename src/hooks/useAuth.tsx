@@ -170,151 +170,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, fullName: string, role: AppRole) => {
-    if (!isSupabaseConfigured()) {
-      return { error: new Error('Supabase is not configured. Please check environment variables.') };
-    }
-
-    try {
-      const siteUrl = import.meta.env.VITE_SITE_URL || 'https://www.pouchcare.com.au';
-      const redirectUrl = `${siteUrl}/`;
-      
-      if (import.meta.env.DEV) {
-        console.log('Signup attempt:', { email, role, redirectUrl });
-      }
-
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            full_name: fullName
-          }
-        }
-      });
-
-      if (error) {
-        if (import.meta.env.DEV) {
-          console.error('Supabase signup error:', error);
-        }
-        return { error };
-      }
-
-      const createdUserId = data.user?.id;
-
-      if (data.user) {
-        // TODO(phase2): restore approval gate — set doctor status to 'pending_approval' and is_active to false
-        const status: UserStatus = 'approved';
-        
-        // Create user_roles record
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: data.user.id,
-            role: role,
-            status: status
-          });
-
-        if (roleError) {
-          if (import.meta.env.DEV) {
-            console.error('Error creating user role:', roleError);
-          }
-          return { error: new Error('Failed to assign role. Please try again.') };
-        }
-
-        // Create profile record (handled by trigger, but ensure it exists)
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            user_id: data.user.id,
-            full_name: fullName
-          }, { onConflict: 'user_id' });
-
-        if (profileError && import.meta.env.DEV) {
-          console.error('Error creating profile:', profileError);
-        }
-
-        // Create role-specific profile
-        if (role === 'patient') {
-          const { error: patientError } = await supabase
-            .from('patient_profiles')
-            .insert({ user_id: data.user.id });
-          
-          if (patientError && import.meta.env.DEV) {
-            console.error('Error creating patient profile:', patientError);
-          }
-        } else if (role === 'doctor') {
-          // Create doctors table record
-          // TODO(phase2): restore approval gate — set is_active to false and registration_complete to false
-          const { error: doctorsError } = await supabase
-            .from('doctors')
-            .insert({ 
-              user_id: data.user.id,
-              is_active: true,
-              registration_complete: true
-            });
-          
-          if (doctorsError && import.meta.env.DEV) {
-            console.error('Error creating doctors record:', doctorsError);
-          }
-
-          // Create doctor_profiles record
-          const { error: doctorProfileError } = await supabase
-            .from('doctor_profiles')
-            .insert({ user_id: data.user.id });
-          
-          if (doctorProfileError && import.meta.env.DEV) {
-            console.error('Error creating doctor profile:', doctorProfileError);
-          }
-        }
-
-        setUserRole({ role, status });
-
-        // Note: we intentionally do NOT send the welcome email here.
-        // If email confirmation is enabled, Supabase signUp often returns no active session yet,
-        // which makes authenticated Edge Function invokes fail.
-        // We send the welcome email on the first successful login instead.
-      }
-
-      return { error: null, userId: createdUserId };
-    } catch (err) {
-      if (import.meta.env.DEV) {
-        console.error('Signup exception:', err);
-      }
-      return { error: err as Error };
-    }
+  const signUp = async (_email: string, _password: string, _fullName: string, _role: AppRole) => {
+    return { error: new Error('Public email/password signup is disabled. Patients should use Start consult; doctors must be created by an admin.') };
   };
 
-  const signIn = async (email: string, password: string) => {
-    if (!isSupabaseConfigured()) {
-      return { error: new Error('Supabase is not configured. Please check environment variables.') };
-    }
-
-    try {
-      if (import.meta.env.DEV) {
-        console.log('Login attempt:', { email });
-      }
-
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (error) {
-        if (import.meta.env.DEV) {
-          console.error('Supabase login error:', error);
-        }
-        return { error };
-      }
-
-      return { error: null };
-    } catch (err) {
-      if (import.meta.env.DEV) {
-        console.error('Login exception:', err);
-      }
-      return { error: err as Error };
-    }
+  const signIn = async (_email: string, _password: string) => {
+    return { error: new Error('Email/password login is disabled. Please use phone login.') };
   };
 
   const signOut = async () => {
@@ -327,22 +188,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUserRole(null);
   };
 
-  const resetPassword = async (email: string) => {
-    if (!isSupabaseConfigured()) {
-      return { error: new Error('Supabase is not configured. Please check environment variables.') };
-    }
-
-    try {
-      const siteUrl = import.meta.env.VITE_SITE_URL || 'https://www.pouchcare.com.au';
-      
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${siteUrl}/auth?mode=reset`
-      });
-
-      return { error };
-    } catch (err) {
-      return { error: err as Error };
-    }
+  const resetPassword = async (_email: string) => {
+    return { error: new Error('Password reset is disabled because PouchCare uses phone OTP login.') };
   };
 
   if (configError) {

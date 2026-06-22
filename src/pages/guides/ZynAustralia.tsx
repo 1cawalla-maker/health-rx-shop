@@ -18,7 +18,7 @@ export default function GuideZynAustralia() {
     {
       question: 'How can I get Zyns in Australia legally?',
       answer:
-        'Start with the questionnaire, then book a telehealth consultation. If clinically appropriate, a doctor can guide you through the next steps to access nicotine pouches in Australia.',
+        'Start a Halaxy booking and complete the clinical intake there. If clinically appropriate, a doctor can guide you through the next steps to access nicotine pouches in Australia.',
     },
     {
       question: 'Do I need a prescription for nicotine pouches in Australia?',
@@ -48,7 +48,7 @@ export default function GuideZynAustralia() {
     {
       question: 'How long does it take?',
       answer:
-        'Timeframes vary. You can start with the questionnaire and book a consultation; the rest depends on clinical suitability and the steps required for your situation.',
+        'Timeframes vary. You can start a Halaxy booking and complete Halaxy’s clinical intake; the rest depends on clinical suitability and the steps required for your situation.',
     },
     {
       question: 'Can I choose strength and flavours?',
@@ -114,7 +114,7 @@ export default function GuideZynAustralia() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Button asChild size="lg">
-                <Link to="/eligibility">Start consultation</Link>
+                <Link to="/start-consult">Start consultation</Link>
               </Button>
               <Button asChild variant="outline" size="lg">
                 <Link to="/how-it-works">How it works</Link>
@@ -157,7 +157,7 @@ export default function GuideZynAustralia() {
                 explains what is appropriate for you.
               </p>
               <p className="text-muted-foreground">
-                If you’re unsure, the most reliable next step is to start the questionnaire and book a consultation—
+                If you’re unsure, the most reliable next step is to start a Halaxy booking and complete the clinical intake there—
                 a doctor can explain what applies to your situation.
               </p>
             </div>
@@ -165,11 +165,11 @@ export default function GuideZynAustralia() {
             <div className="space-y-2">
               <h2 className="font-display text-2xl font-semibold">How Australians access nicotine pouches</h2>
               <p className="text-muted-foreground">
-                The typical path is: complete a short questionnaire → book a consultation → doctor assesses your
+                The typical path is: book in Halaxy → complete Halaxy clinical intake if prompted → doctor assesses your
                 situation → next steps are explained if clinically appropriate.
               </p>
               <ol className="list-decimal pl-5 text-muted-foreground space-y-2">
-                <li>Complete the questionnaire (takes a couple of minutes).</li>
+                <li>Complete Halaxy’s clinical intake if prompted.</li>
                 <li>Book a consultation time that suits you.</li>
                 <li>Speak with an AHPRA‑registered doctor by phone.</li>
                 <li>If clinically appropriate, your doctor will explain next steps and any limits (like max strength).</li>
@@ -254,11 +254,11 @@ export default function GuideZynAustralia() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-muted-foreground">
-                  Start with the questionnaire and book a consultation. A qualified doctor will make the final
+                  Start a Halaxy booking and complete the clinical intake there. A qualified doctor will make the final
                   clinical assessment.
                 </p>
                 <Button asChild size="lg" className="w-full sm:w-auto">
-                  <Link to="/eligibility">Start consultation</Link>
+                  <Link to="/start-consult">Start consultation</Link>
                 </Button>
               </CardContent>
             </Card>

@@ -26,21 +26,19 @@ const faqCategories = [
         question: 'How does the PouchCare telehealth service work?',
         answer: `Our service provides a streamlined pathway for Australian adults to access nicotine pouches through proper medical supervision. Here's the process:
 
-1. **Check Eligibility**: Complete a quick pre-screening questionnaire to see if nicotine pouch therapy might be suitable for you.
+1. **Start with PouchCare**: Enter only the minimum account/linking details PouchCare needs, including your name, Australian mobile number, age confirmation and privacy consent.
 
-2. **Create an Account**: Sign up and complete your medical intake form with your health history and personal details.
+2. **Book in Halaxy**: Continue to Halaxy to choose a consultation time and complete any clinical intake requested there.
 
-3. **Book a Consultation**: Select a 1-hour consultation slot. You'll be assigned a qualified Australian doctor.
+3. **Doctor consultation**: The doctor reviews the Halaxy intake and conducts the consultation.
 
-4. **Phone Consultation**: Your assigned doctor will call you during your slot to discuss your health, nicotine use history, and goals.
+4. **Clinical assessment**: The doctor makes an independent clinical decision on whether nicotine pouches are appropriate for you.
 
-5. **Clinical Assessment**: The doctor makes a clinical decision on whether nicotine pouches are appropriate for you.
+5. **Prescription outcome**: If a prescription is issued, PouchCare links it to your account and checks the prescription limits.
 
-6. **Prescription (if approved)**: If suitable, you'll receive a digital prescription that unlocks access to our product shop.
+6. **Order products**: If your prescription entitlement is active, you can purchase eligible products within those limits and provide shipping details at order time.
 
-7. **Order Products**: Purchase products within your prescription limits and have them delivered to your Australian address.
-
-The entire process is conducted by AHPRA-registered Australian doctors following proper telehealth protocols.`
+The clinical intake and consultation are handled through Halaxy and AHPRA-registered Australian doctors.`
       },
       {
         question: 'Can doctors legally prescribe nicotine pouches in Australia?',
@@ -547,8 +545,8 @@ export default function FAQPage() {
                 className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10"
                 asChild
               >
-                <Link to="/eligibility">
-                  Check Eligibility
+                <Link to="/start-consult">
+                  Start Consultation
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>

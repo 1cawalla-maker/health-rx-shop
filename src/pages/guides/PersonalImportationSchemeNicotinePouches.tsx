@@ -32,7 +32,7 @@ export default function GuidePersonalImportationSchemeNicotinePouches() {
     {
       question: 'What is the safest next step?',
       answer:
-        'Complete the questionnaire and book a consultation so a qualified doctor can assess suitability and explain the appropriate pathway.',
+        'Start a Halaxy booking and complete the clinical intake there so a qualified doctor can assess suitability and explain the appropriate pathway.',
     },
   ];
 
@@ -88,7 +88,7 @@ export default function GuidePersonalImportationSchemeNicotinePouches() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Button asChild size="lg">
-                <Link to="/eligibility">Start consultation</Link>
+                <Link to="/start-consult">Start consultation</Link>
               </Button>
               <Button asChild variant="outline" size="lg">
                 <Link to="/guides/zyn-australia">Read: Zyn in Australia</Link>
@@ -120,7 +120,7 @@ export default function GuidePersonalImportationSchemeNicotinePouches() {
               </p>
               <p>
                 If you’re reading about importing nicotine pouches yourself, don’t guess—start with the
-                questionnaire and a consultation so you understand what applies to your situation.
+                Halaxy clinical intake and a consultation so you understand what applies to your situation.
               </p>
             </CardContent>
           </Card>
@@ -189,11 +189,11 @@ export default function GuidePersonalImportationSchemeNicotinePouches() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-muted-foreground">
-                  Start with the questionnaire and book a consultation. A qualified doctor will make the final
+                  Start a Halaxy booking and complete the clinical intake there. A qualified doctor will make the final
                   clinical assessment.
                 </p>
                 <Button asChild size="lg" className="w-full sm:w-auto">
-                  <Link to="/eligibility">Start consultation</Link>
+                  <Link to="/start-consult">Start consultation</Link>
                 </Button>
               </CardContent>
             </Card>

@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { halaxyConsultationService } from '@/services/halaxyConsultationService';
+import { getDashboardPathForRole } from '@/lib/roleRoutes';
 
 const PRIVACY_POLICY_VERSION = '2026-06-18-minimal-halaxy-consult';
 const COLLECTION_NOTICE_VERSION = '2026-06-18-minimal-halaxy-consult';
@@ -30,7 +31,7 @@ function normalizeAuMobile(local: string): string | null {
 
 export default function StartConsultation() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, userRole, loading: authLoading } = useAuth();
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [ageConfirmed, setAgeConfirmed] = useState(false);
@@ -106,6 +107,13 @@ export default function StartConsultation() {
       const phoneE164 = validateDetails();
 
       if (user?.id) {
+        if (userRole?.role && userRole.role !== 'patient') {
+          const dashboardPath = getDashboardPathForRole(userRole.role) || '/';
+          toast.error('You are logged in as a staff account. Please log out or use a separate patient account to start a consultation.');
+          navigate(dashboardPath, { replace: true });
+          return;
+        }
+
         await saveProfileAndRole(user.id, phoneE164, Boolean((user as any).phone === phoneE164));
         await continueToHalaxy();
         return;
@@ -211,8 +219,8 @@ export default function StartConsultation() {
                     </AlertDescription>
                   </Alert>
 
-                  <Button type="submit" className="w-full gap-2" disabled={isBusy}>
-                    {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
+                  <Button type="submit" className="w-full gap-2" disabled={isBusy || authLoading}>
+                    {isBusy || authLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
                     {user ? 'Continue to Halaxy' : 'Send SMS code'}
                   </Button>
                 </form>

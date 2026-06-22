@@ -22,7 +22,7 @@ export default function GuideAreNicotinePouchesLegalAustralia() {
     {
       question: 'How do I access nicotine pouches in Australia?',
       answer:
-        'Start with the questionnaire and book a telehealth consultation. If clinically appropriate, a doctor will guide you through the next steps.',
+        'Start a Halaxy booking and complete the clinical intake there. If clinically appropriate, a doctor will guide you through the next steps.',
     },
     {
       question: 'How much does it cost?',
@@ -32,7 +32,7 @@ export default function GuideAreNicotinePouchesLegalAustralia() {
     {
       question: 'What should I do next?',
       answer:
-        'Start with the questionnaire and book a consultation. A qualified doctor will make the final clinical assessment.',
+        'Start a Halaxy booking and complete the clinical intake there. A qualified doctor will make the final clinical assessment.',
     },
   ];
 
@@ -88,7 +88,7 @@ export default function GuideAreNicotinePouchesLegalAustralia() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Button asChild size="lg">
-                <Link to="/eligibility">Start consultation</Link>
+                <Link to="/start-consult">Start consultation</Link>
               </Button>
               <Button asChild variant="outline" size="lg">
                 <Link to="/guides/zyn-australia">Read: Zyn in Australia</Link>
@@ -151,7 +151,7 @@ export default function GuideAreNicotinePouchesLegalAustralia() {
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-2">
               <ol className="list-decimal pl-5 space-y-2">
-                <li>Complete the short questionnaire.</li>
+                <li>Complete Halaxy’s clinical intake if prompted.</li>
                 <li>Book a consultation time that suits you.</li>
                 <li>A doctor will assess your situation and explain next steps if clinically appropriate.</li>
               </ol>
@@ -199,11 +199,11 @@ export default function GuideAreNicotinePouchesLegalAustralia() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-muted-foreground">
-                  Start the questionnaire and book a consultation. A qualified doctor will make the final clinical
+                  Start a Halaxy booking.  A qualified doctor will make the final clinical
                   assessment.
                 </p>
                 <Button asChild size="lg" className="w-full sm:w-auto">
-                  <Link to="/eligibility">Start consultation</Link>
+                  <Link to="/start-consult">Start consultation</Link>
                 </Button>
               </CardContent>
             </Card>

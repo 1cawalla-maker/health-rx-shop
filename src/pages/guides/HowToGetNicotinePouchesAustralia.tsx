@@ -12,12 +12,12 @@ export default function GuideHowToGetNicotinePouchesAustralia() {
     {
       question: 'How do I get nicotine pouches in Australia?',
       answer:
-        'Start with the questionnaire, then book a telehealth consultation. If clinically appropriate, a doctor will guide you through the next steps.',
+        'Start a Halaxy booking and complete the clinical intake there. If clinically appropriate, a doctor will guide you through the next steps.',
     },
     {
       question: 'How do I get Zyns in Australia?',
       answer:
-        'Zyn is a brand of nicotine pouches. The simplest compliant path is the same: complete the questionnaire and book a consultation so a doctor can assess suitability and explain next steps.',
+        'Zyn is a brand of nicotine pouches. The simplest compliant path is the same: start a Halaxy booking and complete the clinical intake there so a doctor can assess suitability and explain next steps.',
     },
     {
       question: 'Do I choose a doctor?',
@@ -32,7 +32,7 @@ export default function GuideHowToGetNicotinePouchesAustralia() {
     {
       question: 'How long does it take?',
       answer:
-        'Timeframes vary. The fastest way to start is to complete the questionnaire and book a consultation time that suits you.',
+        'Timeframes vary. The fastest way to start is to start a Halaxy booking and complete the clinical intake there time that suits you.',
     },
     {
       question: 'What happens if I’m not approved?',
@@ -96,7 +96,7 @@ export default function GuideHowToGetNicotinePouchesAustralia() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Button asChild size="lg">
-                <Link to="/eligibility">Start consultation</Link>
+                <Link to="/start-consult">Start consultation</Link>
               </Button>
               <Button asChild variant="outline" size="lg">
                 <Link to="/how-it-works">How it works</Link>
@@ -110,7 +110,7 @@ export default function GuideHowToGetNicotinePouchesAustralia() {
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-3">
               <ol className="list-decimal pl-5 space-y-2">
-                <li>Complete the short questionnaire.</li>
+                <li>Complete Halaxy’s clinical intake if prompted.</li>
                 <li>Book a consultation time that suits you.</li>
                 <li>A qualified doctor assesses suitability during your consultation.</li>
                 <li>If clinically appropriate, next steps are explained and access is enabled.</li>
@@ -187,11 +187,11 @@ export default function GuideHowToGetNicotinePouchesAustralia() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-muted-foreground">
-                  Start with the questionnaire and book a consultation. A qualified doctor will make the final
+                  Start a Halaxy booking and complete the clinical intake there. A qualified doctor will make the final
                   clinical assessment.
                 </p>
                 <Button asChild size="lg" className="w-full sm:w-auto">
-                  <Link to="/eligibility">Start consultation</Link>
+                  <Link to="/start-consult">Start consultation</Link>
                 </Button>
               </CardContent>
             </Card>

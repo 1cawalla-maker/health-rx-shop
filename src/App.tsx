@@ -13,7 +13,6 @@ import HowItWorks from "./pages/HowItWorks";
 import Pricing from "./pages/Pricing";
 import About from "./pages/About";
 import FAQ from "./pages/FAQ";
-import EligibilityQuiz from "./pages/EligibilityQuiz";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import RefundPolicy from "./pages/RefundPolicy";
@@ -31,16 +30,12 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
 
 // Patient pages
 import PatientDashboard from "./pages/patient/Dashboard";
-import BookConsultation from "./pages/patient/BookConsultation";
-import BookingPayment from "./pages/patient/BookingPayment";
-import BookingConfirmation from "./pages/patient/BookingConfirmation";
 import PatientConsultations from "./pages/patient/Consultations";
 import UploadPrescription from "./pages/patient/UploadPrescription";
 import PatientPrescriptions from "./pages/patient/Prescriptions";
 import PatientShop from "./pages/patient/Shop";
 import PatientProductDetail from "./pages/patient/ProductDetail";
 import PatientShopCheckout from "./pages/patient/ShopCheckout";
-import PatientIntake from "./pages/patient/Intake";
 import PatientAccount from "./pages/patient/Account";
 import PatientOrders from "./pages/patient/Orders";
 import PatientOrderSuccess from "./pages/patient/OrderSuccess";
@@ -116,7 +111,7 @@ const App = () => (
               <Route path="/auth" element={<Navigate to="/phone-login" replace />} />
               <Route path="/phone-login" element={<PhoneLogin />} />
               <Route path="/start-consult" element={<StartConsultation />} />
-              <Route path="/eligibility" element={<EligibilityQuiz />} />
+              <Route path="/eligibility" element={<Navigate to="/start-consult" replace />} />
 
               {/* SEO guides (public) */}
               <Route path="/guides" element={<GuidesIndex />} />
@@ -132,13 +127,13 @@ const App = () => (
               {/* Patient routes */}
               <Route path="/patient" element={<ProtectedRoute allowedRoles={['patient']}><PatientLayout /></ProtectedRoute>}>
                 <Route path="dashboard" element={<PatientDashboard />} />
-                <Route path="book" element={<BookConsultation />} />
-                <Route path="booking/payment/:bookingId" element={<BookingPayment />} />
-                <Route path="booking/confirmation/:bookingId" element={<BookingConfirmation />} />
+                <Route path="book" element={<Navigate to="/start-consult" replace />} />
+                <Route path="booking/payment/:bookingId" element={<Navigate to="/patient/consultations" replace />} />
+                <Route path="booking/confirmation/:bookingId" element={<Navigate to="/patient/consultations" replace />} />
                 <Route path="consultations" element={<PatientConsultations />} />
-                {/* If someone lands on /patient/intake without a bookingId, send them to consultations. */}
+                {/* Halaxy owns patient clinical intake. PouchCare does not collect intake/quiz answers. */}
                 <Route path="intake" element={<PatientConsultations />} />
-                <Route path="intake/:bookingId" element={<PatientIntake />} />
+                <Route path="intake/:bookingId" element={<Navigate to="/patient/consultations" replace />} />
                 <Route path="upload-prescription" element={<UploadPrescription />} />
                 <Route path="prescriptions" element={<PatientPrescriptions />} />
                 <Route path="shop" element={<PatientShop />} />

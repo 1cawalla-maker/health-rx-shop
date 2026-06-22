@@ -42,7 +42,7 @@ serve(async (req) => {
     const { data: userData, error: userError } = await supabaseAnon.auth.getUser(token);
     if (userError) throw new Error(`Authentication error: ${userError.message}`);
     const user = userData.user;
-    if (!user?.id || !user.email) throw new Error("User not authenticated");
+    if (!user?.id) throw new Error("User not authenticated");
 
     const bookingUrl = (Deno.env.get("HALAXY_BOOKING_EMBED_URL") || Deno.env.get("HALAXY_BOOKING_URL") || "").trim() || null;
     const liveConfigPresent = Boolean(
@@ -65,16 +65,6 @@ serve(async (req) => {
     if (!(profile as any).phone_verified_at) throw new Error("Please verify your mobile number before booking.");
     if (!(profile as any).age_attested_at) throw new Error("Please confirm you are 18 or over before booking.");
     if (!(profile as any).privacy_notice_accepted_at) throw new Error("Please accept the privacy and collection notice before booking.");
-
-    const { data: latestQuiz, error: quizError } = await supabaseAdmin
-      .from("eligibility_quiz_sessions")
-      .select("id, completed_at, risk_flags")
-      .eq("patient_id", user.id)
-      .order("completed_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (quizError) throw new Error(quizError.message);
 
     // Halaxy-ready pre-GP behaviour:
     // - Do not require a public Halaxy booking URL yet because no GP may be onboarded.
@@ -113,7 +103,7 @@ serve(async (req) => {
             scaffold: true,
             minimal_halaxy_onboarding: true,
             gp_onboarding_pending: !bookingUrl,
-            latest_quiz_session_id: (latestQuiz as any)?.id ?? null,
+            halaxy_clinical_intake_owner: "halaxy",
             live_halaxy_config_present: liveConfigPresent,
           },
         })

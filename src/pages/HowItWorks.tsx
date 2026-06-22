@@ -94,7 +94,7 @@ export default function HowItWorks() {
     <PublicLayout>
       <Seo
         title="How to Get Nicotine Pouches in Australia (Zyn): How It Works"
-        description="Learn how PouchCare works: questionnaire, telehealth consultation, clinical assessment, and ordering nicotine pouches in Australia through a compliant pathway."
+        description="Learn how PouchCare works: Halaxy booking, doctor consultation, clinical assessment, and ordering nicotine pouches in Australia through a compliant pathway."
         canonicalPath="/how-it-works"
         ogImagePath="/og/how-it-works.png"
         ogType="website"
@@ -103,7 +103,7 @@ export default function HowItWorks() {
             url: `${SITE_ORIGIN}/how-it-works`,
             name: 'How it works',
             description:
-              'Learn how PouchCare works: questionnaire, telehealth consultation, clinical assessment, and ordering nicotine pouches in Australia through a compliant pathway.',
+              'Learn how PouchCare works: Halaxy booking, doctor consultation, clinical assessment, and ordering nicotine pouches in Australia through a compliant pathway.',
             dateModified: '2026-03-30',
             siteOrigin: SITE_ORIGIN,
           }),
@@ -263,7 +263,7 @@ export default function HowItWorks() {
               className="block rounded-xl border border-border bg-card p-6 hover:shadow-md transition-shadow"
             >
               <p className="font-display text-lg font-semibold text-foreground">How to get nicotine pouches</p>
-              <p className="text-sm text-muted-foreground mt-1">Step-by-step from questionnaire to consult.</p>
+              <p className="text-sm text-muted-foreground mt-1">Step-by-step from Halaxy booking to consult.</p>
             </Link>
 
             <Link
@@ -277,7 +277,7 @@ export default function HowItWorks() {
 
           <div className="max-w-4xl mx-auto mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button variant="hero" size="lg" asChild>
-              <Link to="/eligibility">
+              <Link to="/start-consult">
                 Start Consultation
                 <ArrowRight className="h-4 w-4" />
               </Link>

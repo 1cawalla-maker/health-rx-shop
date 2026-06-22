@@ -38,7 +38,7 @@ const faqCategories = [
       },
       {
         question: "How do I get Zyns in Australia?",
-        answer: "Start with the questionnaire, then book a consultation. If clinically appropriate, a doctor will guide you through the next steps to access nicotine pouches in Australia.",
+        answer: "Start a Halaxy booking and complete the clinical intake there. If clinically appropriate, a doctor will guide you through the next steps to access nicotine pouches in Australia.",
       },
       {
         question: "Do I need a prescription?",

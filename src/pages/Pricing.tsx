@@ -231,7 +231,7 @@ export default function Pricing() {
               className="block rounded-xl border border-border bg-card p-6 hover:shadow-md transition-shadow"
             >
               <p className="font-display text-lg font-semibold text-foreground">How to get nicotine pouches</p>
-              <p className="text-sm text-muted-foreground mt-1">Step-by-step from questionnaire to consult.</p>
+              <p className="text-sm text-muted-foreground mt-1">Step-by-step from Halaxy booking to consult.</p>
             </Link>
 
             <Link
@@ -245,7 +245,7 @@ export default function Pricing() {
 
           <div className="max-w-4xl mx-auto mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button variant="hero" size="lg" asChild>
-              <Link to="/eligibility">
+              <Link to="/start-consult">
                 Start Consultation
                 <ArrowRight className="h-5 w-5" />
               </Link>

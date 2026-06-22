@@ -70,7 +70,7 @@ export default function Privacy() {
                 <p>Depending on how you use PouchCare, we may collect:</p>
                 <ul className="list-disc pl-6 mt-4 space-y-2">
                   <li><strong>Account and identity details:</strong> name, email, phone, date of birth, address, login details and role.</li>
-                  <li><strong>Health and eligibility information:</strong> questionnaire answers, nicotine use history, relevant medical history, medications, allergies, safety factors, consultation reason and consent records.</li>
+                  <li><strong>Health and eligibility information:</strong> clinical intake and consultation information handled through Halaxy or provided during care, prescription records, consultation reason where applicable, and consent records.</li>
                   <li><strong>Telehealth records:</strong> booking details, consultation status, consultation notes, call attempts, follow-up arrangements and doctor assessment outcomes.</li>
                   <li><strong>Prescription and document information:</strong> uploaded prescriptions, issued prescription details, prescription files, related correspondence and dispensing/fulfilment documents.</li>
                   <li><strong>Order and delivery information:</strong> products ordered, quantities, shipping details, order status, Shopify or fulfilment references and packing documentation.</li>
@@ -84,7 +84,7 @@ export default function Privacy() {
                 <h2 className="font-display text-2xl font-semibold text-foreground mb-4">3. How we collect information</h2>
                 <p>
                   We collect information directly from you when you use the website, complete the
-                  eligibility questionnaire, create an account, book or attend a consultation, upload a
+                  create an account, book or attend a consultation, upload a
                   document, place an order, contact support or apply to work with us as a doctor. We may
                   also receive information from treating doctors, pharmacists, payment providers,
                   fulfilment partners, identity/security systems and service providers that support our
@@ -121,7 +121,7 @@ export default function Privacy() {
                   telehealth, prescription, dispensing/fulfilment, safety and compliance functions.
                 </p>
                 <p>
-                  The eligibility questionnaire is a pre-screen only. It is not medical advice and does
+                  Any Halaxy clinical intake is for consultation preparation only. It is not medical advice and does
                   not guarantee that a doctor will prescribe or that products will be supplied. A doctor
                   must make an independent clinical assessment.
                 </p>
