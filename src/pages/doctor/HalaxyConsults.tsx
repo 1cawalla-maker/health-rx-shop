@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -250,7 +249,6 @@ export default function DoctorHalaxyConsults() {
         </div>
       )}
 
-      <Button variant="outline" asChild><Link to="/doctor/consultations">View legacy consultation list</Link></Button>
     </div>
   );
 }

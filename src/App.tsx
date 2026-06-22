@@ -153,21 +153,23 @@ const App = () => (
               <Route path="/doctor/pending" element={<DoctorPending />} />
               {/* Payslip print removed (contractor remittances model). */}
               <Route path="/doctor" element={<ProtectedRoute allowedRoles={['doctor']}><DoctorLayout /></ProtectedRoute>}>
+                <Route index element={<Navigate to="/doctor/halaxy-consults" replace />} />
                 <Route path="dashboard" element={<DoctorDashboard />} />
-                <Route path="onboarding" element={<DoctorOnboarding />} />
-                <Route path="calendar" element={<DoctorCalendar />} />
-                <Route path="availability" element={<DoctorAvailability />} />
-                <Route path="bookings" element={<DoctorBookings />} />
-                <Route path="booking/:id" element={<DoctorBookingDetail />} />
-                <Route path="consultations" element={<DoctorConsultations />} />
                 <Route path="halaxy-consults" element={<DoctorHalaxyConsults />} />
-                <Route path="consultation/:id" element={<DoctorConsultationView />} />
-                <Route path="patients" element={<DoctorPatients />} />
-                <Route path="patient/:id" element={<DoctorPatientDetail />} />
-                <Route path="prescriptions" element={<DoctorPrescriptions />} />
-                <Route path="earnings" element={<DoctorEarnings />} />
-                <Route path="info" element={<DoctorInfo />} />
                 <Route path="account" element={<DoctorAccount />} />
+                {/* MVP: doctors only need account info and assigned Halaxy consultations with prescription upload. */}
+                <Route path="onboarding" element={<Navigate to="/doctor/halaxy-consults" replace />} />
+                <Route path="calendar" element={<Navigate to="/doctor/halaxy-consults" replace />} />
+                <Route path="availability" element={<Navigate to="/doctor/halaxy-consults" replace />} />
+                <Route path="bookings" element={<Navigate to="/doctor/halaxy-consults" replace />} />
+                <Route path="booking/:id" element={<Navigate to="/doctor/halaxy-consults" replace />} />
+                <Route path="consultations" element={<Navigate to="/doctor/halaxy-consults" replace />} />
+                <Route path="consultation/:id" element={<Navigate to="/doctor/halaxy-consults" replace />} />
+                <Route path="patients" element={<Navigate to="/doctor/halaxy-consults" replace />} />
+                <Route path="patient/:id" element={<Navigate to="/doctor/halaxy-consults" replace />} />
+                <Route path="prescriptions" element={<Navigate to="/doctor/halaxy-consults" replace />} />
+                <Route path="earnings" element={<Navigate to="/doctor/halaxy-consults" replace />} />
+                <Route path="info" element={<Navigate to="/doctor/halaxy-consults" replace />} />
               </Route>
 
               {/* Admin routes */}
