@@ -112,6 +112,11 @@ const App = () => (
               <Route path="/phone-login" element={<PhoneLogin />} />
               <Route path="/start-consult" element={<StartConsultation />} />
               <Route path="/eligibility" element={<Navigate to="/start-consult" replace />} />
+              <Route path="/patient/book" element={<Navigate to="/start-consult" replace />} />
+              <Route path="/patient/booking/payment/:bookingId" element={<Navigate to="/patient/consultations" replace />} />
+              <Route path="/patient/booking/confirmation/:bookingId" element={<Navigate to="/patient/consultations" replace />} />
+              <Route path="/patient/intake" element={<Navigate to="/patient/consultations" replace />} />
+              <Route path="/patient/intake/:bookingId" element={<Navigate to="/patient/consultations" replace />} />
 
               {/* SEO guides (public) */}
               <Route path="/guides" element={<GuidesIndex />} />

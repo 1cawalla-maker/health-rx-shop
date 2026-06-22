@@ -162,9 +162,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setUserRole(null);
         setLoading(false);
-        setConfigError(
-          'We had trouble loading your session. Please refresh the page. If it persists, clear site data for pouchcare.com.au or try an Incognito window.'
-        );
+        // Do not show a global configuration error for transient auth bootstrap
+        // failures. Public pages should still render, and protected pages can
+        // fall back to their normal phone-login redirect when no session is
+        // available. The env-var configuration screen is reserved for actual
+        // missing Supabase config above.
       });
 
     return () => subscription.unsubscribe();
