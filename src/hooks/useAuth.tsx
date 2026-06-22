@@ -96,32 +96,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const userId = session.user.id;
 
           // Best-effort welcome email on first SIGNED_IN event.
-          // This covers:
-          // - users who end up with a session right after signup
-          // - users who only get a session after email confirmation redirect
-          // - normal logins
+          // Keep this fully out-of-band: Supabase warns against awaiting
+          // Supabase calls inside onAuthStateChange because it can hang auth
+          // flows such as SMS OTP verification.
           if (event === 'SIGNED_IN' && typeof window !== 'undefined') {
-            try {
-              const sentKey = `welcome_email_sent:${userId}`;
-              const alreadySent = window.localStorage.getItem(sentKey);
+            setTimeout(() => {
+              void (async () => {
+                try {
+                  const sentKey = `welcome_email_sent:${userId}`;
+                  const alreadySent = window.localStorage.getItem(sentKey);
 
-              if (!alreadySent) {
-                const { error: welcomeErr } = await supabase.functions.invoke(
-                  'send-welcome-email',
-                  { body: {} }
-                );
+                  if (!alreadySent) {
+                    const { error: welcomeErr } = await supabase.functions.invoke(
+                      'send-welcome-email',
+                      { body: {} }
+                    );
 
-                if (!welcomeErr) {
-                  window.localStorage.setItem(sentKey, new Date().toISOString());
-                } else if (import.meta.env.DEV) {
-                  console.error('Welcome email failed (non-fatal):', welcomeErr);
+                    if (!welcomeErr) {
+                      window.localStorage.setItem(sentKey, new Date().toISOString());
+                    } else if (import.meta.env.DEV) {
+                      console.error('Welcome email failed (non-fatal):', welcomeErr);
+                    }
+                  }
+                } catch (e) {
+                  if (import.meta.env.DEV) {
+                    console.error('Welcome email exception (non-fatal):', e);
+                  }
                 }
-              }
-            } catch (e) {
-              if (import.meta.env.DEV) {
-                console.error('Welcome email exception (non-fatal):', e);
-              }
-            }
+              })();
+            }, 0);
           }
 
           setTimeout(() => {

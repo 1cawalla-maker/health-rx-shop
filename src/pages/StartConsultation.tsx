@@ -29,6 +29,20 @@ function normalizeAuMobile(local: string): string | null {
   return null;
 }
 
+async function withTimeout<T>(promise: Promise<T>, label: string, timeoutMs = 20000): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(`${label} timed out. Please try again.`)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
 export default function StartConsultation() {
   const navigate = useNavigate();
   const { user, userRole, loading: authLoading } = useAuth();
@@ -53,27 +67,37 @@ export default function StartConsultation() {
   const saveProfileAndRole = async (userId: string, phoneE164: string, verified: boolean) => {
     const now = new Date().toISOString();
 
-    const { data: existingProfile } = await (supabase as any)
-      .from('profiles')
-      .select('phone, phone_verified_at')
-      .eq('user_id', userId)
-      .maybeSingle();
+    const { data: existingProfile } = await withTimeout(
+      (supabase as any)
+        .from('profiles')
+        .select('phone, phone_verified_at')
+        .eq('user_id', userId)
+        .maybeSingle(),
+      'Loading your profile'
+    );
 
     const existingVerifiedSamePhone = existingProfile?.phone === phoneE164 && existingProfile?.phone_verified_at;
     const phoneVerifiedAt = verified ? now : existingVerifiedSamePhone || null;
 
-    const { error: roleError } = await (supabase as any)
-      .from('user_roles')
-      .upsert({ user_id: userId, role: 'patient', status: 'approved' }, { onConflict: 'user_id,role' });
+    const { error: roleError } = await withTimeout(
+      (supabase as any)
+        .from('user_roles')
+        .upsert({ user_id: userId, role: 'patient', status: 'approved' }, { onConflict: 'user_id,role' }),
+      'Creating your patient access'
+    );
     if (roleError) throw roleError;
 
-    await (supabase as any)
-      .from('patient_profiles')
-      .upsert({ user_id: userId }, { onConflict: 'user_id' });
+    await withTimeout(
+      (supabase as any)
+        .from('patient_profiles')
+        .upsert({ user_id: userId }, { onConflict: 'user_id' }),
+      'Preparing your patient profile'
+    );
 
-    const { error: profileError } = await (supabase as any)
-      .from('profiles')
-      .upsert({
+    const { error: profileError } = await withTimeout(
+      (supabase as any)
+        .from('profiles')
+        .upsert({
         user_id: userId,
         full_name: fullName.trim(),
         phone: phoneE164,
@@ -85,13 +109,19 @@ export default function StartConsultation() {
         privacy_policy_version: PRIVACY_POLICY_VERSION,
         collection_notice_version: COLLECTION_NOTICE_VERSION,
         minimal_onboarding_completed_at: now,
-      }, { onConflict: 'user_id' });
+      }, { onConflict: 'user_id' }),
+      'Saving your details'
+    );
 
     if (profileError) throw profileError;
   };
 
   const continueToHalaxy = async () => {
-    const prepared = await halaxyConsultationService.prepareConsult();
+    const prepared = await withTimeout(
+      halaxyConsultationService.prepareConsult(),
+      'Opening Halaxy booking',
+      30000
+    );
     const bookingUrl = prepared.bookingUrl || prepared.consultation.halaxyBookingUrl;
     if (bookingUrl) {
       window.location.assign(bookingUrl);
@@ -119,10 +149,13 @@ export default function StartConsultation() {
         return;
       }
 
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: phoneE164,
-        options: { shouldCreateUser: true },
-      });
+      const { error } = await withTimeout(
+        supabase.auth.signInWithOtp({
+          phone: phoneE164,
+          options: { shouldCreateUser: true },
+        }),
+        'Sending SMS code'
+      );
       if (error) throw error;
       setPendingPhone(phoneE164);
       setStep('otp');
@@ -143,11 +176,14 @@ export default function StartConsultation() {
 
     setIsBusy(true);
     try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone: pendingPhone,
-        token: otp.replace(/\D/g, ''),
-        type: 'sms',
-      });
+      const { data, error } = await withTimeout(
+        supabase.auth.verifyOtp({
+          phone: pendingPhone,
+          token: otp.replace(/\D/g, ''),
+          type: 'sms',
+        }),
+        'Verifying SMS code'
+      );
       if (error) throw error;
       const verifiedUserId = data.user?.id;
       if (!verifiedUserId) throw new Error('Verification succeeded but no user session was returned.');
