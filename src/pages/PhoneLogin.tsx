@@ -35,7 +35,8 @@ function safeNextPath(value: string | null): string | null {
 export default function PhoneLogin() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const intendedRole = searchParams.get('role') || 'patient';
+  const requestedRole = searchParams.get('role');
+  const intendedRole = requestedRole || 'patient';
   const nextPath = safeNextPath(searchParams.get('next'));
   const isPatient = intendedRole === 'patient';
   const isUploadPrescriptionFlow = nextPath === '/patient/upload-prescription';
@@ -44,7 +45,7 @@ export default function PhoneLogin() {
   const [phone, setPhone] = useState('');
   const [pendingPhone, setPendingPhone] = useState('');
   const [pendingEmail, setPendingEmail] = useState('');
-  const [authMethod, setAuthMethod] = useState<'phone' | 'email'>('phone');
+  const [authMethod, setAuthMethod] = useState<'phone' | 'email' | 'google'>('phone');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [ageConfirmed, setAgeConfirmed] = useState(false);
@@ -55,11 +56,8 @@ export default function PhoneLogin() {
   const [resendCooldown, setResendCooldown] = useState(0);
 
   const title = useMemo(() => {
-    if (intendedRole === 'doctor') return 'Doctor phone login';
-    if (intendedRole === 'admin') return 'Admin phone login';
     if (createPatientAccount) return 'Create patient account';
-    if (isPatient) return 'Patient phone login';
-    return 'Patient phone login';
+    return 'Log in to PouchCare';
   }, [createPatientAccount, intendedRole, isPatient]);
 
   const destinationDescription = nextPath === '/patient/upload-prescription'
@@ -82,6 +80,29 @@ export default function PhoneLogin() {
   const startResendCooldown = () => setResendCooldown(30);
 
   const otpDestination = authMethod === 'email' ? pendingEmail : pendingPhone;
+
+  const showLoginOptions = !createPatientAccount;
+  const canUsePatientLoginOptions = isPatient;
+
+  const selectAuthMethod = (method: 'phone' | 'email' | 'google') => {
+    if (method === 'phone') {
+      setAuthMethod('phone');
+      return;
+    }
+
+    if (!canUsePatientLoginOptions) {
+      toast.error('Staff accounts use mobile code login.');
+      setAuthMethod('phone');
+      return;
+    }
+
+    if (method === 'google') {
+      toast.info('Google login is coming soon. Use mobile or email code for now.');
+      return;
+    }
+
+    setAuthMethod(method);
+  };
 
   const preparePatientEmailLogin = async (emailAddress: string) => {
     const { data, error } = await supabase.functions.invoke('prepare-patient-email-login', {
@@ -270,7 +291,7 @@ export default function PhoneLogin() {
         .maybeSingle();
       if (roleError) throw roleError;
       if (!roleRow || roleRow.status !== 'approved') throw new Error('This account is not approved yet.');
-      if (intendedRole && roleRow.role !== intendedRole) throw new Error(`This mobile is not registered as a ${intendedRole}.`);
+      if (requestedRole && roleRow.role !== requestedRole) throw new Error(`This mobile is not registered as a ${requestedRole}.`);
 
       const path = nextPath || getDashboardPathForRole(roleRow.role) || '/';
       navigate(path, { replace: true });
@@ -300,20 +321,35 @@ export default function PhoneLogin() {
               <CardDescription>
                 {createPatientAccount
                   ? 'Create a patient account with SMS verification before uploading your prescription.'
-                  : 'Use the mobile number registered with PouchCare. No shared passwords.'}
+                  : isPatient
+                    ? 'Choose how you want to continue. Mobile code works for everyone; email code is available for approved patient accounts.'
+                    : 'Staff accounts use mobile code login.'}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {step === 'phone' ? (
                 <form onSubmit={authMethod === 'email' ? sendEmailCode : sendCode} className="space-y-5">
-                  {enablePatientEmailLogin && isPatient && !createPatientAccount && (
-                    <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted p-1">
-                      <Button type="button" variant={authMethod === 'phone' ? 'default' : 'ghost'} onClick={() => setAuthMethod('phone')} className="gap-2">
-                        <Phone className="h-4 w-4" /> Mobile code
-                      </Button>
-                      <Button type="button" variant={authMethod === 'email' ? 'default' : 'ghost'} onClick={() => setAuthMethod('email')} className="gap-2">
-                        <Mail className="h-4 w-4" /> Email code
-                      </Button>
+                  {showLoginOptions && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">How do you want to continue?</p>
+                      <div className={isPatient ? "grid grid-cols-3 gap-2 rounded-lg bg-muted p-1" : "grid grid-cols-1 gap-2 rounded-lg bg-muted p-1"}>
+                        <Button type="button" variant={authMethod === 'phone' ? 'default' : 'ghost'} onClick={() => selectAuthMethod('phone')} className="gap-2">
+                          <Phone className="h-4 w-4" /> Mobile code
+                        </Button>
+                        {enablePatientEmailLogin && isPatient && (
+                          <Button type="button" variant={authMethod === 'email' ? 'default' : 'ghost'} onClick={() => selectAuthMethod('email')} className="gap-2">
+                            <Mail className="h-4 w-4" /> Email code
+                          </Button>
+                        )}
+                        {isPatient && (
+                          <Button type="button" variant="ghost" onClick={() => selectAuthMethod('google')} className="gap-2" aria-disabled="true">
+                            G Google
+                          </Button>
+                        )}
+                      </div>
+                      {isPatient && (
+                        <p className="text-xs text-muted-foreground">Google login is not active yet; use mobile or email code for now.</p>
+                      )}
                     </div>
                   )}
                   {createPatientAccount && (
