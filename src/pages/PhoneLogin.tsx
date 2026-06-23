@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Mail, Phone, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { getDashboardPathForRole } from '@/lib/roleRoutes';
+import { useAuth } from '@/hooks/useAuth';
 
 const PRIVACY_POLICY_VERSION = '2026-06-18-existing-prescription-upload';
 const COLLECTION_NOTICE_VERSION = '2026-06-18-existing-prescription-upload';
@@ -35,6 +36,7 @@ function safeNextPath(value: string | null): string | null {
 export default function PhoneLogin() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { user, userRole } = useAuth();
   const requestedRole = searchParams.get('role');
   const intendedRole = requestedRole || 'patient';
   const nextPath = safeNextPath(searchParams.get('next'));
@@ -54,6 +56,20 @@ export default function PhoneLogin() {
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [busy, setBusy] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+
+  const isGoogleOnboarding = createPatientAccount && searchParams.get('google') === '1' && Boolean(user);
+  const googleEmail = typeof user?.email === 'string' ? user.email : '';
+  const googleName = typeof user?.user_metadata?.full_name === 'string'
+    ? user.user_metadata.full_name
+    : typeof user?.user_metadata?.name === 'string'
+      ? user.user_metadata.name
+      : '';
+
+  useEffect(() => {
+    if (!user || !createPatientAccount) return;
+    if (!email && googleEmail) setEmail(googleEmail);
+    if (!fullName && googleName) setFullName(googleName);
+  }, [createPatientAccount, email, fullName, googleEmail, googleName, user]);
 
   const title = useMemo(() => {
     if (createPatientAccount) return 'Create patient account';
@@ -81,9 +97,15 @@ export default function PhoneLogin() {
 
   const otpDestination = authMethod === 'email' ? pendingEmail : pendingPhone;
 
-  const getOAuthRedirectUrl = () => {
+  const getOAuthRedirectUrl = (mode?: 'signup') => {
     const callbackUrl = new URL('/auth/callback', window.location.origin);
-    if (nextPath) callbackUrl.searchParams.set('next', nextPath);
+    if (mode) callbackUrl.searchParams.set('mode', mode);
+    if (mode === 'signup') {
+      const returnPath = `${window.location.pathname}${window.location.search}`;
+      callbackUrl.searchParams.set('next', returnPath);
+    } else if (nextPath) {
+      callbackUrl.searchParams.set('next', nextPath);
+    }
     return callbackUrl.toString();
   };
 
@@ -113,8 +135,23 @@ export default function PhoneLogin() {
     if ((data as any)?.error) throw new Error((data as any).error);
   };
 
+  const getCurrentGoogleIdentity = (userId: string) => {
+    if (!user || user.id !== userId) return null;
+    const identities = Array.isArray((user as any).identities) ? (user as any).identities : [];
+    const googleIdentity = identities.find((identity: any) => identity?.provider === 'google');
+    if (!googleIdentity) return null;
+
+    const identityData = googleIdentity.identity_data || {};
+    const emailAddress = normalizeEmail(identityData.email || user.email);
+    const providerId = String(identityData.sub || googleIdentity.id || googleIdentity.identity_id || '').trim();
+    if (!emailAddress || !providerId) return null;
+
+    return { email: emailAddress, providerId };
+  };
+
   const savePatientAccount = async (userId: string, phoneE164: string) => {
     const now = new Date().toISOString();
+    const googleIdentity = getCurrentGoogleIdentity(userId);
 
     const { error: roleError } = await (supabase as any)
       .from('user_roles')
@@ -132,8 +169,13 @@ export default function PhoneLogin() {
         user_id: userId,
         full_name: fullName.trim(),
         email: normalizeEmail(email),
-        email_verified_at: null,
-        email_verification_method: null,
+        email_verified_at: googleIdentity ? now : null,
+        email_verification_method: googleIdentity ? 'google_oauth' : null,
+        ...(googleIdentity ? {
+          google_provider_id: googleIdentity.providerId,
+          google_email: googleIdentity.email,
+          google_linked_at: now,
+        } : {}),
         phone: phoneE164,
         phone_verified_at: now,
         phone_verification_method: 'supabase_sms_otp',
@@ -172,6 +214,20 @@ export default function PhoneLogin() {
 
     setBusy(true);
     try {
+      if (createPatientAccount && user?.id) {
+        if (userRole?.role && userRole.role !== 'patient') {
+          const dashboardPath = getDashboardPathForRole(userRole.role) || '/';
+          toast.error('You are logged in as a staff account. Please log out or use a separate patient account.');
+          navigate(dashboardPath, { replace: true });
+          return;
+        }
+
+        await savePatientAccount(user.id, phoneE164);
+        const path = nextPath || getDashboardPathForRole('patient') || '/patient/dashboard';
+        window.location.assign(path);
+        return;
+      }
+
       const { error } = await supabase.auth.signInWithOtp({
         phone: phoneE164,
         options: { shouldCreateUser: createPatientAccount },
@@ -246,6 +302,27 @@ export default function PhoneLogin() {
       if (error) throw error;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not start Google login.');
+      setBusy(false);
+    }
+  };
+
+  const startGoogleSignup = async () => {
+    if (!isPatient || !createPatientAccount) return;
+
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: getOAuthRedirectUrl('signup'),
+          queryParams: {
+            prompt: 'select_account',
+          },
+        },
+      });
+      if (error) throw error;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not start Google sign-up.');
       setBusy(false);
     }
   };
@@ -351,7 +428,7 @@ export default function PhoneLogin() {
               </CardTitle>
               <CardDescription>
                 {createPatientAccount
-                  ? 'Create a patient account with SMS verification before uploading your prescription.'
+                  ? 'Create a patient account before uploading your prescription. Google can verify your email; mobile details are still required.'
                   : isPatient
                     ? 'Choose how you want to continue. Mobile code works for everyone; email code is available for approved patient accounts.'
                     : 'Staff accounts use mobile code login.'}
@@ -360,6 +437,21 @@ export default function PhoneLogin() {
             <CardContent>
               {step === 'phone' ? (
                 <form onSubmit={authMethod === 'email' ? sendEmailCode : authMethod === 'google' ? continueWithGoogle : sendCode} className="space-y-5">
+                  {createPatientAccount && !user && (
+                    <div className="space-y-3 rounded-lg border p-4">
+                      <Button type="button" variant="outline" className="w-full" onClick={startGoogleSignup} disabled={busy}>
+                        {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                        Continue with Google
+                      </Button>
+                      <p className="text-xs text-muted-foreground">Google can prefill your name and email. You still need to provide your Australian mobile, confirm you are 18+, and complete prescription review before shop access.</p>
+                    </div>
+                  )}
+                  {isGoogleOnboarding && (
+                    <Alert>
+                      <ShieldCheck className="h-4 w-4" />
+                      <AlertDescription>Google verified your email. Complete the remaining patient details before continuing.</AlertDescription>
+                    </Alert>
+                  )}
                   {showLoginOptions && (
                     <div className="space-y-2">
                       <p className="text-sm font-medium">How do you want to continue?</p>
@@ -392,7 +484,7 @@ export default function PhoneLogin() {
                   {createPatientAccount && (
                     <div className="space-y-2">
                       <Label htmlFor="email">Email address</Label>
-                      <Input id="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" autoComplete="email" required />
+                      <Input id="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" autoComplete="email" readOnly={isGoogleOnboarding} required />
                     </div>
                   )}
                   {authMethod === 'phone' ? (

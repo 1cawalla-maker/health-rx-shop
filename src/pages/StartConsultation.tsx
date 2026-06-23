@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import Seo from '@/components/seo/Seo';
 import { Button } from '@/components/ui/button';
@@ -45,6 +45,7 @@ async function withTimeout<T>(promise: Promise<T>, label: string, timeoutMs = 20
 
 export default function StartConsultation() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, userRole, loading: authLoading } = useAuth();
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -57,6 +58,19 @@ export default function StartConsultation() {
   const [isBusy, setIsBusy] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
+  const isGoogleOnboarding = searchParams.get('google') === '1' && Boolean(user);
+  const googleEmail = typeof user?.email === 'string' ? user.email : '';
+  const googleName = typeof user?.user_metadata?.full_name === 'string'
+    ? user.user_metadata.full_name
+    : typeof user?.user_metadata?.name === 'string'
+      ? user.user_metadata.name
+      : '';
+
+  useEffect(() => {
+    if (!user) return;
+    if (!email && googleEmail) setEmail(googleEmail);
+    if (!fullName && googleName) setFullName(googleName);
+  }, [email, fullName, googleEmail, googleName, user]);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -83,8 +97,49 @@ export default function StartConsultation() {
     return phoneE164;
   };
 
+  const getGoogleSignupRedirectUrl = () => {
+    const callbackUrl = new URL('/auth/callback', window.location.origin);
+    callbackUrl.searchParams.set('mode', 'signup');
+    callbackUrl.searchParams.set('next', '/start-consult');
+    return callbackUrl.toString();
+  };
+
+  const continueWithGoogle = async () => {
+    setIsBusy(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: getGoogleSignupRedirectUrl(),
+          queryParams: {
+            prompt: 'select_account',
+          },
+        },
+      });
+      if (error) throw error;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not start Google sign-up.');
+      setIsBusy(false);
+    }
+  };
+
+  const getCurrentGoogleIdentity = (userId: string) => {
+    if (!user || user.id !== userId) return null;
+    const identities = Array.isArray((user as any).identities) ? (user as any).identities : [];
+    const googleIdentity = identities.find((identity: any) => identity?.provider === 'google');
+    if (!googleIdentity) return null;
+
+    const identityData = googleIdentity.identity_data || {};
+    const emailAddress = normalizeEmail(identityData.email || user.email);
+    const providerId = String(identityData.sub || googleIdentity.id || googleIdentity.identity_id || '').trim();
+    if (!emailAddress || !providerId) return null;
+
+    return { email: emailAddress, providerId };
+  };
+
   const saveProfileAndRole = async (userId: string, phoneE164: string, verified: boolean) => {
     const now = new Date().toISOString();
+    const googleIdentity = getCurrentGoogleIdentity(userId);
 
     const { data: existingProfile } = await withTimeout(
       (supabase as any)
@@ -120,8 +175,13 @@ export default function StartConsultation() {
         user_id: userId,
         full_name: fullName.trim(),
         email: normalizeEmail(email),
-        email_verified_at: null,
-        email_verification_method: null,
+        email_verified_at: googleIdentity ? now : null,
+        email_verification_method: googleIdentity ? 'google_oauth' : null,
+        ...(googleIdentity ? {
+          google_provider_id: googleIdentity.providerId,
+          google_email: googleIdentity.email,
+          google_linked_at: now,
+        } : {}),
         phone: phoneE164,
         phone_verified_at: phoneVerifiedAt,
         phone_verification_method: verified ? 'supabase_sms_otp' : (phoneVerifiedAt ? 'supabase_sms_otp' : null),
@@ -267,6 +327,21 @@ export default function StartConsultation() {
             <CardContent>
               {step === 'details' ? (
                 <form onSubmit={handleSendCode} className="space-y-5">
+                  {!user && (
+                    <div className="space-y-3 rounded-lg border p-4">
+                      <Button type="button" variant="outline" className="w-full" onClick={continueWithGoogle} disabled={isBusy}>
+                        {isBusy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                        Continue with Google
+                      </Button>
+                      <p className="text-xs text-muted-foreground">Google can prefill your name and email. You still need to provide your Australian mobile, confirm you are 18+, accept the privacy notice, and complete the consultation/prescription pathway.</p>
+                    </div>
+                  )}
+                  {isGoogleOnboarding && (
+                    <Alert>
+                      <ShieldCheck className="h-4 w-4" />
+                      <AlertDescription>Google verified your email. Complete the remaining patient details before booking.</AlertDescription>
+                    </Alert>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="full-name">Full name</Label>
                     <Input id="full-name" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your legal name" required />
@@ -274,7 +349,7 @@ export default function StartConsultation() {
 
                   <div className="space-y-2">
                     <Label htmlFor="email">Email address</Label>
-                    <Input id="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" autoComplete="email" required />
+                    <Input id="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" autoComplete="email" readOnly={isGoogleOnboarding} required />
                     <p className="text-xs text-muted-foreground">Used for account access, receipts, and prescription updates.</p>
                   </div>
 

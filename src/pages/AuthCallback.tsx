@@ -20,6 +20,7 @@ export default function AuthCallback() {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState('Finishing secure login…');
   const nextPath = useMemo(() => safeNextPath(searchParams.get('next')), [searchParams]);
+  const mode = searchParams.get('mode');
 
   useEffect(() => {
     let cancelled = false;
@@ -34,6 +35,26 @@ export default function AuthCallback() {
           setStatus('Confirming Google session…');
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
           if (exchangeError) throw exchangeError;
+        }
+
+        if (mode === 'signup') {
+          setStatus('Preparing patient onboarding…');
+          const { data: userData, error: userError } = await supabase.auth.getUser();
+          if (userError || !userData.user) throw userError || new Error('Google sign-up did not return a valid session.');
+
+          const { data: roles, error: roleError } = await supabase
+            .from('user_roles')
+            .select('role,status')
+            .eq('user_id', userData.user.id);
+          if (roleError) throw roleError;
+
+          const staffRole = (roles || []).some((row: any) => ['admin', 'doctor'].includes(row.role));
+          if (staffRole) throw new Error('Staff accounts must use mobile code login.');
+
+          const path = nextPath || '/start-consult';
+          const separator = path.includes('?') ? '&' : '?';
+          if (!cancelled) navigate(`${path}${separator}google=1`, { replace: true });
+          return;
         }
 
         setStatus('Checking account access…');
@@ -57,7 +78,7 @@ export default function AuthCallback() {
     return () => {
       cancelled = true;
     };
-  }, [navigate, nextPath, searchParams]);
+  }, [mode, navigate, nextPath, searchParams]);
 
   return (
     <PublicLayout>
@@ -71,7 +92,7 @@ export default function AuthCallback() {
                 Google login
               </CardTitle>
               <CardDescription>
-                We only allow Google login for existing approved patient accounts.
+                Google can be used for approved patient login or to start guarded patient onboarding.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
