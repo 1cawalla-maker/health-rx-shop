@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Phone, ShieldCheck } from 'lucide-react';
+import { Loader2, Mail, Phone, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { getDashboardPathForRole } from '@/lib/roleRoutes';
 
@@ -42,6 +42,8 @@ export default function PhoneLogin() {
   const createPatientAccount = isPatient && (isUploadPrescriptionFlow || searchParams.get('mode') === 'signup' || searchParams.get('create') === '1');
   const [phone, setPhone] = useState('');
   const [pendingPhone, setPendingPhone] = useState('');
+  const [pendingEmail, setPendingEmail] = useState('');
+  const [authMethod, setAuthMethod] = useState<'phone' | 'email'>('phone');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [ageConfirmed, setAgeConfirmed] = useState(false);
@@ -55,8 +57,9 @@ export default function PhoneLogin() {
     if (intendedRole === 'doctor') return 'Doctor phone login';
     if (intendedRole === 'admin') return 'Admin phone login';
     if (createPatientAccount) return 'Create patient account';
+    if (isPatient) return 'Log in to PouchCare';
     return 'Patient phone login';
-  }, [createPatientAccount, intendedRole]);
+  }, [createPatientAccount, intendedRole, isPatient]);
 
   const destinationDescription = nextPath === '/patient/upload-prescription'
     ? 'After verification, you will go straight to prescription upload.'
@@ -76,6 +79,16 @@ export default function PhoneLogin() {
   };
 
   const startResendCooldown = () => setResendCooldown(30);
+
+  const otpDestination = authMethod === 'email' ? pendingEmail : pendingPhone;
+
+  const preparePatientEmailLogin = async (emailAddress: string) => {
+    const { data, error } = await supabase.functions.invoke('prepare-patient-email-login', {
+      body: { email: emailAddress },
+    });
+    if (error) throw error;
+    if ((data as any)?.error) throw new Error((data as any).error);
+  };
 
   const savePatientAccount = async (userId: string, phoneE164: string) => {
     const now = new Date().toISOString();
@@ -153,18 +166,62 @@ export default function PhoneLogin() {
   };
 
 
-  const resendCode = async () => {
-    if (!pendingPhone || resendCooldown > 0) return;
+  const sendEmailCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isPatient || createPatientAccount) return;
+
+    const emailAddress = normalizeEmail(email);
+    if (!emailAddress) {
+      toast.error('Enter a valid email address.');
+      return;
+    }
+
     setBusy(true);
     try {
+      await preparePatientEmailLogin(emailAddress);
       const { error } = await supabase.auth.signInWithOtp({
-        phone: pendingPhone,
-        options: { shouldCreateUser: createPatientAccount },
+        email: emailAddress,
+        options: { shouldCreateUser: false },
       });
       if (error) throw error;
+      setPendingEmail(emailAddress);
+      setPendingPhone('');
+      setAuthMethod('email');
+      setStep('otp');
+      startResendCooldown();
+      toast.success('Verification code sent by email.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not send email verification code.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+
+  const resendCode = async () => {
+    if (resendCooldown > 0) return;
+    setBusy(true);
+    try {
+      if (authMethod === 'email') {
+        if (!pendingEmail) return;
+        await preparePatientEmailLogin(pendingEmail);
+        const { error } = await supabase.auth.signInWithOtp({
+          email: pendingEmail,
+          options: { shouldCreateUser: false },
+        });
+        if (error) throw error;
+        toast.success('New email verification code sent.');
+      } else {
+        if (!pendingPhone) return;
+        const { error } = await supabase.auth.signInWithOtp({
+          phone: pendingPhone,
+          options: { shouldCreateUser: createPatientAccount },
+        });
+        if (error) throw error;
+        toast.success('New verification code sent.');
+      }
       setOtp('');
       startResendCooldown();
-      toast.success('New verification code sent.');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not resend verification code.');
     } finally {
@@ -182,17 +239,27 @@ export default function PhoneLogin() {
 
     setBusy(true);
     try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone: pendingPhone,
-        token,
-        type: 'sms',
-      });
+      const { data, error } = authMethod === 'email'
+        ? await supabase.auth.verifyOtp({ email: pendingEmail, token, type: 'email' })
+        : await supabase.auth.verifyOtp({ phone: pendingPhone, token, type: 'sms' });
       if (error) throw error;
       const userId = data.user?.id;
       if (!userId) throw new Error('Login succeeded but no session was returned.');
 
       if (createPatientAccount) {
         await savePatientAccount(userId, pendingPhone);
+      }
+
+      if (authMethod === 'email') {
+        const { error: emailProfileError } = await (supabase as any)
+          .from('profiles')
+          .update({
+            email_verified_at: new Date().toISOString(),
+            email_verification_method: 'supabase_email_otp',
+          })
+          .eq('user_id', userId)
+          .ilike('email', pendingEmail);
+        if (emailProfileError) throw emailProfileError;
       }
 
       const { data: roleRow, error: roleError } = await supabase
@@ -232,12 +299,24 @@ export default function PhoneLogin() {
               <CardDescription>
                 {createPatientAccount
                   ? 'Create a patient account with SMS verification before uploading your prescription.'
-                  : 'Use the mobile number registered with PouchCare. No shared passwords.'}
+                  : isPatient
+                    ? 'Use mobile code or email code. Staff should use mobile code only.'
+                    : 'Use the mobile number registered with PouchCare. No shared passwords.'}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {step === 'phone' ? (
-                <form onSubmit={sendCode} className="space-y-5">
+                <form onSubmit={authMethod === 'email' ? sendEmailCode : sendCode} className="space-y-5">
+                  {isPatient && !createPatientAccount && (
+                    <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted p-1">
+                      <Button type="button" variant={authMethod === 'phone' ? 'default' : 'ghost'} onClick={() => setAuthMethod('phone')} className="gap-2">
+                        <Phone className="h-4 w-4" /> Mobile code
+                      </Button>
+                      <Button type="button" variant={authMethod === 'email' ? 'default' : 'ghost'} onClick={() => setAuthMethod('email')} className="gap-2">
+                        <Mail className="h-4 w-4" /> Email code
+                      </Button>
+                    </div>
+                  )}
                   {createPatientAccount && (
                     <div className="space-y-2">
                       <Label htmlFor="fullName">Full name</Label>
@@ -250,10 +329,18 @@ export default function PhoneLogin() {
                       <Input id="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" autoComplete="email" required />
                     </div>
                   )}
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Mobile number</Label>
-                    <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="04xx xxx xxx" inputMode="tel" required />
-                  </div>
+                  {authMethod === 'phone' ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Mobile number</Label>
+                      <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="04xx xxx xxx" inputMode="tel" required />
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label htmlFor="loginEmail">Email address</Label>
+                      <Input id="loginEmail" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" autoComplete="email" required />
+                      <p className="text-xs text-muted-foreground">Email login only works for existing approved patient accounts. Staff must use mobile code.</p>
+                    </div>
+                  )}
                   {createPatientAccount && (
                     <div className="space-y-3 rounded-lg border p-3 text-sm">
                       <label className="flex items-start gap-3">
@@ -277,7 +364,7 @@ export default function PhoneLogin() {
                   )}
                   <Button type="submit" className="w-full" disabled={busy}>
                     {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Send code
+                    {authMethod === 'email' ? 'Send email code' : 'Send code'}
                   </Button>
                   {createPatientAccount ? (
                     <p className="text-center text-sm text-muted-foreground">
@@ -304,17 +391,17 @@ export default function PhoneLogin() {
                         <InputOTPSlot index={5} />
                       </InputOTPGroup>
                     </InputOTP>
-                    <p className="text-xs text-muted-foreground">Sent to {pendingPhone}</p>
+                    <p className="text-xs text-muted-foreground">Sent to {otpDestination}</p>
                   </div>
                   <Button type="button" variant="outline" className="w-full" onClick={resendCode} disabled={busy || resendCooldown > 0}>
-                    {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
+                    {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : `Resend ${authMethod === 'email' ? 'email' : 'code'}`}
                   </Button>
                   <Button type="submit" className="w-full" disabled={busy}>
                     {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     {createPatientAccount ? 'Verify and continue' : 'Log in'}
                   </Button>
                   <Button type="button" variant="ghost" className="w-full" onClick={() => setStep('phone')} disabled={busy}>
-                    Change mobile
+                    {authMethod === 'email' ? 'Change email' : 'Change mobile'}
                   </Button>
                 </form>
               )}
