@@ -342,7 +342,7 @@ export default function PhoneLogin() {
                           </Button>
                         )}
                         {isPatient && (
-                          <Button type="button" variant="ghost" onClick={() => selectAuthMethod('google')} className="gap-2" aria-disabled="true">
+                          <Button type="button" variant="ghost" onClick={() => selectAuthMethod('google')} className="gap-2">
                             G Google
                           </Button>
                         )}
