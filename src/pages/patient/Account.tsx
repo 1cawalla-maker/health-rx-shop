@@ -1,23 +1,28 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { userPreferencesService } from '@/services/userPreferencesService';
 import { userProfileService } from '@/services/userProfileService';
 import { supabase } from '@/integrations/supabase/client';
-import { AU_TIMEZONE_OPTIONS } from '@/lib/timezones';
 import { validateDob, formatDobForStorage, parseDobFromStorage, validateAuPhone, stripAuPrefix } from '@/lib/validation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Mail, User, Globe, Save } from 'lucide-react';
+import { Mail, User, Save } from 'lucide-react';
 import { toast } from 'sonner';
+
+function normalizeEmail(value: string): string | null {
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) return null;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return null;
+  return trimmed;
+}
 
 export default function PatientAccount() {
   const { user } = useAuth();
 
   const [contactEmail, setContactEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [fullName, setFullName] = useState('');
   const [dobDay, setDobDay] = useState('');
   const [dobMonth, setDobMonth] = useState('');
@@ -25,32 +30,57 @@ export default function PatientAccount() {
   const [dobError, setDobError] = useState('');
   const [phone, setPhone] = useState('');
   const [phoneError, setPhoneError] = useState('');
-  const [timezone, setTimezone] = useState('Australia/Brisbane');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
 
-    const profile = userProfileService.getProfile(user.id);
-    if (profile) {
-      setContactEmail(profile.contactEmail || user.email || '');
-      setFullName(profile.fullName || '');
-      const dob = parseDobFromStorage(profile.dateOfBirth);
-      setDobDay(dob.day);
-      setDobMonth(dob.month);
-      setDobYear(dob.year);
-      setPhone(stripAuPrefix(profile.phoneE164));
-      setTimezone(profile.timezone || 'Australia/Brisbane');
-    } else {
-      // Seed from auth + metadata on first visit
-      setContactEmail(user.email || '');
-      setFullName(user.user_metadata?.full_name || '');
-    }
+    let cancelled = false;
 
-    const { timezone: tz, wasReset } = userPreferencesService.getTimezoneWithMeta(user.id);
-    setTimezone(tz);
-    if (wasReset) toast.info('Your timezone preference was reset to the default (Australia/Brisbane) because the stored value was invalid.');
-  }, [user?.id]);
+    const loadProfile = async () => {
+      const localProfile = userProfileService.getProfile(user.id);
+      if (localProfile && !cancelled) {
+        setContactEmail(localProfile.contactEmail || user.email || '');
+        setFullName(localProfile.fullName || '');
+        const dob = parseDobFromStorage(localProfile.dateOfBirth);
+        setDobDay(dob.day);
+        setDobMonth(dob.month);
+        setDobYear(dob.year);
+        setPhone(stripAuPrefix(localProfile.phoneE164));
+      } else if (!cancelled) {
+        setContactEmail(user.email || '');
+        setFullName(user.user_metadata?.full_name || '');
+      }
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('full_name, email, phone, date_of_birth')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (error) {
+        console.error('Failed to load profile from Supabase:', error);
+        return;
+      }
+
+      if (data) {
+        setContactEmail((data as any).email || user.email || '');
+        setFullName((data as any).full_name || '');
+        const dob = parseDobFromStorage((data as any).date_of_birth || null);
+        setDobDay(dob.day);
+        setDobMonth(dob.month);
+        setDobYear(dob.year);
+        setPhone(stripAuPrefix((data as any).phone || ''));
+      }
+    };
+
+    void loadProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, user?.email, user?.user_metadata?.full_name]);
 
   const handlePhoneChange = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 9);
@@ -60,6 +90,13 @@ export default function PatientAccount() {
 
   const handleSave = async () => {
     if (!user?.id) return;
+
+    const normalizedEmail = normalizeEmail(contactEmail);
+    if (!normalizedEmail) {
+      setEmailError('Enter a valid email address.');
+      return;
+    }
+    setEmailError('');
 
     const pErr = validateAuPhone(phone);
     if (pErr) {
@@ -82,16 +119,15 @@ export default function PatientAccount() {
     const phoneE164 = `+61${phone}`;
     const dateOfBirth = (dobDay && dobMonth && dobYear) ? formatDobForStorage(dobDay, dobMonth, dobYear) : null;
 
-    // Phase 1 local profile (kept for UI responsiveness)
+    // Keep a local cache for UI responsiveness, but Supabase is the source of truth.
     userProfileService.upsertProfile(user.id, {
-      contactEmail,
+      contactEmail: normalizedEmail,
       fullName,
       dateOfBirth,
       phoneE164,
-      timezone,
+      timezone: 'Australia/Brisbane',
     });
 
-    // Phase 2: persist into Supabase profiles so doctors can see patient details.
     try {
       const { error } = await supabase
         .from('profiles')
@@ -99,6 +135,7 @@ export default function PatientAccount() {
           {
             user_id: user.id,
             full_name: fullName || null,
+            email: normalizedEmail,
             phone: phoneE164 || null,
             date_of_birth: dateOfBirth,
           } as any,
@@ -106,23 +143,20 @@ export default function PatientAccount() {
         );
 
       if (error) throw error;
+      toast.success('Account settings saved');
     } catch (err) {
       console.error('Failed to save profile to Supabase:', err);
-      // Keep local save, but surface a hint.
-      toast.error('Saved locally, but could not sync profile to server');
+      toast.error('Could not sync profile to server');
+    } finally {
+      setSaving(false);
     }
-
-    userPreferencesService.setTimezone(user.id, timezone);
-
-    setSaving(false);
-    toast.success('Account settings saved');
   };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
         <h1 className="font-display text-3xl font-bold text-foreground">Account Settings</h1>
-        <p className="text-muted-foreground mt-1">Manage your profile and preferences</p>
+        <p className="text-muted-foreground mt-1">Manage your profile and login details</p>
       </div>
 
       <Card>
@@ -131,45 +165,31 @@ export default function PatientAccount() {
             <User className="h-5 w-5" />
             Personal Details
           </CardTitle>
-          <CardDescription>Update your account information</CardDescription>
+          <CardDescription>Update the details PouchCare uses for your patient account</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Login Email (read-only) */}
           <div className="space-y-1">
             <Label className="flex items-center gap-2">
               <Mail className="h-4 w-4" />
-              Login Email
+              Account email
             </Label>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Input
-                value={user?.email || ''}
-                readOnly
-                className="bg-muted/30 w-full sm:flex-1 min-w-0"
-              />
-              <Badge variant="outline" className="w-fit self-start sm:self-auto">Read-only</Badge>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              This is the email you use to sign in.
-            </p>
-          </div>
-
-          {/* Contact Email (editable) */}
-          <div className="space-y-1">
-            <Label htmlFor="account-contact-email">Contact Email</Label>
             <Input
               id="account-contact-email"
               value={contactEmail}
-              onChange={(e) => setContactEmail(e.target.value)}
+              onChange={(e) => { setContactEmail(e.target.value); setEmailError(''); }}
               placeholder="you@example.com"
               inputMode="email"
               autoComplete="email"
             />
+            {emailError && <p className="text-xs text-destructive">{emailError}</p>}
             <p className="text-xs text-muted-foreground">
-              Used for reminders and receipts. Changing this does not change your login email.
+              Used for account access, receipts, and prescription updates. Email-code login will be enabled after verification is configured.
             </p>
+            {user?.email && user.email !== contactEmail && (
+              <Badge variant="outline" className="w-fit">Auth email: {user.email}</Badge>
+            )}
           </div>
 
-          {/* Full Name */}
           <div className="space-y-1">
             <Label htmlFor="account-name">Full Name</Label>
             <Input
@@ -180,7 +200,6 @@ export default function PatientAccount() {
             />
           </div>
 
-          {/* DOB */}
           <div className="space-y-1">
             <Label>Date of Birth</Label>
             <div className="grid grid-cols-3 gap-2">
@@ -212,9 +231,8 @@ export default function PatientAccount() {
             {dobError && <p className="text-xs text-destructive">{dobError}</p>}
           </div>
 
-          {/* Phone */}
           <div className="space-y-1">
-            <Label>Phone Number</Label>
+            <Label>Mobile Number</Label>
             <div className="flex items-center gap-2">
               <span className="flex h-10 items-center rounded-md border border-input bg-muted px-3 text-sm font-medium text-muted-foreground">
                 +61
@@ -231,30 +249,6 @@ export default function PatientAccount() {
             </div>
             {phoneError && <p className="text-xs text-destructive">{phoneError}</p>}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Timezone */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Globe className="h-5 w-5" />
-            Timezone
-          </CardTitle>
-          <CardDescription>All consultation and booking times are displayed in this timezone</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Select value={timezone} onValueChange={setTimezone}>
-            <SelectTrigger className="max-w-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {AU_TIMEZONE_OPTIONS.map((opt, i) => (
-                <SelectItem key={`${opt.value}-${i}`} value={opt.value}>{opt.label} ({opt.value})</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">Default: Australia/Brisbane. Only Australian timezones are supported.</p>
         </CardContent>
       </Card>
 

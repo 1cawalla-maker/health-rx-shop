@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import Seo from '@/components/seo/Seo';
@@ -48,17 +48,36 @@ export default function StartConsultation() {
   const { user, userRole, loading: authLoading } = useAuth();
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [step, setStep] = useState<'details' | 'otp'>('details');
   const [otp, setOtp] = useState('');
   const [pendingPhone, setPendingPhone] = useState('');
   const [isBusy, setIsBusy] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = window.setTimeout(() => setResendCooldown((value) => Math.max(0, value - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [resendCooldown]);
+
+  const normalizeEmail = (value: string): string | null => {
+    const trimmed = value.trim().toLowerCase();
+    if (!trimmed) return null;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return null;
+    return trimmed;
+  };
+
+  const startResendCooldown = () => setResendCooldown(30);
 
   const validateDetails = () => {
     if (fullName.trim().length < 2) throw new Error('Please enter your full name.');
     const phoneE164 = normalizeAuMobile(phone);
     if (!phoneE164) throw new Error('Please enter a valid Australian mobile number.');
+    if (!normalizeEmail(email)) throw new Error('Please enter a valid email address.');
     if (!ageConfirmed) throw new Error('Please confirm you are 18 or over.');
     if (!privacyAccepted) throw new Error('Please accept the privacy and collection notice.');
     return phoneE164;
@@ -100,6 +119,9 @@ export default function StartConsultation() {
         .upsert({
         user_id: userId,
         full_name: fullName.trim(),
+        email: normalizeEmail(email),
+        email_verified_at: null,
+        email_verification_method: null,
         phone: phoneE164,
         phone_verified_at: phoneVerifiedAt,
         phone_verification_method: verified ? 'supabase_sms_otp' : (phoneVerifiedAt ? 'supabase_sms_otp' : null),
@@ -159,9 +181,33 @@ export default function StartConsultation() {
       if (error) throw error;
       setPendingPhone(phoneE164);
       setStep('otp');
+      startResendCooldown();
       toast.success('Verification code sent by SMS.');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not start consult booking.');
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+
+  const resendCode = async () => {
+    if (!pendingPhone || resendCooldown > 0) return;
+    setIsBusy(true);
+    try {
+      const { error } = await withTimeout(
+        supabase.auth.signInWithOtp({
+          phone: pendingPhone,
+          options: { shouldCreateUser: true },
+        }),
+        'Resending SMS code'
+      );
+      if (error) throw error;
+      setOtp('');
+      startResendCooldown();
+      toast.success('New verification code sent by SMS.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not resend SMS code.');
     } finally {
       setIsBusy(false);
     }
@@ -227,6 +273,12 @@ export default function StartConsultation() {
                   </div>
 
                   <div className="space-y-2">
+                    <Label htmlFor="email">Email address</Label>
+                    <Input id="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" autoComplete="email" required />
+                    <p className="text-xs text-muted-foreground">Used for account access, receipts, and prescription updates.</p>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="mobile">Mobile number</Label>
                     <div className="flex items-center gap-2">
                       <span className="flex h-10 items-center rounded-md border border-input bg-muted px-3 text-sm font-medium text-muted-foreground">AU</span>
@@ -276,6 +328,9 @@ export default function StartConsultation() {
                     </InputOTP>
                     <p className="text-xs text-muted-foreground">Sent to {pendingPhone}</p>
                   </div>
+                  <Button type="button" variant="outline" className="w-full" onClick={resendCode} disabled={isBusy || resendCooldown > 0}>
+                    {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
+                  </Button>
                   <Button type="submit" className="w-full gap-2" disabled={isBusy}>
                     {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
                     Verify and continue to Halaxy

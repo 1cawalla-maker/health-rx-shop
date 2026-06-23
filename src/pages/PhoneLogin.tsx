@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import Seo from '@/components/seo/Seo';
@@ -43,11 +43,13 @@ export default function PhoneLogin() {
   const [phone, setPhone] = useState('');
   const [pendingPhone, setPendingPhone] = useState('');
   const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [busy, setBusy] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const title = useMemo(() => {
     if (intendedRole === 'doctor') return 'Doctor phone login';
@@ -59,6 +61,21 @@ export default function PhoneLogin() {
   const destinationDescription = nextPath === '/patient/upload-prescription'
     ? 'After verification, you will go straight to prescription upload.'
     : 'After verification, you will continue to your patient account.';
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = window.setTimeout(() => setResendCooldown((value) => Math.max(0, value - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [resendCooldown]);
+
+  const normalizeEmail = (value: string): string | null => {
+    const trimmed = value.trim().toLowerCase();
+    if (!trimmed) return null;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return null;
+    return trimmed;
+  };
+
+  const startResendCooldown = () => setResendCooldown(30);
 
   const savePatientAccount = async (userId: string, phoneE164: string) => {
     const now = new Date().toISOString();
@@ -78,6 +95,9 @@ export default function PhoneLogin() {
       .upsert({
         user_id: userId,
         full_name: fullName.trim(),
+        email: normalizeEmail(email),
+        email_verified_at: null,
+        email_verification_method: null,
         phone: phoneE164,
         phone_verified_at: now,
         phone_verification_method: 'supabase_sms_otp',
@@ -104,6 +124,10 @@ export default function PhoneLogin() {
         toast.error('Enter your full name.');
         return;
       }
+      if (!normalizeEmail(email)) {
+        toast.error('Enter a valid email address.');
+        return;
+      }
       if (!ageConfirmed || !privacyAccepted) {
         toast.error('Please confirm the required patient account acknowledgements.');
         return;
@@ -119,9 +143,30 @@ export default function PhoneLogin() {
       if (error) throw error;
       setPendingPhone(phoneE164);
       setStep('otp');
+      startResendCooldown();
       toast.success('Verification code sent.');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not send verification code.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+
+  const resendCode = async () => {
+    if (!pendingPhone || resendCooldown > 0) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: pendingPhone,
+        options: { shouldCreateUser: createPatientAccount },
+      });
+      if (error) throw error;
+      setOtp('');
+      startResendCooldown();
+      toast.success('New verification code sent.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not resend verification code.');
     } finally {
       setBusy(false);
     }
@@ -199,6 +244,12 @@ export default function PhoneLogin() {
                       <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your legal name" required />
                     </div>
                   )}
+                  {createPatientAccount && (
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email address</Label>
+                      <Input id="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" autoComplete="email" required />
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="phone">Mobile number</Label>
                     <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="04xx xxx xxx" inputMode="tel" required />
@@ -255,6 +306,9 @@ export default function PhoneLogin() {
                     </InputOTP>
                     <p className="text-xs text-muted-foreground">Sent to {pendingPhone}</p>
                   </div>
+                  <Button type="button" variant="outline" className="w-full" onClick={resendCode} disabled={busy || resendCooldown > 0}>
+                    {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
+                  </Button>
                   <Button type="submit" className="w-full" disabled={busy}>
                     {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     {createPatientAccount ? 'Verify and continue' : 'Log in'}
