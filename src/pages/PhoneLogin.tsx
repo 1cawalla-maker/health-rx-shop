@@ -39,6 +39,7 @@ export default function PhoneLogin() {
   const nextPath = safeNextPath(searchParams.get('next'));
   const isPatient = intendedRole === 'patient';
   const isUploadPrescriptionFlow = nextPath === '/patient/upload-prescription';
+  const enablePatientEmailLogin = false;
   const createPatientAccount = isPatient && (isUploadPrescriptionFlow || searchParams.get('mode') === 'signup' || searchParams.get('create') === '1');
   const [phone, setPhone] = useState('');
   const [pendingPhone, setPendingPhone] = useState('');
@@ -57,7 +58,7 @@ export default function PhoneLogin() {
     if (intendedRole === 'doctor') return 'Doctor phone login';
     if (intendedRole === 'admin') return 'Admin phone login';
     if (createPatientAccount) return 'Create patient account';
-    if (isPatient) return 'Log in to PouchCare';
+    if (isPatient) return 'Patient phone login';
     return 'Patient phone login';
   }, [createPatientAccount, intendedRole, isPatient]);
 
@@ -299,15 +300,13 @@ export default function PhoneLogin() {
               <CardDescription>
                 {createPatientAccount
                   ? 'Create a patient account with SMS verification before uploading your prescription.'
-                  : isPatient
-                    ? 'Use mobile code or email code. Staff should use mobile code only.'
-                    : 'Use the mobile number registered with PouchCare. No shared passwords.'}
+                  : 'Use the mobile number registered with PouchCare. No shared passwords.'}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {step === 'phone' ? (
                 <form onSubmit={authMethod === 'email' ? sendEmailCode : sendCode} className="space-y-5">
-                  {isPatient && !createPatientAccount && (
+                  {enablePatientEmailLogin && isPatient && !createPatientAccount && (
                     <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted p-1">
                       <Button type="button" variant={authMethod === 'phone' ? 'default' : 'ghost'} onClick={() => setAuthMethod('phone')} className="gap-2">
                         <Phone className="h-4 w-4" /> Mobile code
