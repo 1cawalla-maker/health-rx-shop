@@ -39,7 +39,7 @@ export default function PhoneLogin() {
   const nextPath = safeNextPath(searchParams.get('next'));
   const isPatient = intendedRole === 'patient';
   const isUploadPrescriptionFlow = nextPath === '/patient/upload-prescription';
-  const enablePatientEmailLogin = false;
+  const enablePatientEmailLogin = true;
   const createPatientAccount = isPatient && (isUploadPrescriptionFlow || searchParams.get('mode') === 'signup' || searchParams.get('create') === '1');
   const [phone, setPhone] = useState('');
   const [pendingPhone, setPendingPhone] = useState('');
