@@ -38,7 +38,8 @@ export default function PhoneLogin() {
   const intendedRole = searchParams.get('role') || 'patient';
   const nextPath = safeNextPath(searchParams.get('next'));
   const isPatient = intendedRole === 'patient';
-  const createPatientAccount = isPatient && (searchParams.get('mode') === 'signup' || searchParams.get('create') === '1');
+  const isUploadPrescriptionFlow = nextPath === '/patient/upload-prescription';
+  const createPatientAccount = isPatient && (isUploadPrescriptionFlow || searchParams.get('mode') === 'signup' || searchParams.get('create') === '1');
   const [phone, setPhone] = useState('');
   const [pendingPhone, setPendingPhone] = useState('');
   const [fullName, setFullName] = useState('');
@@ -167,7 +168,7 @@ export default function PhoneLogin() {
     }
   };
 
-  const loginPath = nextPath
+  const loginPath = nextPath && !isUploadPrescriptionFlow
     ? `/phone-login?role=patient&next=${encodeURIComponent(nextPath)}`
     : '/phone-login?role=patient';
   const uploadSignupPath = '/phone-login?role=patient&mode=signup&next=/patient/upload-prescription';
@@ -229,7 +230,7 @@ export default function PhoneLogin() {
                   </Button>
                   {createPatientAccount ? (
                     <p className="text-center text-sm text-muted-foreground">
-                      Already have an account? <Link className="underline" to={loginPath}>Log in instead</Link>
+                      Already have a PouchCare account and not uploading now? <Link className="underline" to={loginPath}>Log in instead</Link>
                     </p>
                   ) : (
                     <div className="space-y-2 text-center text-sm text-muted-foreground">
