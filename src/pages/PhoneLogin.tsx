@@ -81,6 +81,12 @@ export default function PhoneLogin() {
 
   const otpDestination = authMethod === 'email' ? pendingEmail : pendingPhone;
 
+  const getOAuthRedirectUrl = () => {
+    const callbackUrl = new URL('/auth/callback', window.location.origin);
+    if (nextPath) callbackUrl.searchParams.set('next', nextPath);
+    return callbackUrl.toString();
+  };
+
   const showLoginOptions = !createPatientAccount;
   const canUsePatientLoginOptions = isPatient;
 
@@ -93,11 +99,6 @@ export default function PhoneLogin() {
     if (!canUsePatientLoginOptions) {
       toast.error('Staff accounts use mobile code login.');
       setAuthMethod('phone');
-      return;
-    }
-
-    if (method === 'google') {
-      toast.info('Google login is coming soon. Use mobile or email code for now.');
       return;
     }
 
@@ -219,6 +220,36 @@ export default function PhoneLogin() {
     }
   };
 
+  const continueWithGoogle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isPatient || createPatientAccount) return;
+
+    const emailAddress = normalizeEmail(email);
+    if (!emailAddress) {
+      toast.error('Enter the email on your approved patient account first.');
+      return;
+    }
+
+    setBusy(true);
+    try {
+      await preparePatientEmailLogin(emailAddress);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: getOAuthRedirectUrl(),
+          queryParams: {
+            login_hint: emailAddress,
+            prompt: 'select_account',
+          },
+        },
+      });
+      if (error) throw error;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not start Google login.');
+      setBusy(false);
+    }
+  };
+
 
   const resendCode = async () => {
     if (resendCooldown > 0) return;
@@ -328,7 +359,7 @@ export default function PhoneLogin() {
             </CardHeader>
             <CardContent>
               {step === 'phone' ? (
-                <form onSubmit={authMethod === 'email' ? sendEmailCode : sendCode} className="space-y-5">
+                <form onSubmit={authMethod === 'email' ? sendEmailCode : authMethod === 'google' ? continueWithGoogle : sendCode} className="space-y-5">
                   {showLoginOptions && (
                     <div className="space-y-2">
                       <p className="text-sm font-medium">How do you want to continue?</p>
@@ -342,13 +373,13 @@ export default function PhoneLogin() {
                           </Button>
                         )}
                         {isPatient && (
-                          <Button type="button" variant="ghost" onClick={() => selectAuthMethod('google')} className="gap-2">
+                          <Button type="button" variant={authMethod === 'google' ? 'default' : 'ghost'} onClick={() => selectAuthMethod('google')} className="gap-2">
                             G Google
                           </Button>
                         )}
                       </div>
                       {isPatient && (
-                        <p className="text-xs text-muted-foreground">Google login is not active yet; use mobile or email code for now.</p>
+                        <p className="text-xs text-muted-foreground">Google works only for existing approved patient accounts with a matching email.</p>
                       )}
                     </div>
                   )}
@@ -373,7 +404,11 @@ export default function PhoneLogin() {
                     <div className="space-y-2">
                       <Label htmlFor="loginEmail">Email address</Label>
                       <Input id="loginEmail" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" autoComplete="email" required />
-                      <p className="text-xs text-muted-foreground">Email login only works for existing approved patient accounts. Staff must use mobile code.</p>
+                      <p className="text-xs text-muted-foreground">
+                        {authMethod === 'google'
+                          ? 'Enter the email already saved on your approved patient account, then choose the same Google account.'
+                          : 'Email login only works for existing approved patient accounts. Staff must use mobile code.'}
+                      </p>
                     </div>
                   )}
                   {createPatientAccount && (
@@ -399,7 +434,7 @@ export default function PhoneLogin() {
                   )}
                   <Button type="submit" className="w-full" disabled={busy}>
                     {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    {authMethod === 'email' ? 'Send email code' : 'Send code'}
+                    {authMethod === 'email' ? 'Send email code' : authMethod === 'google' ? 'Continue with Google' : 'Send code'}
                   </Button>
                   {createPatientAccount ? (
                     <p className="text-center text-sm text-muted-foreground">

@@ -19,6 +19,7 @@ import RefundPolicy from "./pages/RefundPolicy";
 import Disclaimer from "./pages/Disclaimer";
 import Contact from "./pages/Contact";
 import PhoneLogin from "./pages/PhoneLogin";
+import AuthCallback from "./pages/AuthCallback";
 import StartConsultation from "./pages/StartConsultation";
 import ImportationBasis from "./pages/ImportationBasis";
 import NotFound from "./pages/NotFound";
@@ -97,6 +98,7 @@ const App = () => (
               <Route path="/contact" element={<Contact />} />
               <Route path="/importation-basis" element={<ImportationBasis />} />
               <Route path="/auth" element={<Navigate to="/phone-login" replace />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/phone-login" element={<PhoneLogin />} />
               <Route path="/start-consult" element={<StartConsultation />} />
               <Route path="/eligibility" element={<Navigate to="/start-consult" replace />} />
