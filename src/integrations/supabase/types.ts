@@ -728,8 +728,15 @@ export type Database = {
           email_verification_method: string | null
           email_verified_at: string | null
           full_name: string | null
+          google_email: string | null
+          google_linked_at: string | null
+          google_provider_id: string | null
           id: string
           phone: string | null
+          phone_change_requested_at: string | null
+          phone_change_verification_method: string | null
+          phone_change_verified_at: string | null
+          previous_phone: string | null
           shipping_address_line1: string | null
           shipping_address_line2: string | null
           shipping_country: string | null
@@ -749,8 +756,15 @@ export type Database = {
           email_verification_method?: string | null
           email_verified_at?: string | null
           full_name?: string | null
+          google_email?: string | null
+          google_linked_at?: string | null
+          google_provider_id?: string | null
           id?: string
           phone?: string | null
+          phone_change_requested_at?: string | null
+          phone_change_verification_method?: string | null
+          phone_change_verified_at?: string | null
+          previous_phone?: string | null
           shipping_address_line1?: string | null
           shipping_address_line2?: string | null
           shipping_country?: string | null
@@ -770,8 +784,15 @@ export type Database = {
           email_verification_method?: string | null
           email_verified_at?: string | null
           full_name?: string | null
+          google_email?: string | null
+          google_linked_at?: string | null
+          google_provider_id?: string | null
           id?: string
           phone?: string | null
+          phone_change_requested_at?: string | null
+          phone_change_verification_method?: string | null
+          phone_change_verified_at?: string | null
+          previous_phone?: string | null
           shipping_address_line1?: string | null
           shipping_address_line2?: string | null
           shipping_country?: string | null
