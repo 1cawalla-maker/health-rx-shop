@@ -501,7 +501,7 @@ export default function StartConsultation() {
                     ) : (
                       <ExternalLink className="h-4 w-4" />
                     )}
-                    {user ? "Continue to Halaxy" : "Send SMS code"}
+                    Verify mobile and continue
                   </Button>
                 </form>
               ) : (
