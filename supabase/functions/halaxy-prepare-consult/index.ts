@@ -7,6 +7,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const PRIVACY_POLICY_VERSION = "2026-06-18-minimal-halaxy-consult";
+const COLLECTION_NOTICE_VERSION = "2026-06-18-minimal-halaxy-consult";
+const AGE_ATTESTATION_VERSION = "2026-06-18-adult-only";
+
 const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : "";
   console.log(`[HALAXY-PREPARE-CONSULT] ${step}${detailsStr}`);
@@ -53,7 +57,7 @@ serve(async (req) => {
 
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
-      .select("user_id, full_name, phone, phone_verified_at, date_of_birth, shipping_address_line1, shipping_address_line2, shipping_suburb, shipping_state, shipping_postcode, shipping_country, halaxy_patient_id, age_attested_at, privacy_notice_accepted_at")
+      .select("user_id, full_name, phone, phone_verified_at, date_of_birth, shipping_address_line1, shipping_address_line2, shipping_suburb, shipping_state, shipping_postcode, shipping_country, halaxy_patient_id, age_attested_at, age_attestation_version, privacy_notice_accepted_at, privacy_policy_version, collection_notice_version")
       .eq("user_id", user.id)
       .maybeSingle();
 
@@ -63,8 +67,17 @@ serve(async (req) => {
     const hasMinimalIdentity = Boolean((profile as any).full_name && (profile as any).phone);
     if (!hasMinimalIdentity) throw new Error("Please enter your name and mobile number before booking.");
     if (!(profile as any).phone_verified_at) throw new Error("Please verify your mobile number before booking.");
-    if (!(profile as any).age_attested_at) throw new Error("Please confirm you are 18 or over before booking.");
-    if (!(profile as any).privacy_notice_accepted_at) throw new Error("Please accept the privacy and collection notice before booking.");
+    if (!(profile as any).date_of_birth) throw new Error("Please enter your date of birth before booking.");
+    if (!(profile as any).age_attested_at || (profile as any).age_attestation_version !== AGE_ATTESTATION_VERSION) {
+      throw new Error("Please confirm you are 18 or over before booking.");
+    }
+    if (
+      !(profile as any).privacy_notice_accepted_at ||
+      (profile as any).privacy_policy_version !== PRIVACY_POLICY_VERSION ||
+      (profile as any).collection_notice_version !== COLLECTION_NOTICE_VERSION
+    ) {
+      throw new Error("Please accept the privacy and collection notice before booking.");
+    }
 
     // Halaxy-ready pre-GP behaviour:
     // - Do not require a public Halaxy booking URL yet because no GP may be onboarded.
