@@ -81,102 +81,113 @@ export type Database = {
           storage_path?: string
           uploaded_at?: string
         }
-        Relationships: []
-      }
-      call_attempts: {
-        Row: {
-          attempt_number: number
-          attempted_at: string
-          booking_id: string
-          doctor_id: string
-          id: string
-          notes: string | null
-        }
-        Insert: {
-          attempt_number: number
-          attempted_at?: string
-          booking_id: string
-          doctor_id: string
-          id?: string
-          notes?: string | null
-        }
-        Update: {
-          attempt_number?: number
-          attempted_at?: string
-          booking_id?: string
-          doctor_id?: string
-          id?: string
-          notes?: string | null
-        }
         Relationships: [
           {
-            foreignKeyName: "call_attempts_booking_id_fkey"
+            foreignKeyName: "booking_files_booking_id_fkey"
             columns: ["booking_id"]
             isOneToOne: false
-            referencedRelation: "consultation_bookings"
+            referencedRelation: "consultations"
             referencedColumns: ["id"]
           },
         ]
       }
-      consultation_bookings: {
+      call_attempts: {
         Row: {
-          amount_paid: number | null
-          created_at: string
-          doctor_id: string | null
-          doctor_notes: string | null
+          answered: boolean
+          attempt_number: number
+          attempted_at: string
+          call_status: string | null
+          consultation_id: string
+          doctor_id: string
+          doctor_user_id: string | null
+          duration_seconds: number | null
+          ended_at: string | null
           id: string
-          paid_at: string | null
-          patient_id: string
-          reason_for_visit: string | null
-          scheduled_date: string
-          slot_id: string | null
-          status: Database["public"]["Enums"]["booking_status"]
-          stripe_checkout_session_id: string | null
-          stripe_payment_intent_id: string | null
-          time_window_end: string
-          time_window_start: string
-          timezone: string
-          updated_at: string
+          notes: string | null
+          twilio_call_sid: string | null
         }
         Insert: {
-          amount_paid?: number | null
-          created_at?: string
-          doctor_id?: string | null
-          doctor_notes?: string | null
+          answered?: boolean
+          attempt_number: number
+          attempted_at?: string
+          call_status?: string | null
+          consultation_id: string
+          doctor_id: string
+          doctor_user_id?: string | null
+          duration_seconds?: number | null
+          ended_at?: string | null
           id?: string
-          paid_at?: string | null
-          patient_id: string
-          reason_for_visit?: string | null
-          scheduled_date: string
-          slot_id?: string | null
-          status?: Database["public"]["Enums"]["booking_status"]
-          stripe_checkout_session_id?: string | null
-          stripe_payment_intent_id?: string | null
-          time_window_end: string
-          time_window_start: string
-          timezone?: string
-          updated_at?: string
+          notes?: string | null
+          twilio_call_sid?: string | null
         }
         Update: {
-          amount_paid?: number | null
-          created_at?: string
-          doctor_id?: string | null
-          doctor_notes?: string | null
+          answered?: boolean
+          attempt_number?: number
+          attempted_at?: string
+          call_status?: string | null
+          consultation_id?: string
+          doctor_id?: string
+          doctor_user_id?: string | null
+          duration_seconds?: number | null
+          ended_at?: string | null
           id?: string
-          paid_at?: string | null
-          patient_id?: string
-          reason_for_visit?: string | null
-          scheduled_date?: string
-          slot_id?: string | null
-          status?: Database["public"]["Enums"]["booking_status"]
-          stripe_checkout_session_id?: string | null
-          stripe_payment_intent_id?: string | null
-          time_window_end?: string
-          time_window_start?: string
-          timezone?: string
-          updated_at?: string
+          notes?: string | null
+          twilio_call_sid?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "call_attempts_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_attempts_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consultation_events: {
+        Row: {
+          actor_id: string | null
+          actor_role: string | null
+          consultation_id: string
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_role?: string | null
+          consultation_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+        }
+        Update: {
+          actor_id?: string | null
+          actor_role?: string | null
+          consultation_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultation_events_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       consultation_notes: {
         Row: {
@@ -185,7 +196,10 @@ export type Database = {
           doctor_id: string
           id: string
           internal_only: boolean | null
+          isbar: Json | null
+          note_type: string
           notes: string
+          source: string
           updated_at: string
         }
         Insert: {
@@ -194,7 +208,10 @@ export type Database = {
           doctor_id: string
           id?: string
           internal_only?: boolean | null
+          isbar?: Json | null
+          note_type?: string
           notes: string
+          source?: string
           updated_at?: string
         }
         Update: {
@@ -203,55 +220,266 @@ export type Database = {
           doctor_id?: string
           id?: string
           internal_only?: boolean | null
+          isbar?: Json | null
+          note_type?: string
           notes?: string
+          source?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "consultation_notes_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultation_notes_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consultation_payments: {
+        Row: {
+          amount_cents: number
+          consultation_id: string
+          created_at: string
+          currency: string
+          id: string
+          net_amount_cents: number | null
+          paid_at: string | null
+          patient_id: string
+          status: string
+          stripe_balance_transaction_id: string | null
+          stripe_charge_id: string | null
+          stripe_checkout_session_id: string | null
+          stripe_fee_cents: number | null
+          stripe_payment_intent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          consultation_id: string
+          created_at?: string
+          currency?: string
+          id?: string
+          net_amount_cents?: number | null
+          paid_at?: string | null
+          patient_id: string
+          status?: string
+          stripe_balance_transaction_id?: string | null
+          stripe_charge_id?: string | null
+          stripe_checkout_session_id?: string | null
+          stripe_fee_cents?: number | null
+          stripe_payment_intent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          consultation_id?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          net_amount_cents?: number | null
+          paid_at?: string | null
+          patient_id?: string
+          status?: string
+          stripe_balance_transaction_id?: string | null
+          stripe_charge_id?: string | null
+          stripe_checkout_session_id?: string | null
+          stripe_fee_cents?: number | null
+          stripe_payment_intent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultation_payments_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consultation_reservations: {
+        Row: {
+          consultation_id: string
+          created_at: string
+          doctor_id: string | null
+          expires_at: string
+          id: string
+          patient_id: string
+          scheduled_at: string
+          status: string
+        }
+        Insert: {
+          consultation_id: string
+          created_at?: string
+          doctor_id?: string | null
+          expires_at: string
+          id?: string
+          patient_id: string
+          scheduled_at: string
+          status?: string
+        }
+        Update: {
+          consultation_id?: string
+          created_at?: string
+          doctor_id?: string | null
+          expires_at?: string
+          id?: string
+          patient_id?: string
+          scheduled_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultation_reservations_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultation_reservations_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       consultations: {
         Row: {
+          booking_metadata: Json
+          booking_provider: string
+          booking_return_token: string | null
+          booking_status: string
+          completed_at: string | null
           consultation_type: Database["public"]["Enums"]["consultation_type"]
           created_at: string
           doctor_id: string | null
+          doctor_user_id: string | null
           end_time: string | null
+          halaxy_appointment_id: string | null
+          halaxy_appointment_status: string | null
+          halaxy_booking_url: string | null
+          halaxy_charge_item_definition_id: string | null
+          halaxy_document_reference_id: string | null
+          halaxy_healthcare_service_id: string | null
+          halaxy_invoice_id: string | null
+          halaxy_last_webhook_at: string | null
+          halaxy_location_id: string | null
+          halaxy_location_name: string | null
+          halaxy_manage_url: string | null
+          halaxy_patient_id: string | null
+          halaxy_payment_status: string | null
+          halaxy_payment_transaction_id: string | null
+          halaxy_practitioner_id: string | null
+          halaxy_practitioner_name: string | null
+          halaxy_practitioner_role_id: string | null
           id: string
           notes: string | null
+          outcome: string | null
+          outcome_reason: string | null
           patient_id: string
           reason_for_visit: string | null
-          scheduled_at: string
+          scheduled_at: string | null
           status: Database["public"]["Enums"]["consultation_status"]
           timezone: string | null
           updated_at: string
         }
         Insert: {
+          booking_metadata?: Json
+          booking_provider?: string
+          booking_return_token?: string | null
+          booking_status?: string
+          completed_at?: string | null
           consultation_type?: Database["public"]["Enums"]["consultation_type"]
           created_at?: string
           doctor_id?: string | null
+          doctor_user_id?: string | null
           end_time?: string | null
+          halaxy_appointment_id?: string | null
+          halaxy_appointment_status?: string | null
+          halaxy_booking_url?: string | null
+          halaxy_charge_item_definition_id?: string | null
+          halaxy_document_reference_id?: string | null
+          halaxy_healthcare_service_id?: string | null
+          halaxy_invoice_id?: string | null
+          halaxy_last_webhook_at?: string | null
+          halaxy_location_id?: string | null
+          halaxy_location_name?: string | null
+          halaxy_manage_url?: string | null
+          halaxy_patient_id?: string | null
+          halaxy_payment_status?: string | null
+          halaxy_payment_transaction_id?: string | null
+          halaxy_practitioner_id?: string | null
+          halaxy_practitioner_name?: string | null
+          halaxy_practitioner_role_id?: string | null
           id?: string
           notes?: string | null
+          outcome?: string | null
+          outcome_reason?: string | null
           patient_id: string
           reason_for_visit?: string | null
-          scheduled_at: string
+          scheduled_at?: string | null
           status?: Database["public"]["Enums"]["consultation_status"]
           timezone?: string | null
           updated_at?: string
         }
         Update: {
+          booking_metadata?: Json
+          booking_provider?: string
+          booking_return_token?: string | null
+          booking_status?: string
+          completed_at?: string | null
           consultation_type?: Database["public"]["Enums"]["consultation_type"]
           created_at?: string
           doctor_id?: string | null
+          doctor_user_id?: string | null
           end_time?: string | null
+          halaxy_appointment_id?: string | null
+          halaxy_appointment_status?: string | null
+          halaxy_booking_url?: string | null
+          halaxy_charge_item_definition_id?: string | null
+          halaxy_document_reference_id?: string | null
+          halaxy_healthcare_service_id?: string | null
+          halaxy_invoice_id?: string | null
+          halaxy_last_webhook_at?: string | null
+          halaxy_location_id?: string | null
+          halaxy_location_name?: string | null
+          halaxy_manage_url?: string | null
+          halaxy_patient_id?: string | null
+          halaxy_payment_status?: string | null
+          halaxy_payment_transaction_id?: string | null
+          halaxy_practitioner_id?: string | null
+          halaxy_practitioner_name?: string | null
+          halaxy_practitioner_role_id?: string | null
           id?: string
           notes?: string | null
+          outcome?: string | null
+          outcome_reason?: string | null
           patient_id?: string
           reason_for_visit?: string | null
-          scheduled_at?: string
+          scheduled_at?: string | null
           status?: Database["public"]["Enums"]["consultation_status"]
           timezone?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "consultations_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       doctor_availability: {
         Row: {
@@ -292,11 +520,45 @@ export type Database = {
             foreignKeyName: "doctor_availability_doctor_id_fkey"
             columns: ["doctor_id"]
             isOneToOne: false
-            referencedRelation: "admin_user_overview"
-            referencedColumns: ["doctor_id"]
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
           },
+        ]
+      }
+      doctor_availability_blocks: {
+        Row: {
+          created_at: string
+          date: string
+          doctor_id: string
+          end_time: string
+          id: string
+          start_time: string
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          doctor_id: string
+          end_time: string
+          id?: string
+          start_time: string
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          doctor_id?: string
+          end_time?: string
+          id?: string
+          start_time?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: [
           {
-            foreignKeyName: "doctor_availability_doctor_id_fkey"
+            foreignKeyName: "doctor_availability_blocks_doctor_id_fkey"
             columns: ["doctor_id"]
             isOneToOne: false
             referencedRelation: "doctors"
@@ -304,64 +566,26 @@ export type Database = {
           },
         ]
       }
-      doctor_availability_slots: {
-        Row: {
-          availability_type: Database["public"]["Enums"]["availability_type"]
-          created_at: string
-          day_of_week: number | null
-          doctor_id: string
-          end_time: string
-          id: string
-          is_active: boolean
-          max_bookings: number
-          specific_date: string | null
-          start_time: string
-          timezone: string
-          updated_at: string
-        }
-        Insert: {
-          availability_type?: Database["public"]["Enums"]["availability_type"]
-          created_at?: string
-          day_of_week?: number | null
-          doctor_id: string
-          end_time: string
-          id?: string
-          is_active?: boolean
-          max_bookings?: number
-          specific_date?: string | null
-          start_time: string
-          timezone?: string
-          updated_at?: string
-        }
-        Update: {
-          availability_type?: Database["public"]["Enums"]["availability_type"]
-          created_at?: string
-          day_of_week?: number | null
-          doctor_id?: string
-          end_time?: string
-          id?: string
-          is_active?: boolean
-          max_bookings?: number
-          specific_date?: string | null
-          start_time?: string
-          timezone?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       doctor_issued_prescriptions: {
         Row: {
+          approved_pdf_at: string | null
           booking_id: string
+          consultation_id: string | null
           containers_allowed: number
           created_at: string
           daily_max_pouches: number
-          decline_reason: string | null
+          directions: string | null
+          doctor_declaration_accepted: boolean
+          doctor_declaration_accepted_at: string | null
           doctor_id: string
           expires_at: string
           id: string
           issued_at: string
+          max_pouches_per_day: number | null
           nicotine_strength: Database["public"]["Enums"]["nicotine_strength"]
           patient_id: string
+          patient_identity_verification_id: string | null
+          patient_identity_verified_at: string | null
           pdf_storage_path: string | null
           reference_id: string
           status: Database["public"]["Enums"]["issued_prescription_status"]
@@ -371,17 +595,24 @@ export type Database = {
           usage_tier: Database["public"]["Enums"]["usage_tier"]
         }
         Insert: {
+          approved_pdf_at?: string | null
           booking_id: string
+          consultation_id?: string | null
           containers_allowed: number
           created_at?: string
           daily_max_pouches: number
-          decline_reason?: string | null
+          directions?: string | null
+          doctor_declaration_accepted?: boolean
+          doctor_declaration_accepted_at?: string | null
           doctor_id: string
           expires_at: string
           id?: string
           issued_at?: string
+          max_pouches_per_day?: number | null
           nicotine_strength: Database["public"]["Enums"]["nicotine_strength"]
           patient_id: string
+          patient_identity_verification_id?: string | null
+          patient_identity_verified_at?: string | null
           pdf_storage_path?: string | null
           reference_id: string
           status?: Database["public"]["Enums"]["issued_prescription_status"]
@@ -391,17 +622,24 @@ export type Database = {
           usage_tier: Database["public"]["Enums"]["usage_tier"]
         }
         Update: {
+          approved_pdf_at?: string | null
           booking_id?: string
+          consultation_id?: string | null
           containers_allowed?: number
           created_at?: string
           daily_max_pouches?: number
-          decline_reason?: string | null
+          directions?: string | null
+          doctor_declaration_accepted?: boolean
+          doctor_declaration_accepted_at?: string | null
           doctor_id?: string
           expires_at?: string
           id?: string
           issued_at?: string
+          max_pouches_per_day?: number | null
           nicotine_strength?: Database["public"]["Enums"]["nicotine_strength"]
           patient_id?: string
+          patient_identity_verification_id?: string | null
+          patient_identity_verified_at?: string | null
           pdf_storage_path?: string | null
           reference_id?: string
           status?: Database["public"]["Enums"]["issued_prescription_status"]
@@ -416,6 +654,141 @@ export type Database = {
             columns: ["booking_id"]
             isOneToOne: false
             referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doctor_issued_prescriptions_patient_identity_verification__fkey"
+            columns: ["patient_identity_verification_id"]
+            isOneToOne: false
+            referencedRelation: "patient_identity_verifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doctor_payout_profiles: {
+        Row: {
+          abn: string
+          account_name: string | null
+          account_number: string | null
+          bsb: string | null
+          created_at: string
+          doctor_id: string
+          entity_name: string
+          gst_registered: boolean
+          id: string
+          remittance_email: string
+          updated_at: string
+        }
+        Insert: {
+          abn: string
+          account_name?: string | null
+          account_number?: string | null
+          bsb?: string | null
+          created_at?: string
+          doctor_id: string
+          entity_name: string
+          gst_registered?: boolean
+          id?: string
+          remittance_email: string
+          updated_at?: string
+        }
+        Update: {
+          abn?: string
+          account_name?: string | null
+          account_number?: string | null
+          bsb?: string | null
+          created_at?: string
+          doctor_id?: string
+          entity_name?: string
+          gst_registered?: boolean
+          id?: string
+          remittance_email?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_payout_profiles_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doctor_payouts: {
+        Row: {
+          amount_cents: number
+          consultation_id: string
+          created_at: string
+          currency: string
+          doctor_id: string
+          failure_message: string | null
+          gross_amount_cents: number | null
+          id: string
+          paid_at: string | null
+          payout_period_end: string | null
+          payout_period_start: string | null
+          remittance_email_sent_at: string | null
+          remittance_pdf_path: string | null
+          status: string
+          stripe_balance_transaction_id: string | null
+          stripe_fee_cents: number | null
+          stripe_transfer_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          consultation_id: string
+          created_at?: string
+          currency?: string
+          doctor_id: string
+          failure_message?: string | null
+          gross_amount_cents?: number | null
+          id?: string
+          paid_at?: string | null
+          payout_period_end?: string | null
+          payout_period_start?: string | null
+          remittance_email_sent_at?: string | null
+          remittance_pdf_path?: string | null
+          status?: string
+          stripe_balance_transaction_id?: string | null
+          stripe_fee_cents?: number | null
+          stripe_transfer_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          consultation_id?: string
+          created_at?: string
+          currency?: string
+          doctor_id?: string
+          failure_message?: string | null
+          gross_amount_cents?: number | null
+          id?: string
+          paid_at?: string | null
+          payout_period_end?: string | null
+          payout_period_start?: string | null
+          remittance_email_sent_at?: string | null
+          remittance_pdf_path?: string | null
+          status?: string
+          stripe_balance_transaction_id?: string | null
+          stripe_fee_cents?: number | null
+          stripe_transfer_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_payouts_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doctor_payouts_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
             referencedColumns: ["id"]
           },
         ]
@@ -456,12 +829,91 @@ export type Database = {
         }
         Relationships: []
       }
+      doctor_signatures: {
+        Row: {
+          created_at: string
+          doctor_id: string
+          id: string
+          storage_bucket: string
+          storage_path: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          doctor_id: string
+          id?: string
+          storage_bucket?: string
+          storage_path: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          doctor_id?: string
+          id?: string
+          storage_bucket?: string
+          storage_path?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_signatures_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doctor_stripe_accounts: {
+        Row: {
+          charges_enabled: boolean
+          created_at: string
+          doctor_id: string
+          id: string
+          onboarding_complete: boolean
+          payouts_enabled: boolean
+          stripe_account_id: string
+          updated_at: string
+        }
+        Insert: {
+          charges_enabled?: boolean
+          created_at?: string
+          doctor_id: string
+          id?: string
+          onboarding_complete?: boolean
+          payouts_enabled?: boolean
+          stripe_account_id: string
+          updated_at?: string
+        }
+        Update: {
+          charges_enabled?: boolean
+          created_at?: string
+          doctor_id?: string
+          id?: string
+          onboarding_complete?: boolean
+          payouts_enabled?: boolean
+          stripe_account_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_stripe_accounts_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       doctors: {
         Row: {
           ahpra_number: string | null
           created_at: string
+          halaxy_practitioner_id: string | null
           id: string
           is_active: boolean | null
+          onboarding_completed_at: string | null
+          onboarding_invited_at: string | null
           phone: string | null
           practice_location: string | null
           provider_number: string | null
@@ -473,8 +925,11 @@ export type Database = {
         Insert: {
           ahpra_number?: string | null
           created_at?: string
+          halaxy_practitioner_id?: string | null
           id?: string
           is_active?: boolean | null
+          onboarding_completed_at?: string | null
+          onboarding_invited_at?: string | null
           phone?: string | null
           practice_location?: string | null
           provider_number?: string | null
@@ -486,8 +941,11 @@ export type Database = {
         Update: {
           ahpra_number?: string | null
           created_at?: string
+          halaxy_practitioner_id?: string | null
           id?: string
           is_active?: boolean | null
+          onboarding_completed_at?: string | null
+          onboarding_invited_at?: string | null
           phone?: string | null
           practice_location?: string | null
           provider_number?: string | null
@@ -497,6 +955,155 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      eligibility_quiz_sessions: {
+        Row: {
+          answers: Json
+          completed_at: string
+          created_at: string
+          id: string
+          linked_at: string | null
+          notice_version: string
+          patient_id: string | null
+          privacy_policy_version: string
+          result: string
+          risk_flags: string[]
+          updated_at: string
+        }
+        Insert: {
+          answers: Json
+          completed_at?: string
+          created_at?: string
+          id?: string
+          linked_at?: string | null
+          notice_version: string
+          patient_id?: string | null
+          privacy_policy_version: string
+          result?: string
+          risk_flags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          answers?: Json
+          completed_at?: string
+          created_at?: string
+          id?: string
+          linked_at?: string | null
+          notice_version?: string
+          patient_id?: string | null
+          privacy_policy_version?: string
+          result?: string
+          risk_flags?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      email_outbox: {
+        Row: {
+          attempts: number
+          created_at: string
+          event_type: string
+          id: string
+          idempotency_key: string
+          last_error: string | null
+          locked_at: string | null
+          payload: Json
+          provider: string | null
+          provider_message_id: string | null
+          scheduled_for: string
+          sent_at: string | null
+          status: string
+          to_email: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          event_type: string
+          id?: string
+          idempotency_key: string
+          last_error?: string | null
+          locked_at?: string | null
+          payload?: Json
+          provider?: string | null
+          provider_message_id?: string | null
+          scheduled_for?: string
+          sent_at?: string | null
+          status?: string
+          to_email: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          event_type?: string
+          id?: string
+          idempotency_key?: string
+          last_error?: string | null
+          locked_at?: string | null
+          payload?: Json
+          provider?: string | null
+          provider_message_id?: string | null
+          scheduled_for?: string
+          sent_at?: string | null
+          status?: string
+          to_email?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      halaxy_webhook_events: {
+        Row: {
+          action: string | null
+          consultation_id: string | null
+          created_at: string
+          error_message: string | null
+          halaxy_event_id: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          processing_status: string
+          resource_reference: string | null
+          resource_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          action?: string | null
+          consultation_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          halaxy_event_id: string
+          id?: string
+          payload: Json
+          processed_at?: string | null
+          processing_status?: string
+          resource_reference?: string | null
+          resource_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          action?: string | null
+          consultation_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          halaxy_event_id?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          processing_status?: string
+          resource_reference?: string | null
+          resource_type?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "halaxy_webhook_events_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       intake_forms: {
         Row: {
@@ -547,7 +1154,57 @@ export type Database = {
           symptoms?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "intake_forms_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      issued_prescriptions: {
+        Row: {
+          consultation_id: string
+          doctor_id: string
+          id: string
+          issued_at: string
+          max_strength_mg: number
+          patient_id: string
+        }
+        Insert: {
+          consultation_id: string
+          doctor_id: string
+          id?: string
+          issued_at?: string
+          max_strength_mg: number
+          patient_id: string
+        }
+        Update: {
+          consultation_id?: string
+          doctor_id?: string
+          id?: string
+          issued_at?: string
+          max_strength_mg?: number
+          patient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "issued_prescriptions_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "issued_prescriptions_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -582,45 +1239,92 @@ export type Database = {
         }
         Relationships: []
       }
-      eligibility_quiz_sessions: {
+      order_pdfs: {
         Row: {
-          answers: Json
-          completed_at: string
+          bucket: string
           created_at: string
           id: string
-          linked_at: string | null
-          notice_version: string
-          patient_id: string | null
-          privacy_policy_version: string
-          result: string
-          risk_flags: string[]
-          updated_at: string
+          kind: string
+          path: string
+          shopify_order_id: string
         }
         Insert: {
-          answers: Json
-          completed_at?: string
+          bucket?: string
           created_at?: string
           id?: string
-          linked_at?: string | null
-          notice_version: string
-          patient_id?: string | null
-          privacy_policy_version: string
-          result?: string
-          risk_flags?: string[]
-          updated_at?: string
+          kind: string
+          path: string
+          shopify_order_id: string
         }
         Update: {
-          answers?: Json
-          completed_at?: string
+          bucket?: string
           created_at?: string
           id?: string
-          linked_at?: string | null
-          notice_version?: string
-          patient_id?: string | null
-          privacy_policy_version?: string
-          result?: string
-          risk_flags?: string[]
+          kind?: string
+          path?: string
+          shopify_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_pdfs_shopify_order_id_fkey"
+            columns: ["shopify_order_id"]
+            isOneToOne: false
+            referencedRelation: "shopify_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_identity_verifications: {
+        Row: {
+          created_at: string
+          document_type: string | null
+          failure_reason: string | null
+          id: string
+          metadata: Json
+          patient_id: string
+          provider: string | null
+          provider_reference_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          verified_at: string | null
+          verified_dob: string | null
+          verified_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          document_type?: string | null
+          failure_reason?: string | null
+          id?: string
+          metadata?: Json
+          patient_id: string
+          provider?: string | null
+          provider_reference_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
           updated_at?: string
+          verified_at?: string | null
+          verified_dob?: string | null
+          verified_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          document_type?: string | null
+          failure_reason?: string | null
+          id?: string
+          metadata?: Json
+          patient_id?: string
+          provider?: string | null
+          provider_reference_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_dob?: string | null
+          verified_name?: string | null
         }
         Relationships: []
       }
@@ -667,76 +1371,118 @@ export type Database = {
         Row: {
           allowed_strength_max: number | null
           allowed_strength_min: number | null
+          consultation_id: string | null
           created_at: string
           doctor_id: string | null
           expires_at: string | null
+          file_name: string | null
           file_url: string | null
           id: string
           issued_at: string | null
           max_units_per_month: number | null
           max_units_per_order: number | null
+          ocr_confidence: number | null
+          ocr_error: string | null
+          ocr_extracted: Json | null
+          ocr_processed_at: string | null
+          ocr_raw_text: string | null
+          ocr_status: string
           patient_id: string
           prescription_type: Database["public"]["Enums"]["prescription_type"]
           product_category: string | null
           review_reason: string | null
           status: Database["public"]["Enums"]["prescription_status"]
+          total_units_allowed: number | null
           updated_at: string
         }
         Insert: {
           allowed_strength_max?: number | null
           allowed_strength_min?: number | null
+          consultation_id?: string | null
           created_at?: string
           doctor_id?: string | null
           expires_at?: string | null
+          file_name?: string | null
           file_url?: string | null
           id?: string
           issued_at?: string | null
           max_units_per_month?: number | null
           max_units_per_order?: number | null
+          ocr_confidence?: number | null
+          ocr_error?: string | null
+          ocr_extracted?: Json | null
+          ocr_processed_at?: string | null
+          ocr_raw_text?: string | null
+          ocr_status?: string
           patient_id: string
           prescription_type: Database["public"]["Enums"]["prescription_type"]
           product_category?: string | null
           review_reason?: string | null
           status?: Database["public"]["Enums"]["prescription_status"]
+          total_units_allowed?: number | null
           updated_at?: string
         }
         Update: {
           allowed_strength_max?: number | null
           allowed_strength_min?: number | null
+          consultation_id?: string | null
           created_at?: string
           doctor_id?: string | null
           expires_at?: string | null
+          file_name?: string | null
           file_url?: string | null
           id?: string
           issued_at?: string | null
           max_units_per_month?: number | null
           max_units_per_order?: number | null
+          ocr_confidence?: number | null
+          ocr_error?: string | null
+          ocr_extracted?: Json | null
+          ocr_processed_at?: string | null
+          ocr_raw_text?: string | null
+          ocr_status?: string
           patient_id?: string
           prescription_type?: Database["public"]["Enums"]["prescription_type"]
           product_category?: string | null
           review_reason?: string | null
           status?: Database["public"]["Enums"]["prescription_status"]
+          total_units_allowed?: number | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "prescriptions_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
+          age_attestation_version: string | null
+          age_attested_at: string | null
+          collection_notice_version: string | null
           created_at: string
           date_of_birth: string | null
           email: string | null
           email_verification_method: string | null
           email_verified_at: string | null
           full_name: string | null
-          google_email: string | null
-          google_linked_at: string | null
-          google_provider_id: string | null
+          halaxy_patient_id: string | null
+          halaxy_patient_synced_at: string | null
           id: string
+          minimal_onboarding_completed_at: string | null
           phone: string | null
           phone_change_requested_at: string | null
           phone_change_verification_method: string | null
           phone_change_verified_at: string | null
+          phone_verification_method: string | null
+          phone_verified_at: string | null
           previous_phone: string | null
+          privacy_notice_accepted_at: string | null
+          privacy_policy_version: string | null
           shipping_address_line1: string | null
           shipping_address_line2: string | null
           shipping_country: string | null
@@ -744,68 +1490,272 @@ export type Database = {
           shipping_postcode: string | null
           shipping_state: string | null
           shipping_suburb: string | null
-          phone_verification_method: string | null
-          phone_verified_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          age_attestation_version?: string | null
+          age_attested_at?: string | null
+          collection_notice_version?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          email?: string | null
+          email_verification_method?: string | null
+          email_verified_at?: string | null
+          full_name?: string | null
+          halaxy_patient_id?: string | null
+          halaxy_patient_synced_at?: string | null
+          id?: string
+          minimal_onboarding_completed_at?: string | null
+          phone?: string | null
+          phone_change_requested_at?: string | null
+          phone_change_verification_method?: string | null
+          phone_change_verified_at?: string | null
+          phone_verification_method?: string | null
+          phone_verified_at?: string | null
+          previous_phone?: string | null
+          privacy_notice_accepted_at?: string | null
+          privacy_policy_version?: string | null
+          shipping_address_line1?: string | null
+          shipping_address_line2?: string | null
+          shipping_country?: string | null
+          shipping_place_id?: string | null
+          shipping_postcode?: string | null
+          shipping_state?: string | null
+          shipping_suburb?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          age_attestation_version?: string | null
+          age_attested_at?: string | null
+          collection_notice_version?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          email?: string | null
+          email_verification_method?: string | null
+          email_verified_at?: string | null
+          full_name?: string | null
+          halaxy_patient_id?: string | null
+          halaxy_patient_synced_at?: string | null
+          id?: string
+          minimal_onboarding_completed_at?: string | null
+          phone?: string | null
+          phone_change_requested_at?: string | null
+          phone_change_verification_method?: string | null
+          phone_change_verified_at?: string | null
+          phone_verification_method?: string | null
+          phone_verified_at?: string | null
+          previous_phone?: string | null
+          privacy_notice_accepted_at?: string | null
+          privacy_policy_version?: string | null
+          shipping_address_line1?: string | null
+          shipping_address_line2?: string | null
+          shipping_country?: string | null
+          shipping_place_id?: string | null
+          shipping_postcode?: string | null
+          shipping_state?: string | null
+          shipping_suburb?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      shopify_order_items: {
+        Row: {
+          created_at: string
+          id: string
+          quantity: number
+          raw: Json | null
+          shopify_line_item_id: number | null
+          shopify_order_id: string
+          shopify_variant_gid: string | null
+          shopify_variant_id: number | null
+          strength_mg: number | null
+          title: string | null
+          variant_title: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          quantity: number
+          raw?: Json | null
+          shopify_line_item_id?: number | null
+          shopify_order_id: string
+          shopify_variant_gid?: string | null
+          shopify_variant_id?: number | null
+          strength_mg?: number | null
+          title?: string | null
+          variant_title?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          quantity?: number
+          raw?: Json | null
+          shopify_line_item_id?: number | null
+          shopify_order_id?: string
+          shopify_variant_gid?: string | null
+          shopify_variant_id?: number | null
+          strength_mg?: number | null
+          title?: string | null
+          variant_title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shopify_order_items_shopify_order_id_fkey"
+            columns: ["shopify_order_id"]
+            isOneToOne: false
+            referencedRelation: "shopify_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shopify_orders: {
+        Row: {
+          created_at: string
+          currency: string | null
+          financial_status: string | null
+          fulfillment_status: string | null
+          id: string
+          order_name: string | null
+          prescription_id: string | null
+          processed_at: string | null
+          raw: Json | null
+          shopify_order_gid: string | null
+          shopify_order_id: number
+          subtotal_price: number | null
+          total_price: number | null
+          total_tax: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
-          date_of_birth?: string | null
-          email?: string | null
-          email_verification_method?: string | null
-          email_verified_at?: string | null
-          full_name?: string | null
-          google_email?: string | null
-          google_linked_at?: string | null
-          google_provider_id?: string | null
+          currency?: string | null
+          financial_status?: string | null
+          fulfillment_status?: string | null
           id?: string
-          phone?: string | null
-          phone_change_requested_at?: string | null
-          phone_change_verification_method?: string | null
-          phone_change_verified_at?: string | null
-          previous_phone?: string | null
-          shipping_address_line1?: string | null
-          shipping_address_line2?: string | null
-          shipping_country?: string | null
-          shipping_place_id?: string | null
-          shipping_postcode?: string | null
-          shipping_state?: string | null
-          shipping_suburb?: string | null
-          phone_verification_method?: string | null
-          phone_verified_at?: string | null
+          order_name?: string | null
+          prescription_id?: string | null
+          processed_at?: string | null
+          raw?: Json | null
+          shopify_order_gid?: string | null
+          shopify_order_id: number
+          subtotal_price?: number | null
+          total_price?: number | null
+          total_tax?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
-          date_of_birth?: string | null
-          email?: string | null
-          email_verification_method?: string | null
-          email_verified_at?: string | null
-          full_name?: string | null
-          google_email?: string | null
-          google_linked_at?: string | null
-          google_provider_id?: string | null
+          currency?: string | null
+          financial_status?: string | null
+          fulfillment_status?: string | null
           id?: string
-          phone?: string | null
-          phone_change_requested_at?: string | null
-          phone_change_verification_method?: string | null
-          phone_change_verified_at?: string | null
-          previous_phone?: string | null
-          shipping_address_line1?: string | null
-          shipping_address_line2?: string | null
-          shipping_country?: string | null
-          shipping_place_id?: string | null
-          shipping_postcode?: string | null
-          shipping_state?: string | null
-          shipping_suburb?: string | null
-          phone_verification_method?: string | null
-          phone_verified_at?: string | null
+          order_name?: string | null
+          prescription_id?: string | null
+          processed_at?: string | null
+          raw?: Json | null
+          shopify_order_gid?: string | null
+          shopify_order_id?: number
+          subtotal_price?: number | null
+          total_price?: number | null
+          total_tax?: number | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "shopify_orders_prescription_id_fkey"
+            columns: ["prescription_id"]
+            isOneToOne: false
+            referencedRelation: "prescriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      twilio_call_logs: {
+        Row: {
+          answered: boolean | null
+          answered_at: string | null
+          consultation_id: string
+          created_at: string
+          direction: string
+          doctor_id: string | null
+          doctor_user_id: string | null
+          duration_seconds: number | null
+          ended_at: string | null
+          from_number: string | null
+          id: string
+          parent_call_sid: string | null
+          patient_id: string
+          raw_events: Json
+          started_at: string | null
+          status: string
+          to_number: string | null
+          twilio_call_sid: string | null
+          updated_at: string
+        }
+        Insert: {
+          answered?: boolean | null
+          answered_at?: string | null
+          consultation_id: string
+          created_at?: string
+          direction?: string
+          doctor_id?: string | null
+          doctor_user_id?: string | null
+          duration_seconds?: number | null
+          ended_at?: string | null
+          from_number?: string | null
+          id?: string
+          parent_call_sid?: string | null
+          patient_id: string
+          raw_events?: Json
+          started_at?: string | null
+          status?: string
+          to_number?: string | null
+          twilio_call_sid?: string | null
+          updated_at?: string
+        }
+        Update: {
+          answered?: boolean | null
+          answered_at?: string | null
+          consultation_id?: string
+          created_at?: string
+          direction?: string
+          doctor_id?: string | null
+          doctor_user_id?: string | null
+          duration_seconds?: number | null
+          ended_at?: string | null
+          from_number?: string | null
+          id?: string
+          parent_call_sid?: string | null
+          patient_id?: string
+          raw_events?: Json
+          started_at?: string | null
+          status?: string
+          to_number?: string | null
+          twilio_call_sid?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "twilio_call_logs_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "twilio_call_logs_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -833,92 +1783,71 @@ export type Database = {
       }
     }
     Views: {
-      admin_prescription_overview: {
-        Row: {
-          allowed_strength_max: number | null
-          allowed_strength_min: number | null
-          created_at: string | null
-          doctor_id: string | null
-          expires_at: string | null
-          file_url: string | null
-          issued_at: string | null
-          max_units_per_month: number | null
-          max_units_per_order: number | null
-          patient_dob: string | null
-          patient_id: string | null
-          patient_name: string | null
-          patient_phone: string | null
-          prescription_id: string | null
-          prescription_type:
-            | Database["public"]["Enums"]["prescription_type"]
-            | null
-          review_reason: string | null
-          status: Database["public"]["Enums"]["prescription_status"] | null
-          updated_at: string | null
-        }
-        Relationships: []
-      }
-      admin_user_overview: {
-        Row: {
-          date_of_birth: string | null
-          doctor_id: string | null
-          doctor_is_active: boolean | null
-          full_name: string | null
-          phone: string | null
-          profile_created_at: string | null
-          provider_number: string | null
-          qualifications: string | null
-          registration_number: string | null
-          role: Database["public"]["Enums"]["app_role"] | null
-          role_created_at: string | null
-          role_id: string | null
-          specialties: string[] | null
-          specialty: string | null
-          status: Database["public"]["Enums"]["user_status"] | null
-          user_id: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
-      calculate_prescription_quantities: {
-        Args: { _usage_tier: Database["public"]["Enums"]["usage_tier"] }
+      confirm_paid_consultation: {
+        Args: { _consultation_id: string }
         Returns: {
-          containers_allowed: number
-          daily_max_pouches: number
-          total_pouches: number
-        }[]
-      }
-      complete_doctor_registration: {
-        Args: {
-          _ahpra_number: string
-          _provider_number: string
-          _user_id: string
+          booking_metadata: Json
+          booking_provider: string
+          booking_return_token: string | null
+          booking_status: string
+          completed_at: string | null
+          consultation_type: Database["public"]["Enums"]["consultation_type"]
+          created_at: string
+          doctor_id: string | null
+          doctor_user_id: string | null
+          end_time: string | null
+          halaxy_appointment_id: string | null
+          halaxy_appointment_status: string | null
+          halaxy_booking_url: string | null
+          halaxy_charge_item_definition_id: string | null
+          halaxy_document_reference_id: string | null
+          halaxy_healthcare_service_id: string | null
+          halaxy_invoice_id: string | null
+          halaxy_last_webhook_at: string | null
+          halaxy_location_id: string | null
+          halaxy_location_name: string | null
+          halaxy_manage_url: string | null
+          halaxy_patient_id: string | null
+          halaxy_payment_status: string | null
+          halaxy_payment_transaction_id: string | null
+          halaxy_practitioner_id: string | null
+          halaxy_practitioner_name: string | null
+          halaxy_practitioner_role_id: string | null
+          id: string
+          notes: string | null
+          outcome: string | null
+          outcome_reason: string | null
+          patient_id: string
+          reason_for_visit: string | null
+          scheduled_at: string | null
+          status: Database["public"]["Enums"]["consultation_status"]
+          timezone: string | null
+          updated_at: string
         }
-        Returns: boolean
+        SetofOptions: {
+          from: "*"
+          to: "consultations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
-      link_eligibility_quiz_session: {
-        Args: { _quiz_session_id: string }
-        Returns: boolean
-      }
-      get_available_slots: {
-        Args: { _date: string; _timezone?: string }
+      create_fair_consultation_reservation: {
+        Args: { _consultation_id: string; _expires_at?: string }
         Returns: {
-          available_capacity: number
           doctor_id: string
-          end_time: string
-          slot_id: string
-          start_time: string
+          expires_at: string
+          reservation_id: string
+          scheduled_at: string
         }[]
       }
+      expire_stale_consultation_reservations: { Args: never; Returns: number }
       get_doctor_id: { Args: { _user_id: string }; Returns: string }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
-      }
-      has_active_issued_prescription: {
-        Args: { _patient_id: string }
-        Returns: boolean
       }
       has_active_prescription: {
         Args: { _patient_id: string }
@@ -940,34 +1869,39 @@ export type Database = {
         Args: { _doctor_id: string; _patient_id: string }
         Returns: boolean
       }
+      link_eligibility_quiz_session: {
+        Args: { _quiz_session_id: string }
+        Returns: boolean
+      }
+      select_fair_consultation_doctor: {
+        Args: { _scheduled_at: string }
+        Returns: string
+      }
     }
     Enums: {
-      app_role: "patient" | "doctor" | "admin"
-      availability_type: "recurring" | "one_off" | "blocked"
-      booking_status:
-        | "pending_payment"
-        | "booked"
-        | "in_progress"
-        | "completed"
-        | "cancelled"
-        | "no_answer"
+      app_role: "admin" | "doctor" | "patient"
       consultation_status:
         | "requested"
         | "confirmed"
-        | "completed"
-        | "no_answer"
-        | "cancelled"
         | "intake_pending"
         | "ready_for_call"
         | "called"
         | "script_uploaded"
+        | "completed"
+        | "cancelled"
+        | "no_answer"
       consultation_type: "video" | "phone"
-      issued_prescription_status: "active" | "expired" | "revoked" | "declined"
+      issued_prescription_status: "active" | "expired" | "revoked"
       nicotine_strength: "3mg" | "6mg" | "9mg" | "12mg"
-      prescription_status: "pending_review" | "active" | "rejected" | "expired"
+      prescription_status:
+        | "pending_review"
+        | "active"
+        | "expired"
+        | "cancelled"
+        | "rejected"
       prescription_type: "uploaded" | "issued"
       usage_tier: "light" | "moderate" | "heavy"
-      user_status: "approved" | "pending_approval" | "deactivated"
+      user_status: "pending" | "approved" | "rejected" | "suspended"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1095,34 +2029,31 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["patient", "doctor", "admin"],
-      availability_type: ["recurring", "one_off", "blocked"],
-      booking_status: [
-        "pending_payment",
-        "booked",
-        "in_progress",
-        "completed",
-        "cancelled",
-        "no_answer",
-      ],
+      app_role: ["admin", "doctor", "patient"],
       consultation_status: [
         "requested",
         "confirmed",
-        "completed",
-        "no_answer",
-        "cancelled",
         "intake_pending",
         "ready_for_call",
         "called",
         "script_uploaded",
+        "completed",
+        "cancelled",
+        "no_answer",
       ],
       consultation_type: ["video", "phone"],
-      issued_prescription_status: ["active", "expired", "revoked", "declined"],
+      issued_prescription_status: ["active", "expired", "revoked"],
       nicotine_strength: ["3mg", "6mg", "9mg", "12mg"],
-      prescription_status: ["pending_review", "active", "rejected", "expired"],
+      prescription_status: [
+        "pending_review",
+        "active",
+        "expired",
+        "cancelled",
+        "rejected",
+      ],
       prescription_type: ["uploaded", "issued"],
       usage_tier: ["light", "moderate", "heavy"],
-      user_status: ["approved", "pending_approval", "deactivated"],
+      user_status: ["pending", "approved", "rejected", "suspended"],
     },
   },
 } as const

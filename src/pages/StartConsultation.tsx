@@ -1,42 +1,59 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { PublicLayout } from '@/components/layout/PublicLayout';
-import Seo from '@/components/seo/Seo';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { Loader2, ShieldCheck, Phone, ExternalLink } from 'lucide-react';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { halaxyConsultationService } from '@/services/halaxyConsultationService';
-import { getDashboardPathForRole } from '@/lib/roleRoutes';
-import { formatDobForStorage, validateDob } from '@/lib/validation';
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { PublicLayout } from "@/components/layout/PublicLayout";
+import Seo from "@/components/seo/Seo";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
+import { Loader2, ShieldCheck, Phone, ExternalLink } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { halaxyConsultationService } from "@/services/halaxyConsultationService";
+import { getDashboardPathForRole } from "@/lib/roleRoutes";
+import { formatDobForStorage, validateDob } from "@/lib/validation";
 
-const PRIVACY_POLICY_VERSION = '2026-06-18-minimal-halaxy-consult';
-const COLLECTION_NOTICE_VERSION = '2026-06-18-minimal-halaxy-consult';
-const AGE_ATTESTATION_VERSION = '2026-06-18-adult-only';
+const PRIVACY_POLICY_VERSION = "2026-06-18-minimal-halaxy-consult";
+const COLLECTION_NOTICE_VERSION = "2026-06-18-minimal-halaxy-consult";
+const AGE_ATTESTATION_VERSION = "2026-06-18-adult-only";
 
 function normalizeAuMobile(local: string): string | null {
-  const digits = local.replace(/\D/g, '');
+  const digits = local.replace(/\D/g, "");
   if (/^04\d{8}$/.test(digits)) return `+61${digits.slice(1)}`;
   if (/^4\d{8}$/.test(digits)) return `+61${digits}`;
   if (/^614\d{8}$/.test(digits)) return `+${digits}`;
   return null;
 }
 
-async function withTimeout<T>(promise: Promise<T>, label: string, timeoutMs = 20000): Promise<T> {
+async function withTimeout<T>(
+  promise: Promise<T>,
+  label: string,
+  timeoutMs = 20000,
+): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
       promise,
       new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(() => reject(new Error(`${label} timed out. Please try again.`)), timeoutMs);
+        timeoutId = setTimeout(
+          () => reject(new Error(`${label} timed out. Please try again.`)),
+          timeoutMs,
+        );
       }),
     ]);
   } finally {
@@ -48,40 +65,28 @@ export default function StartConsultation() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, userRole, loading: authLoading } = useAuth();
-  const [fullName, setFullName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [dobDay, setDobDay] = useState('');
-  const [dobMonth, setDobMonth] = useState('');
-  const [dobYear, setDobYear] = useState('');
-  const [dobError, setDobError] = useState('');
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [dobDay, setDobDay] = useState("");
+  const [dobMonth, setDobMonth] = useState("");
+  const [dobYear, setDobYear] = useState("");
+  const [dobError, setDobError] = useState("");
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
-  const [step, setStep] = useState<'details' | 'otp'>('details');
-  const [otp, setOtp] = useState('');
-  const [pendingPhone, setPendingPhone] = useState('');
-  const [otpFlow, setOtpFlow] = useState<'sms' | 'phone_change'>('sms');
+  const [step, setStep] = useState<"details" | "otp">("details");
+  const [otp, setOtp] = useState("");
+  const [pendingPhone, setPendingPhone] = useState("");
+  const [otpFlow, setOtpFlow] = useState<"sms" | "phone_change">("sms");
   const [isBusy, setIsBusy] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  const hasGoogleIdentity = Boolean(user && Array.isArray((user as any).identities) && (user as any).identities.some((identity: any) => identity?.provider === 'google'));
-  const isGoogleOnboarding = Boolean(user) && (searchParams.get('google') === '1' || hasGoogleIdentity);
-  const googleEmail = typeof user?.email === 'string' ? user.email : '';
-  const googleName = typeof user?.user_metadata?.full_name === 'string'
-    ? user.user_metadata.full_name
-    : typeof user?.user_metadata?.name === 'string'
-      ? user.user_metadata.name
-      : '';
-
-  useEffect(() => {
-    if (!user) return;
-    if (!email && googleEmail) setEmail(googleEmail);
-    if (!fullName && googleName) setFullName(googleName);
-  }, [email, fullName, googleEmail, googleName, user]);
-
   useEffect(() => {
     if (resendCooldown <= 0) return;
-    const timer = window.setTimeout(() => setResendCooldown((value) => Math.max(0, value - 1)), 1000);
+    const timer = window.setTimeout(
+      () => setResendCooldown((value) => Math.max(0, value - 1)),
+      1000,
+    );
     return () => window.clearTimeout(timer);
   }, [resendCooldown]);
 
@@ -95,119 +100,90 @@ export default function StartConsultation() {
   const startResendCooldown = () => setResendCooldown(30);
 
   const validateDetails = () => {
-    if (fullName.trim().length < 2) throw new Error('Please enter your full name.');
+    if (fullName.trim().length < 2)
+      throw new Error("Please enter your full name.");
     const phoneE164 = normalizeAuMobile(phone);
-    if (!phoneE164) throw new Error('Please enter a valid Australian mobile number.');
-    if (!normalizeEmail(email)) throw new Error('Please enter a valid email address.');
+    if (!phoneE164)
+      throw new Error("Please enter a valid Australian mobile number.");
+    if (!normalizeEmail(email))
+      throw new Error("Please enter a valid email address.");
     const dobResult = validateDob(dobDay, dobMonth, dobYear);
     if (!dobResult.valid) {
-      setDobError(dobResult.error || 'Please enter a valid date of birth.');
-      throw new Error(dobResult.error || 'Please enter a valid date of birth.');
+      setDobError(dobResult.error || "Please enter a valid date of birth.");
+      throw new Error(dobResult.error || "Please enter a valid date of birth.");
     }
-    setDobError('');
-    if (!ageConfirmed) throw new Error('Please confirm you are 18 or over.');
-    if (!privacyAccepted) throw new Error('Please accept the privacy and collection notice.');
+    setDobError("");
+    if (!ageConfirmed) throw new Error("Please confirm you are 18 or over.");
+    if (!privacyAccepted)
+      throw new Error("Please accept the privacy and collection notice.");
     return phoneE164;
   };
 
-  const getGoogleSignupRedirectUrl = () => {
-    const callbackUrl = new URL('/auth/callback', window.location.origin);
-    callbackUrl.searchParams.set('mode', 'signup');
-    callbackUrl.searchParams.set('next', '/start-consult');
-    return callbackUrl.toString();
-  };
-
-  const continueWithGoogle = async () => {
-    setIsBusy(true);
-    try {
-      sessionStorage.setItem('pouchcare_google_onboarding_next', '/start-consult');
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: getGoogleSignupRedirectUrl(),
-          queryParams: {
-            prompt: 'select_account',
-          },
-        },
-      });
-      if (error) throw error;
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not start Google sign-up.');
-      setIsBusy(false);
-    }
-  };
-
-  const getCurrentGoogleIdentity = (userId: string) => {
-    if (!user || user.id !== userId) return null;
-    const identities = Array.isArray((user as any).identities) ? (user as any).identities : [];
-    const googleIdentity = identities.find((identity: any) => identity?.provider === 'google');
-    if (!googleIdentity) return null;
-
-    const identityData = googleIdentity.identity_data || {};
-    const emailAddress = normalizeEmail(identityData.email || user.email);
-    const providerId = String(identityData.sub || googleIdentity.id || googleIdentity.identity_id || '').trim();
-    if (!emailAddress || !providerId) return null;
-
-    return { email: emailAddress, providerId };
-  };
-
-  const saveProfileAndRole = async (userId: string, phoneE164: string, verified: boolean) => {
+  const saveProfileAndRole = async (
+    userId: string,
+    phoneE164: string,
+    verified: boolean,
+  ) => {
     const now = new Date().toISOString();
-    const googleIdentity = getCurrentGoogleIdentity(userId);
 
     const { data: existingProfile } = await withTimeout(
       (supabase as any)
-        .from('profiles')
-        .select('phone, phone_verified_at')
-        .eq('user_id', userId)
+        .from("profiles")
+        .select("phone, phone_verified_at")
+        .eq("user_id", userId)
         .maybeSingle(),
-      'Loading your profile'
+      "Loading your profile",
     );
 
-    const existingVerifiedSamePhone = existingProfile?.phone === phoneE164 && existingProfile?.phone_verified_at;
+    const existingVerifiedSamePhone =
+      existingProfile?.phone === phoneE164 &&
+      existingProfile?.phone_verified_at;
     const phoneVerifiedAt = verified ? now : existingVerifiedSamePhone || null;
 
     const { error: roleError } = await withTimeout(
       (supabase as any)
-        .from('user_roles')
-        .upsert({ user_id: userId, role: 'patient', status: 'approved' }, { onConflict: 'user_id,role' }),
-      'Creating your patient access'
+        .from("user_roles")
+        .upsert(
+          { user_id: userId, role: "patient", status: "approved" },
+          { onConflict: "user_id,role" },
+        ),
+      "Creating your patient access",
     );
     if (roleError) throw roleError;
 
     await withTimeout(
       (supabase as any)
-        .from('patient_profiles')
-        .upsert({ user_id: userId }, { onConflict: 'user_id' }),
-      'Preparing your patient profile'
+        .from("patient_profiles")
+        .upsert({ user_id: userId }, { onConflict: "user_id" }),
+      "Preparing your patient profile",
     );
 
     const { error: profileError } = await withTimeout(
-      (supabase as any)
-        .from('profiles')
-        .upsert({
-        user_id: userId,
-        full_name: fullName.trim(),
-        date_of_birth: formatDobForStorage(dobDay, dobMonth, dobYear),
-        email: normalizeEmail(email),
-        email_verified_at: googleIdentity ? now : null,
-        email_verification_method: googleIdentity ? 'google_oauth' : null,
-        ...(googleIdentity ? {
-          google_provider_id: googleIdentity.providerId,
-          google_email: googleIdentity.email,
-          google_linked_at: now,
-        } : {}),
-        phone: phoneE164,
-        phone_verified_at: phoneVerifiedAt,
-        phone_verification_method: verified ? 'supabase_sms_otp' : (phoneVerifiedAt ? 'supabase_sms_otp' : null),
-        age_attested_at: now,
-        age_attestation_version: AGE_ATTESTATION_VERSION,
-        privacy_notice_accepted_at: now,
-        privacy_policy_version: PRIVACY_POLICY_VERSION,
-        collection_notice_version: COLLECTION_NOTICE_VERSION,
-        minimal_onboarding_completed_at: now,
-      }, { onConflict: 'user_id' }),
-      'Saving your details'
+      (supabase as any).from("profiles").upsert(
+        {
+          user_id: userId,
+          full_name: fullName.trim(),
+          date_of_birth: formatDobForStorage(dobDay, dobMonth, dobYear),
+          email: normalizeEmail(email),
+          email_verified_at: null,
+          email_verification_method: null,
+          phone: phoneE164,
+          phone_verified_at: phoneVerifiedAt,
+          phone_verification_method: verified
+            ? "supabase_sms_otp"
+            : phoneVerifiedAt
+              ? "supabase_sms_otp"
+              : null,
+          age_attested_at: now,
+          age_attestation_version: AGE_ATTESTATION_VERSION,
+          privacy_notice_accepted_at: now,
+          privacy_policy_version: PRIVACY_POLICY_VERSION,
+          collection_notice_version: COLLECTION_NOTICE_VERSION,
+          minimal_onboarding_completed_at: now,
+        },
+        { onConflict: "user_id" },
+      ),
+      "Saving your details",
     );
 
     if (profileError) throw profileError;
@@ -216,10 +192,11 @@ export default function StartConsultation() {
   const continueToHalaxy = async () => {
     const prepared = await withTimeout(
       halaxyConsultationService.prepareConsult(),
-      'Opening Halaxy booking',
-      30000
+      "Opening Halaxy booking",
+      30000,
     );
-    const bookingUrl = prepared.bookingUrl || prepared.consultation.halaxyBookingUrl;
+    const bookingUrl =
+      prepared.bookingUrl || prepared.consultation.halaxyBookingUrl;
     if (bookingUrl) {
       window.location.assign(bookingUrl);
       return;
@@ -234,14 +211,17 @@ export default function StartConsultation() {
       const phoneE164 = validateDetails();
 
       if (user?.id) {
-        if (userRole?.role && userRole.role !== 'patient') {
-          const dashboardPath = getDashboardPathForRole(userRole.role) || '/';
-          toast.error('You are logged in as a staff account. Please log out or use a separate patient account to start a consultation.');
+        if (userRole?.role && userRole.role !== "patient") {
+          const dashboardPath = getDashboardPathForRole(userRole.role) || "/";
+          toast.error(
+            "You are logged in as a staff account. Please log out or use a separate patient account to start a consultation.",
+          );
           navigate(dashboardPath, { replace: true });
           return;
         }
 
-        const existingPhone = typeof (user as any).phone === 'string' ? (user as any).phone : '';
+        const existingPhone =
+          typeof (user as any).phone === "string" ? (user as any).phone : "";
         if (existingPhone === phoneE164) {
           await saveProfileAndRole(user.id, phoneE164, true);
           await continueToHalaxy();
@@ -250,14 +230,14 @@ export default function StartConsultation() {
 
         const { error } = await withTimeout(
           (supabase.auth.updateUser as any)({ phone: phoneE164 }),
-          'Sending SMS code'
+          "Sending SMS code",
         );
         if (error) throw error;
         setPendingPhone(phoneE164);
-        setOtpFlow('phone_change');
-        setStep('otp');
+        setOtpFlow("phone_change");
+        setStep("otp");
         startResendCooldown();
-        toast.success('Verification code sent by SMS.');
+        toast.success("Verification code sent by SMS.");
         return;
       }
 
@@ -266,41 +246,46 @@ export default function StartConsultation() {
           phone: phoneE164,
           options: { shouldCreateUser: true },
         }),
-        'Sending SMS code'
+        "Sending SMS code",
       );
       if (error) throw error;
       setPendingPhone(phoneE164);
-      setOtpFlow('sms');
-      setStep('otp');
+      setOtpFlow("sms");
+      setStep("otp");
       startResendCooldown();
-      toast.success('Verification code sent by SMS.');
+      toast.success("Verification code sent by SMS.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not start consult booking.');
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not start consult booking.",
+      );
     } finally {
       setIsBusy(false);
     }
   };
-
 
   const resendCode = async () => {
     if (!pendingPhone || resendCooldown > 0) return;
     setIsBusy(true);
     try {
       const { error } = await withTimeout(
-        otpFlow === 'phone_change'
+        otpFlow === "phone_change"
           ? (supabase.auth.updateUser as any)({ phone: pendingPhone })
           : supabase.auth.signInWithOtp({
               phone: pendingPhone,
               options: { shouldCreateUser: true },
             }),
-        'Resending SMS code'
+        "Resending SMS code",
       );
       if (error) throw error;
-      setOtp('');
+      setOtp("");
       startResendCooldown();
-      toast.success('New verification code sent by SMS.');
+      toast.success("New verification code sent by SMS.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not resend SMS code.');
+      toast.error(
+        error instanceof Error ? error.message : "Could not resend SMS code.",
+      );
     } finally {
       setIsBusy(false);
     }
@@ -308,8 +293,8 @@ export default function StartConsultation() {
 
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp.replace(/\D/g, '').length !== 6) {
-      toast.error('Please enter the 6-digit SMS code.');
+    if (otp.replace(/\D/g, "").length !== 6) {
+      toast.error("Please enter the 6-digit SMS code.");
       return;
     }
 
@@ -318,20 +303,28 @@ export default function StartConsultation() {
       const { data, error } = await withTimeout(
         (supabase.auth.verifyOtp as any)({
           phone: pendingPhone,
-          token: otp.replace(/\D/g, ''),
-          type: otpFlow === 'phone_change' ? 'phone_change' : 'sms',
+          token: otp.replace(/\D/g, ""),
+          type: otpFlow === "phone_change" ? "phone_change" : "sms",
         }),
-        'Verifying SMS code'
+        "Verifying SMS code",
       );
       if (error) throw error;
-      const verifiedUserId = otpFlow === 'phone_change' ? user?.id : data.user?.id;
-      if (!verifiedUserId) throw new Error('Verification succeeded but no user session was returned.');
+      const verifiedUserId =
+        otpFlow === "phone_change" ? user?.id : data.user?.id;
+      if (!verifiedUserId)
+        throw new Error(
+          "Verification succeeded but no user session was returned.",
+        );
 
       await saveProfileAndRole(verifiedUserId, pendingPhone, true);
-      toast.success('Mobile verified. Opening Halaxy booking.');
+      toast.success("Mobile verified. Opening Halaxy booking.");
       await continueToHalaxy();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not verify mobile number.');
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not verify mobile number.",
+      );
     } finally {
       setIsBusy(false);
     }
@@ -354,67 +347,136 @@ export default function StartConsultation() {
                 Book a GP consultation
               </CardTitle>
               <CardDescription>
-                Enter only the details PouchCare needs to link your Halaxy booking and any prescription back to your account.
+                Enter only the details PouchCare needs to link your Halaxy
+                booking and any prescription back to your account.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {step === 'details' ? (
+              {step === "details" ? (
                 <form onSubmit={handleSendCode} className="space-y-5">
-                  {!user && (
-                    <div className="space-y-3 rounded-lg border p-4">
-                      <Button type="button" variant="outline" className="w-full" onClick={continueWithGoogle} disabled={isBusy}>
-                        {isBusy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                        Continue with Google
-                      </Button>
-                      <p className="text-xs text-muted-foreground">Google can prefill your name and email. You still need to provide your date of birth, verify your Australian mobile, accept the privacy notice, and complete the consultation/prescription pathway.</p>
-                    </div>
-                  )}
-                  {isGoogleOnboarding && (
-                    <Alert>
-                      <ShieldCheck className="h-4 w-4" />
-                      <AlertDescription>Google account connected{googleEmail ? ` as ${googleEmail}` : ''}. Your email is verified; please complete DOB, mobile verification, and consent before booking.</AlertDescription>
-                    </Alert>
-                  )}
                   <div className="space-y-2">
                     <Label htmlFor="full-name">Full name</Label>
-                    <Input id="full-name" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your legal name" required />
+                    <Input
+                      id="full-name"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Your legal name"
+                      required
+                    />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="email">Email address</Label>
-                    <Input id="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" autoComplete="email" readOnly={isGoogleOnboarding} required />
-                    <p className="text-xs text-muted-foreground">Used for account access, receipts, and prescription updates.</p>
+                    <Input
+                      id="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      inputMode="email"
+                      autoComplete="email"
+                      required
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Used for account access, receipts, and prescription
+                      updates.
+                    </p>
                   </div>
 
                   <div className="space-y-2">
                     <Label>Date of birth</Label>
                     <div className="grid grid-cols-3 gap-2">
-                      <Input value={dobDay} onChange={(e) => setDobDay(e.target.value.replace(/\D/g, '').slice(0, 2))} placeholder="DD" inputMode="numeric" autoComplete="bday-day" required />
-                      <Input value={dobMonth} onChange={(e) => setDobMonth(e.target.value.replace(/\D/g, '').slice(0, 2))} placeholder="MM" inputMode="numeric" autoComplete="bday-month" required />
-                      <Input value={dobYear} onChange={(e) => setDobYear(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="YYYY" inputMode="numeric" autoComplete="bday-year" required />
+                      <Input
+                        value={dobDay}
+                        onChange={(e) =>
+                          setDobDay(
+                            e.target.value.replace(/\D/g, "").slice(0, 2),
+                          )
+                        }
+                        placeholder="DD"
+                        inputMode="numeric"
+                        autoComplete="bday-day"
+                        required
+                      />
+                      <Input
+                        value={dobMonth}
+                        onChange={(e) =>
+                          setDobMonth(
+                            e.target.value.replace(/\D/g, "").slice(0, 2),
+                          )
+                        }
+                        placeholder="MM"
+                        inputMode="numeric"
+                        autoComplete="bday-month"
+                        required
+                      />
+                      <Input
+                        value={dobYear}
+                        onChange={(e) =>
+                          setDobYear(
+                            e.target.value.replace(/\D/g, "").slice(0, 4),
+                          )
+                        }
+                        placeholder="YYYY"
+                        inputMode="numeric"
+                        autoComplete="bday-year"
+                        required
+                      />
                     </div>
-                    {dobError && <p className="text-xs text-destructive">{dobError}</p>}
-                    <p className="text-xs text-muted-foreground">Used to confirm adult eligibility and match clinical records.</p>
+                    {dobError && (
+                      <p className="text-xs text-destructive">{dobError}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Used to confirm adult eligibility and match clinical
+                      records.
+                    </p>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="mobile">Mobile number</Label>
                     <div className="flex items-center gap-2">
-                      <span className="flex h-10 items-center rounded-md border border-input bg-muted px-3 text-sm font-medium text-muted-foreground">AU</span>
-                      <Input id="mobile" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="04xx xxx xxx" inputMode="tel" required />
+                      <span className="flex h-10 items-center rounded-md border border-input bg-muted px-3 text-sm font-medium text-muted-foreground">
+                        AU
+                      </span>
+                      <Input
+                        id="mobile"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="04xx xxx xxx"
+                        inputMode="tel"
+                        required
+                      />
                     </div>
-                    <p className="text-xs text-muted-foreground">We verify this by SMS and use it to match your Halaxy booking.</p>
+                    <p className="text-xs text-muted-foreground">
+                      We verify this by SMS and use it to match your Halaxy
+                      booking.
+                    </p>
                   </div>
 
                   <div className="space-y-3 rounded-lg border p-4">
                     <label className="flex items-start gap-3 text-sm">
-                      <Checkbox checked={ageConfirmed} onCheckedChange={(v) => setAgeConfirmed(v === true)} />
+                      <Checkbox
+                        checked={ageConfirmed}
+                        onCheckedChange={(v) => setAgeConfirmed(v === true)}
+                      />
                       <span>I confirm I am 18 years or older.</span>
                     </label>
                     <label className="flex items-start gap-3 text-sm">
-                      <Checkbox checked={privacyAccepted} onCheckedChange={(v) => setPrivacyAccepted(v === true)} />
+                      <Checkbox
+                        checked={privacyAccepted}
+                        onCheckedChange={(v) => setPrivacyAccepted(v === true)}
+                      />
                       <span>
-                        I agree to PouchCare collecting these details to create my account, link my Halaxy booking, and process prescriptions under the <Link className="underline" to="/privacy">Privacy Policy</Link> and <Link className="underline" to="/terms">Terms</Link>.
+                        I agree to PouchCare collecting these details to create
+                        my account, link my Halaxy booking, and process
+                        prescriptions under the{" "}
+                        <Link className="underline" to="/privacy">
+                          Privacy Policy
+                        </Link>{" "}
+                        and{" "}
+                        <Link className="underline" to="/terms">
+                          Terms
+                        </Link>
+                        .
                       </span>
                     </label>
                   </div>
@@ -422,13 +484,24 @@ export default function StartConsultation() {
                   <Alert>
                     <Phone className="h-4 w-4" />
                     <AlertDescription>
-                      Halaxy will collect the clinical and booking details needed for the consultation. PouchCare only uses this mobile number to match the booking and prescription back to you.
+                      Halaxy will collect the clinical and booking details
+                      needed for the consultation. PouchCare only uses this
+                      mobile number to match the booking and prescription back
+                      to you.
                     </AlertDescription>
                   </Alert>
 
-                  <Button type="submit" className="w-full gap-2" disabled={isBusy || authLoading}>
-                    {isBusy || authLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
-                    {isGoogleOnboarding ? 'Verify mobile and continue' : user ? 'Continue to Halaxy' : 'Send SMS code'}
+                  <Button
+                    type="submit"
+                    className="w-full gap-2"
+                    disabled={isBusy || authLoading}
+                  >
+                    {isBusy || authLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ExternalLink className="h-4 w-4" />
+                    )}
+                    {user ? "Continue to Halaxy" : "Send SMS code"}
                   </Button>
                 </form>
               ) : (
@@ -445,16 +518,40 @@ export default function StartConsultation() {
                         <InputOTPSlot index={5} />
                       </InputOTPGroup>
                     </InputOTP>
-                    <p className="text-xs text-muted-foreground">Sent to {pendingPhone}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Sent to {pendingPhone}
+                    </p>
                   </div>
-                  <Button type="button" variant="outline" className="w-full" onClick={resendCode} disabled={isBusy || resendCooldown > 0}>
-                    {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={resendCode}
+                    disabled={isBusy || resendCooldown > 0}
+                  >
+                    {resendCooldown > 0
+                      ? `Resend code in ${resendCooldown}s`
+                      : "Resend code"}
                   </Button>
-                  <Button type="submit" className="w-full gap-2" disabled={isBusy}>
-                    {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
+                  <Button
+                    type="submit"
+                    className="w-full gap-2"
+                    disabled={isBusy}
+                  >
+                    {isBusy ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ExternalLink className="h-4 w-4" />
+                    )}
                     Verify and continue to Halaxy
                   </Button>
-                  <Button type="button" variant="ghost" className="w-full" onClick={() => setStep('details')} disabled={isBusy}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full"
+                    onClick={() => setStep("details")}
+                    disabled={isBusy}
+                  >
                     Change details
                   </Button>
                 </form>

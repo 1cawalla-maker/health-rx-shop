@@ -1,27 +1,37 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { PublicLayout } from '@/components/layout/PublicLayout';
-import Seo from '@/components/seo/Seo';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Mail, Phone, ShieldCheck } from 'lucide-react';
-import { toast } from 'sonner';
-import { getDashboardPathForRole } from '@/lib/roleRoutes';
-import { useAuth } from '@/hooks/useAuth';
-import { formatDobForStorage, validateDob } from '@/lib/validation';
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { PublicLayout } from "@/components/layout/PublicLayout";
+import Seo from "@/components/seo/Seo";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, Mail, Phone, ShieldCheck } from "lucide-react";
+import { toast } from "sonner";
+import { getDashboardPathForRole } from "@/lib/roleRoutes";
+import { useAuth } from "@/hooks/useAuth";
+import { formatDobForStorage, validateDob } from "@/lib/validation";
 
-const PRIVACY_POLICY_VERSION = '2026-06-18-existing-prescription-upload';
-const COLLECTION_NOTICE_VERSION = '2026-06-18-existing-prescription-upload';
-const AGE_ATTESTATION_VERSION = '2026-06-18-adult-only';
+const PRIVACY_POLICY_VERSION = "2026-06-18-existing-prescription-upload";
+const COLLECTION_NOTICE_VERSION = "2026-06-18-existing-prescription-upload";
+const AGE_ATTESTATION_VERSION = "2026-06-18-adult-only";
 
 function normalizeAuMobile(value: string): string | null {
-  const digits = value.replace(/\D/g, '');
+  const digits = value.replace(/\D/g, "");
   if (/^04\d{8}$/.test(digits)) return `+61${digits.slice(1)}`;
   if (/^4\d{8}$/.test(digits)) return `+61${digits}`;
   if (/^614\d{8}$/.test(digits)) return `+${digits}`;
@@ -30,7 +40,7 @@ function normalizeAuMobile(value: string): string | null {
 
 function safeNextPath(value: string | null): string | null {
   if (!value) return null;
-  if (!value.startsWith('/') || value.startsWith('//')) return null;
+  if (!value.startsWith("/") || value.startsWith("//")) return null;
   return value;
 }
 
@@ -38,63 +48,53 @@ export default function PhoneLogin() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, userRole } = useAuth();
-  const requestedRole = searchParams.get('role');
-  const intendedRole = requestedRole || 'patient';
-  const nextPath = safeNextPath(searchParams.get('next'));
-  const isPatient = intendedRole === 'patient';
-  const isUploadPrescriptionFlow = nextPath === '/patient/upload-prescription';
+  const requestedRole = searchParams.get("role");
+  const intendedRole = requestedRole || "patient";
+  const nextPath = safeNextPath(searchParams.get("next"));
+  const isPatient = intendedRole === "patient";
+  const isUploadPrescriptionFlow = nextPath === "/patient/upload-prescription";
   const enablePatientEmailLogin = true;
-  const createPatientAccount = isPatient && (
-    isUploadPrescriptionFlow ||
-    searchParams.get('mode') === 'signup' ||
-    searchParams.get('create') === '1' ||
-    (searchParams.get('google') === '1' && Boolean(user))
-  );
-  const [phone, setPhone] = useState('');
-  const [pendingPhone, setPendingPhone] = useState('');
-  const [pendingEmail, setPendingEmail] = useState('');
-  const [authMethod, setAuthMethod] = useState<'phone' | 'email' | 'google'>('phone');
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [dobDay, setDobDay] = useState('');
-  const [dobMonth, setDobMonth] = useState('');
-  const [dobYear, setDobYear] = useState('');
-  const [dobError, setDobError] = useState('');
+  const createPatientAccount =
+    isPatient &&
+    (isUploadPrescriptionFlow ||
+      searchParams.get("mode") === "signup" ||
+      searchParams.get("create") === "1");
+  const [phone, setPhone] = useState("");
+  const [pendingPhone, setPendingPhone] = useState("");
+  const [pendingEmail, setPendingEmail] = useState("");
+  const [authMethod, setAuthMethod] = useState<"phone" | "email">("phone");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [dobDay, setDobDay] = useState("");
+  const [dobMonth, setDobMonth] = useState("");
+  const [dobYear, setDobYear] = useState("");
+  const [dobError, setDobError] = useState("");
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
-  const [otp, setOtp] = useState('');
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
-  const [otpFlow, setOtpFlow] = useState<'sms' | 'email' | 'phone_change'>('sms');
+  const [otp, setOtp] = useState("");
+  const [step, setStep] = useState<"phone" | "otp">("phone");
+  const [otpFlow, setOtpFlow] = useState<"sms" | "email" | "phone_change">(
+    "sms",
+  );
   const [busy, setBusy] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  const hasGoogleIdentity = Boolean(user && Array.isArray((user as any).identities) && (user as any).identities.some((identity: any) => identity?.provider === 'google'));
-  const isGoogleOnboarding = createPatientAccount && Boolean(user) && (searchParams.get('google') === '1' || hasGoogleIdentity);
-  const googleEmail = typeof user?.email === 'string' ? user.email : '';
-  const googleName = typeof user?.user_metadata?.full_name === 'string'
-    ? user.user_metadata.full_name
-    : typeof user?.user_metadata?.name === 'string'
-      ? user.user_metadata.name
-      : '';
-
-  useEffect(() => {
-    if (!user || !createPatientAccount) return;
-    if (!email && googleEmail) setEmail(googleEmail);
-    if (!fullName && googleName) setFullName(googleName);
-  }, [createPatientAccount, email, fullName, googleEmail, googleName, user]);
-
   const title = useMemo(() => {
-    if (createPatientAccount) return 'Create patient account';
-    return 'Log in to PouchCare';
+    if (createPatientAccount) return "Create patient account";
+    return "Log in to PouchCare";
   }, [createPatientAccount, intendedRole, isPatient]);
 
-  const destinationDescription = nextPath === '/patient/upload-prescription'
-    ? 'After verification, you will go straight to prescription upload.'
-    : 'After verification, you will continue to your patient account.';
+  const destinationDescription =
+    nextPath === "/patient/upload-prescription"
+      ? "After verification, you will go straight to prescription upload."
+      : "After verification, you will continue to your patient account.";
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
-    const timer = window.setTimeout(() => setResendCooldown((value) => Math.max(0, value - 1)), 1000);
+    const timer = window.setTimeout(
+      () => setResendCooldown((value) => Math.max(0, value - 1)),
+      1000,
+    );
     return () => window.clearTimeout(timer);
   }, [resendCooldown]);
 
@@ -107,32 +107,20 @@ export default function PhoneLogin() {
 
   const startResendCooldown = () => setResendCooldown(30);
 
-  const otpDestination = authMethod === 'email' ? pendingEmail : pendingPhone;
-
-  const getOAuthRedirectUrl = (mode?: 'signup') => {
-    const callbackUrl = new URL('/auth/callback', window.location.origin);
-    if (mode) callbackUrl.searchParams.set('mode', mode);
-    if (mode === 'signup') {
-      const returnPath = `${window.location.pathname}${window.location.search}`;
-      callbackUrl.searchParams.set('next', returnPath);
-    } else if (nextPath) {
-      callbackUrl.searchParams.set('next', nextPath);
-    }
-    return callbackUrl.toString();
-  };
+  const otpDestination = authMethod === "email" ? pendingEmail : pendingPhone;
 
   const showLoginOptions = !createPatientAccount;
   const canUsePatientLoginOptions = isPatient;
 
-  const selectAuthMethod = (method: 'phone' | 'email' | 'google') => {
-    if (method === 'phone') {
-      setAuthMethod('phone');
+  const selectAuthMethod = (method: "phone" | "email") => {
+    if (method === "phone") {
+      setAuthMethod("phone");
       return;
     }
 
     if (!canUsePatientLoginOptions) {
-      toast.error('Staff accounts use mobile code login.');
-      setAuthMethod('phone');
+      toast.error("Staff accounts use mobile code login.");
+      setAuthMethod("phone");
       return;
     }
 
@@ -140,65 +128,54 @@ export default function PhoneLogin() {
   };
 
   const preparePatientEmailLogin = async (emailAddress: string) => {
-    const { data, error } = await supabase.functions.invoke('prepare-patient-email-login', {
-      body: { email: emailAddress },
-    });
+    const { data, error } = await supabase.functions.invoke(
+      "prepare-patient-email-login",
+      {
+        body: { email: emailAddress },
+      },
+    );
     if (error) throw error;
     if ((data as any)?.error) throw new Error((data as any).error);
   };
 
-  const getCurrentGoogleIdentity = (userId: string) => {
-    if (!user || user.id !== userId) return null;
-    const identities = Array.isArray((user as any).identities) ? (user as any).identities : [];
-    const googleIdentity = identities.find((identity: any) => identity?.provider === 'google');
-    if (!googleIdentity) return null;
-
-    const identityData = googleIdentity.identity_data || {};
-    const emailAddress = normalizeEmail(identityData.email || user.email);
-    const providerId = String(identityData.sub || googleIdentity.id || googleIdentity.identity_id || '').trim();
-    if (!emailAddress || !providerId) return null;
-
-    return { email: emailAddress, providerId };
-  };
-
   const savePatientAccount = async (userId: string, phoneE164: string) => {
     const now = new Date().toISOString();
-    const googleIdentity = getCurrentGoogleIdentity(userId);
 
     const { error: roleError } = await (supabase as any)
-      .from('user_roles')
-      .upsert({ user_id: userId, role: 'patient', status: 'approved' }, { onConflict: 'user_id,role' });
+      .from("user_roles")
+      .upsert(
+        { user_id: userId, role: "patient", status: "approved" },
+        { onConflict: "user_id,role" },
+      );
     if (roleError) throw roleError;
 
     const { error: patientProfileError } = await (supabase as any)
-      .from('patient_profiles')
-      .upsert({ user_id: userId }, { onConflict: 'user_id' });
+      .from("patient_profiles")
+      .upsert({ user_id: userId }, { onConflict: "user_id" });
     if (patientProfileError) throw patientProfileError;
 
     const { error: profileError } = await (supabase as any)
-      .from('profiles')
-      .upsert({
-        user_id: userId,
-        full_name: fullName.trim(),
-        date_of_birth: formatDobForStorage(dobDay, dobMonth, dobYear),
-        email: normalizeEmail(email),
-        email_verified_at: googleIdentity ? now : null,
-        email_verification_method: googleIdentity ? 'google_oauth' : null,
-        ...(googleIdentity ? {
-          google_provider_id: googleIdentity.providerId,
-          google_email: googleIdentity.email,
-          google_linked_at: now,
-        } : {}),
-        phone: phoneE164,
-        phone_verified_at: now,
-        phone_verification_method: 'supabase_sms_otp',
-        age_attested_at: now,
-        age_attestation_version: AGE_ATTESTATION_VERSION,
-        privacy_notice_accepted_at: now,
-        privacy_policy_version: PRIVACY_POLICY_VERSION,
-        collection_notice_version: COLLECTION_NOTICE_VERSION,
-        minimal_onboarding_completed_at: now,
-      }, { onConflict: 'user_id' });
+      .from("profiles")
+      .upsert(
+        {
+          user_id: userId,
+          full_name: fullName.trim(),
+          date_of_birth: formatDobForStorage(dobDay, dobMonth, dobYear),
+          email: normalizeEmail(email),
+          email_verified_at: null,
+          email_verification_method: null,
+          phone: phoneE164,
+          phone_verified_at: now,
+          phone_verification_method: "supabase_sms_otp",
+          age_attested_at: now,
+          age_attestation_version: AGE_ATTESTATION_VERSION,
+          privacy_notice_accepted_at: now,
+          privacy_policy_version: PRIVACY_POLICY_VERSION,
+          collection_notice_version: COLLECTION_NOTICE_VERSION,
+          minimal_onboarding_completed_at: now,
+        },
+        { onConflict: "user_id" },
+      );
     if (profileError) throw profileError;
   };
 
@@ -206,28 +183,30 @@ export default function PhoneLogin() {
     e.preventDefault();
     const phoneE164 = normalizeAuMobile(phone);
     if (!phoneE164) {
-      toast.error('Enter a valid Australian mobile number.');
+      toast.error("Enter a valid Australian mobile number.");
       return;
     }
 
     if (createPatientAccount) {
       if (!fullName.trim()) {
-        toast.error('Enter your full name.');
+        toast.error("Enter your full name.");
         return;
       }
       if (!normalizeEmail(email)) {
-        toast.error('Enter a valid email address.');
+        toast.error("Enter a valid email address.");
         return;
       }
       const dobResult = validateDob(dobDay, dobMonth, dobYear);
       if (!dobResult.valid) {
-        setDobError(dobResult.error || 'Invalid date of birth');
-        toast.error(dobResult.error || 'Enter a valid date of birth.');
+        setDobError(dobResult.error || "Invalid date of birth");
+        toast.error(dobResult.error || "Enter a valid date of birth.");
         return;
       }
-      setDobError('');
+      setDobError("");
       if (!ageConfirmed || !privacyAccepted) {
-        toast.error('Please confirm the required patient account acknowledgements.');
+        toast.error(
+          "Please confirm the required patient account acknowledgements.",
+        );
         return;
       }
     }
@@ -235,30 +214,38 @@ export default function PhoneLogin() {
     setBusy(true);
     try {
       if (createPatientAccount && user?.id) {
-        if (userRole?.role && userRole.role !== 'patient') {
-          const dashboardPath = getDashboardPathForRole(userRole.role) || '/';
-          toast.error('You are logged in as a staff account. Please log out or use a separate patient account.');
+        if (userRole?.role && userRole.role !== "patient") {
+          const dashboardPath = getDashboardPathForRole(userRole.role) || "/";
+          toast.error(
+            "You are logged in as a staff account. Please log out or use a separate patient account.",
+          );
           navigate(dashboardPath, { replace: true });
           return;
         }
 
-        const existingPhone = typeof (user as any).phone === 'string' ? (user as any).phone : '';
+        const existingPhone =
+          typeof (user as any).phone === "string" ? (user as any).phone : "";
         if (existingPhone === phoneE164) {
           await savePatientAccount(user.id, phoneE164);
-          const path = nextPath || getDashboardPathForRole('patient') || '/patient/dashboard';
+          const path =
+            nextPath ||
+            getDashboardPathForRole("patient") ||
+            "/patient/dashboard";
           window.location.assign(path);
           return;
         }
 
-        const { error } = await (supabase.auth.updateUser as any)({ phone: phoneE164 });
+        const { error } = await (supabase.auth.updateUser as any)({
+          phone: phoneE164,
+        });
         if (error) throw error;
         setPendingPhone(phoneE164);
-        setPendingEmail('');
-        setAuthMethod('phone');
-        setOtpFlow('phone_change');
-        setStep('otp');
+        setPendingEmail("");
+        setAuthMethod("phone");
+        setOtpFlow("phone_change");
+        setStep("otp");
         startResendCooldown();
-        toast.success('Verification code sent.');
+        toast.success("Verification code sent.");
         return;
       }
 
@@ -268,17 +255,20 @@ export default function PhoneLogin() {
       });
       if (error) throw error;
       setPendingPhone(phoneE164);
-      setOtpFlow('sms');
-      setStep('otp');
+      setOtpFlow("sms");
+      setStep("otp");
       startResendCooldown();
-      toast.success('Verification code sent.');
+      toast.success("Verification code sent.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not send verification code.');
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not send verification code.",
+      );
     } finally {
       setBusy(false);
     }
   };
-
 
   const sendEmailCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -286,7 +276,7 @@ export default function PhoneLogin() {
 
     const emailAddress = normalizeEmail(email);
     if (!emailAddress) {
-      toast.error('Enter a valid email address.');
+      toast.error("Enter a valid email address.");
       return;
     }
 
@@ -299,70 +289,28 @@ export default function PhoneLogin() {
       });
       if (error) throw error;
       setPendingEmail(emailAddress);
-      setPendingPhone('');
-      setAuthMethod('email');
-      setOtpFlow('email');
-      setStep('otp');
+      setPendingPhone("");
+      setAuthMethod("email");
+      setOtpFlow("email");
+      setStep("otp");
       startResendCooldown();
-      toast.success('Verification code sent by email.');
+      toast.success("Verification code sent by email.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not send email verification code.');
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not send email verification code.",
+      );
     } finally {
       setBusy(false);
     }
   };
 
-  const continueWithGoogle = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isPatient || createPatientAccount) return;
-
-    setBusy(true);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: getOAuthRedirectUrl(),
-          queryParams: {
-            prompt: 'select_account',
-          },
-        },
-      });
-      if (error) throw error;
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not start Google login.');
-      setBusy(false);
-    }
-  };
-
-  const startGoogleSignup = async () => {
-    if (!isPatient || !createPatientAccount) return;
-
-    setBusy(true);
-    try {
-      const returnPath = `${window.location.pathname}${window.location.search}`;
-      sessionStorage.setItem('pouchcare_google_onboarding_next', returnPath);
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: getOAuthRedirectUrl('signup'),
-          queryParams: {
-            prompt: 'select_account',
-          },
-        },
-      });
-      if (error) throw error;
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not start Google sign-up.');
-      setBusy(false);
-    }
-  };
-
-
   const resendCode = async () => {
     if (resendCooldown > 0) return;
     setBusy(true);
     try {
-      if (authMethod === 'email') {
+      if (authMethod === "email") {
         if (!pendingEmail) return;
         await preparePatientEmailLogin(pendingEmail);
         const { error } = await supabase.auth.signInWithOtp({
@@ -370,22 +318,27 @@ export default function PhoneLogin() {
           options: { shouldCreateUser: false },
         });
         if (error) throw error;
-        toast.success('New email verification code sent.');
+        toast.success("New email verification code sent.");
       } else {
         if (!pendingPhone) return;
-        const { error } = otpFlow === 'phone_change'
-          ? await (supabase.auth.updateUser as any)({ phone: pendingPhone })
-          : await supabase.auth.signInWithOtp({
-              phone: pendingPhone,
-              options: { shouldCreateUser: createPatientAccount },
-            });
+        const { error } =
+          otpFlow === "phone_change"
+            ? await (supabase.auth.updateUser as any)({ phone: pendingPhone })
+            : await supabase.auth.signInWithOtp({
+                phone: pendingPhone,
+                options: { shouldCreateUser: createPatientAccount },
+              });
         if (error) throw error;
-        toast.success('New verification code sent.');
+        toast.success("New verification code sent.");
       }
-      setOtp('');
+      setOtp("");
       startResendCooldown();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not resend verification code.');
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not resend verification code.",
+      );
     } finally {
       setBusy(false);
     }
@@ -393,63 +346,84 @@ export default function PhoneLogin() {
 
   const verifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    const token = otp.replace(/\D/g, '');
+    const token = otp.replace(/\D/g, "");
     if (token.length !== 6) {
-      toast.error('Enter the 6-digit code.');
+      toast.error("Enter the 6-digit code.");
       return;
     }
 
     setBusy(true);
     try {
-      const { data, error } = authMethod === 'email'
-        ? await supabase.auth.verifyOtp({ email: pendingEmail, token, type: 'email' })
-        : await (supabase.auth.verifyOtp as any)({ phone: pendingPhone, token, type: otpFlow === 'phone_change' ? 'phone_change' : 'sms' });
+      const { data, error } =
+        authMethod === "email"
+          ? await supabase.auth.verifyOtp({
+              email: pendingEmail,
+              token,
+              type: "email",
+            })
+          : await (supabase.auth.verifyOtp as any)({
+              phone: pendingPhone,
+              token,
+              type: otpFlow === "phone_change" ? "phone_change" : "sms",
+            });
       if (error) throw error;
-      const userId = otpFlow === 'phone_change' ? user?.id : data.user?.id;
-      if (!userId) throw new Error('Login succeeded but no session was returned.');
+      const userId = otpFlow === "phone_change" ? user?.id : data.user?.id;
+      if (!userId)
+        throw new Error("Login succeeded but no session was returned.");
 
       if (createPatientAccount) {
         await savePatientAccount(userId, pendingPhone);
       }
 
-      if (authMethod === 'email') {
+      if (authMethod === "email") {
         const { error: emailProfileError } = await (supabase as any)
-          .from('profiles')
+          .from("profiles")
           .update({
             email_verified_at: new Date().toISOString(),
-            email_verification_method: 'supabase_email_otp',
+            email_verification_method: "supabase_email_otp",
           })
-          .eq('user_id', userId)
-          .ilike('email', pendingEmail);
+          .eq("user_id", userId)
+          .ilike("email", pendingEmail);
         if (emailProfileError) throw emailProfileError;
       }
 
       const { data: roleRow, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role,status')
-        .eq('user_id', userId)
+        .from("user_roles")
+        .select("role,status")
+        .eq("user_id", userId)
         .maybeSingle();
       if (roleError) throw roleError;
-      if (!roleRow || roleRow.status !== 'approved') throw new Error('This account is not approved yet.');
-      if (requestedRole && roleRow.role !== requestedRole) throw new Error(`This mobile is not registered as a ${requestedRole}.`);
+      if (!roleRow || roleRow.status !== "approved")
+        throw new Error("This account is not approved yet.");
+      if (requestedRole && roleRow.role !== requestedRole)
+        throw new Error(`This mobile is not registered as a ${requestedRole}.`);
 
-      const path = nextPath || getDashboardPathForRole(roleRow.role) || '/';
+      const path = nextPath || getDashboardPathForRole(roleRow.role) || "/";
       navigate(path, { replace: true });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not verify code.');
+      toast.error(
+        error instanceof Error ? error.message : "Could not verify code.",
+      );
     } finally {
       setBusy(false);
     }
   };
 
-  const loginPath = nextPath && !isUploadPrescriptionFlow
-    ? `/phone-login?role=patient&next=${encodeURIComponent(nextPath)}`
-    : '/phone-login?role=patient';
-  const uploadSignupPath = '/phone-login?role=patient&mode=signup&next=%2Fpatient%2Fupload-prescription';
+  const loginPath =
+    nextPath && !isUploadPrescriptionFlow
+      ? `/phone-login?role=patient&next=${encodeURIComponent(nextPath)}`
+      : "/phone-login?role=patient";
+  const uploadSignupPath =
+    "/phone-login?role=patient&mode=signup&next=%2Fpatient%2Fupload-prescription";
 
   return (
     <PublicLayout>
-      <Seo title={title} description="Log in to PouchCare with a secure SMS code." canonicalPath="/phone-login" noIndex />
+      <Seo
+        title={title}
+        description="Log in to PouchCare with a secure SMS code."
+        canonicalPath="/phone-login"
+        noIndex
+      />
       <section className="py-16 md:py-24 gradient-section min-h-[70vh]">
         <div className="container max-w-md">
           <Card>
@@ -460,126 +434,217 @@ export default function PhoneLogin() {
               </CardTitle>
               <CardDescription>
                 {createPatientAccount
-                  ? 'Create a patient account before uploading your prescription. Google can verify your email; mobile details are still required.'
+                  ? "Create a patient account with your email and verified Australian mobile number."
                   : isPatient
-                    ? 'Choose how you want to continue. Mobile code works for everyone; email code is available for approved patient accounts.'
-                    : 'Staff accounts use mobile code login.'}
+                    ? "Choose how you want to continue. Mobile code works for everyone; email code is available for approved patient accounts."
+                    : "Staff accounts use mobile code login."}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {step === 'phone' ? (
-                <form onSubmit={authMethod === 'email' ? sendEmailCode : authMethod === 'google' ? continueWithGoogle : sendCode} className="space-y-5">
-                  {createPatientAccount && !user && (
-                    <div className="space-y-3 rounded-lg border p-4">
-                      <Button type="button" variant="outline" className="w-full" onClick={startGoogleSignup} disabled={busy}>
-                        {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                        Continue with Google
-                      </Button>
-                      <p className="text-xs text-muted-foreground">Google can prefill your name and email. You still need to provide your date of birth, verify your Australian mobile, and complete prescription review before shop access.</p>
-                    </div>
-                  )}
-                  {isGoogleOnboarding && (
-                    <Alert>
-                      <ShieldCheck className="h-4 w-4" />
-                      <AlertDescription>Google account connected{googleEmail ? ` as ${googleEmail}` : ''}. Your email is verified; please complete DOB, mobile verification, and consent before continuing.</AlertDescription>
-                    </Alert>
-                  )}
+              {step === "phone" ? (
+                <form
+                  onSubmit={authMethod === "email" ? sendEmailCode : sendCode}
+                  className="space-y-5"
+                >
                   {showLoginOptions && (
                     <div className="space-y-2">
-                      <p className="text-sm font-medium">How do you want to continue?</p>
-                      <div className={isPatient ? "grid grid-cols-3 gap-2 rounded-lg bg-muted p-1" : "grid grid-cols-1 gap-2 rounded-lg bg-muted p-1"}>
-                        <Button type="button" variant={authMethod === 'phone' ? 'default' : 'ghost'} onClick={() => selectAuthMethod('phone')} className="gap-2">
+                      <p className="text-sm font-medium">
+                        How do you want to continue?
+                      </p>
+                      <div
+                        className={
+                          isPatient
+                            ? "grid grid-cols-2 gap-2 rounded-lg bg-muted p-1"
+                            : "grid grid-cols-1 gap-2 rounded-lg bg-muted p-1"
+                        }
+                      >
+                        <Button
+                          type="button"
+                          variant={authMethod === "phone" ? "default" : "ghost"}
+                          onClick={() => selectAuthMethod("phone")}
+                          className="gap-2"
+                        >
                           <Phone className="h-4 w-4" /> Mobile code
                         </Button>
                         {enablePatientEmailLogin && isPatient && (
-                          <Button type="button" variant={authMethod === 'email' ? 'default' : 'ghost'} onClick={() => selectAuthMethod('email')} className="gap-2">
+                          <Button
+                            type="button"
+                            variant={
+                              authMethod === "email" ? "default" : "ghost"
+                            }
+                            onClick={() => selectAuthMethod("email")}
+                            className="gap-2"
+                          >
                             <Mail className="h-4 w-4" /> Email code
                           </Button>
                         )}
-                        {isPatient && (
-                          <Button type="button" variant={authMethod === 'google' ? 'default' : 'ghost'} onClick={() => selectAuthMethod('google')} className="gap-2">
-                            G Google
-                          </Button>
-                        )}
                       </div>
-                      {isPatient && authMethod === 'google' && (
-                        <p className="text-xs text-muted-foreground">Google works only for existing approved patient accounts. We check the Google email after you choose an account.</p>
-                      )}
                     </div>
                   )}
                   {createPatientAccount && (
                     <div className="space-y-2">
                       <Label htmlFor="fullName">Full name</Label>
-                      <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your legal name" required />
+                      <Input
+                        id="fullName"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="Your legal name"
+                        required
+                      />
                     </div>
                   )}
                   {createPatientAccount && (
                     <div className="space-y-2">
                       <Label htmlFor="email">Email address</Label>
-                      <Input id="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" autoComplete="email" readOnly={isGoogleOnboarding} required />
+                      <Input
+                        id="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        inputMode="email"
+                        autoComplete="email"
+                        required
+                      />
                     </div>
                   )}
                   {createPatientAccount && (
                     <div className="space-y-2">
                       <Label>Date of birth</Label>
                       <div className="grid grid-cols-3 gap-2">
-                        <Input value={dobDay} onChange={(e) => setDobDay(e.target.value.replace(/\D/g, '').slice(0, 2))} placeholder="DD" inputMode="numeric" autoComplete="bday-day" required />
-                        <Input value={dobMonth} onChange={(e) => setDobMonth(e.target.value.replace(/\D/g, '').slice(0, 2))} placeholder="MM" inputMode="numeric" autoComplete="bday-month" required />
-                        <Input value={dobYear} onChange={(e) => setDobYear(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="YYYY" inputMode="numeric" autoComplete="bday-year" required />
+                        <Input
+                          value={dobDay}
+                          onChange={(e) =>
+                            setDobDay(
+                              e.target.value.replace(/\D/g, "").slice(0, 2),
+                            )
+                          }
+                          placeholder="DD"
+                          inputMode="numeric"
+                          autoComplete="bday-day"
+                          required
+                        />
+                        <Input
+                          value={dobMonth}
+                          onChange={(e) =>
+                            setDobMonth(
+                              e.target.value.replace(/\D/g, "").slice(0, 2),
+                            )
+                          }
+                          placeholder="MM"
+                          inputMode="numeric"
+                          autoComplete="bday-month"
+                          required
+                        />
+                        <Input
+                          value={dobYear}
+                          onChange={(e) =>
+                            setDobYear(
+                              e.target.value.replace(/\D/g, "").slice(0, 4),
+                            )
+                          }
+                          placeholder="YYYY"
+                          inputMode="numeric"
+                          autoComplete="bday-year"
+                          required
+                        />
                       </div>
-                      {dobError && <p className="text-xs text-destructive">{dobError}</p>}
+                      {dobError && (
+                        <p className="text-xs text-destructive">{dobError}</p>
+                      )}
                     </div>
                   )}
-                  {authMethod === 'phone' ? (
+                  {authMethod === "phone" ? (
                     <div className="space-y-2">
                       <Label htmlFor="phone">Mobile number</Label>
-                      <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="04xx xxx xxx" inputMode="tel" required />
-                    </div>
-                  ) : authMethod === 'email' ? (
-                    <div className="space-y-2">
-                      <Label htmlFor="loginEmail">Email address</Label>
-                      <Input id="loginEmail" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" autoComplete="email" required />
-                      <p className="text-xs text-muted-foreground">Email login only works for existing approved patient accounts. Staff must use mobile code.</p>
+                      <Input
+                        id="phone"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="04xx xxx xxx"
+                        inputMode="tel"
+                        required
+                      />
                     </div>
                   ) : (
-                    <Alert>
-                      <ShieldCheck className="h-4 w-4" />
-                      <AlertDescription>Choose your Google account next. If its email does not match an approved patient profile, login will be refused.</AlertDescription>
-                    </Alert>
+                    <div className="space-y-2">
+                      <Label htmlFor="loginEmail">Email address</Label>
+                      <Input
+                        id="loginEmail"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        inputMode="email"
+                        autoComplete="email"
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Email login only works for existing approved patient
+                        accounts. Staff must use mobile code.
+                      </p>
+                    </div>
                   )}
                   {createPatientAccount && (
                     <div className="space-y-3 rounded-lg border p-3 text-sm">
                       <label className="flex items-start gap-3">
-                        <Checkbox checked={ageConfirmed} onCheckedChange={(checked) => setAgeConfirmed(checked === true)} />
+                        <Checkbox
+                          checked={ageConfirmed}
+                          onCheckedChange={(checked) =>
+                            setAgeConfirmed(checked === true)
+                          }
+                        />
                         <span>I confirm I am 18 years or older.</span>
                       </label>
                       <label className="flex items-start gap-3">
-                        <Checkbox checked={privacyAccepted} onCheckedChange={(checked) => setPrivacyAccepted(checked === true)} />
-                        <span>I agree to PouchCare collecting and using my details to create my account and review prescription access.</span>
+                        <Checkbox
+                          checked={privacyAccepted}
+                          onCheckedChange={(checked) =>
+                            setPrivacyAccepted(checked === true)
+                          }
+                        />
+                        <span>
+                          I agree to PouchCare collecting and using my details
+                          to create my account and review prescription access.
+                        </span>
                       </label>
-                      <p className="text-xs text-muted-foreground">{destinationDescription}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {destinationDescription}
+                      </p>
                     </div>
                   )}
-                  {(intendedRole === 'doctor' || intendedRole === 'admin') && (
+                  {(intendedRole === "doctor" || intendedRole === "admin") && (
                     <Alert>
                       <Phone className="h-4 w-4" />
                       <AlertDescription>
-                        Admin and doctor accounts must already exist before phone login will work.
+                        Admin and doctor accounts must already exist before
+                        phone login will work.
                       </AlertDescription>
                     </Alert>
                   )}
                   <Button type="submit" className="w-full" disabled={busy}>
                     {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    {authMethod === 'email' ? 'Send email code' : authMethod === 'google' ? 'Continue with Google' : 'Send code'}
+                    {authMethod === "email" ? "Send email code" : "Send code"}
                   </Button>
                   {createPatientAccount ? (
                     <p className="text-center text-sm text-muted-foreground">
-                      Already have a PouchCare account and not uploading now? <Link className="underline" to={loginPath}>Log in instead</Link>
+                      Already have a PouchCare account and not uploading now?{" "}
+                      <Link className="underline" to={loginPath}>
+                        Log in instead
+                      </Link>
                     </p>
                   ) : isPatient ? (
                     <div className="space-y-2 text-center text-sm text-muted-foreground">
-                      <p>New patient with a prescription? <Link className="underline" to={uploadSignupPath}>Create an account to upload</Link></p>
-                      <p>Need a prescription? <Link className="underline" to="/start-consult">Start a consult</Link></p>
+                      <p>
+                        New patient with a prescription?{" "}
+                        <Link className="underline" to={uploadSignupPath}>
+                          Create an account to upload
+                        </Link>
+                      </p>
+                      <p>
+                        Need a prescription?{" "}
+                        <Link className="underline" to="/start-consult">
+                          Start a consult
+                        </Link>
+                      </p>
                     </div>
                   ) : null}
                 </form>
@@ -597,17 +662,33 @@ export default function PhoneLogin() {
                         <InputOTPSlot index={5} />
                       </InputOTPGroup>
                     </InputOTP>
-                    <p className="text-xs text-muted-foreground">Sent to {otpDestination}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Sent to {otpDestination}
+                    </p>
                   </div>
-                  <Button type="button" variant="outline" className="w-full" onClick={resendCode} disabled={busy || resendCooldown > 0}>
-                    {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : `Resend ${authMethod === 'email' ? 'email' : 'code'}`}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={resendCode}
+                    disabled={busy || resendCooldown > 0}
+                  >
+                    {resendCooldown > 0
+                      ? `Resend code in ${resendCooldown}s`
+                      : `Resend ${authMethod === "email" ? "email" : "code"}`}
                   </Button>
                   <Button type="submit" className="w-full" disabled={busy}>
                     {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    {createPatientAccount ? 'Verify and continue' : 'Log in'}
+                    {createPatientAccount ? "Verify and continue" : "Log in"}
                   </Button>
-                  <Button type="button" variant="ghost" className="w-full" onClick={() => setStep('phone')} disabled={busy}>
-                    {authMethod === 'email' ? 'Change email' : 'Change mobile'}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full"
+                    onClick={() => setStep("phone")}
+                    disabled={busy}
+                  >
+                    {authMethod === "email" ? "Change email" : "Change mobile"}
                   </Button>
                 </form>
               )}
