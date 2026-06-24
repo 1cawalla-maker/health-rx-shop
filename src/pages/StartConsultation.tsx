@@ -26,7 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { halaxyConsultationService } from "@/services/halaxyConsultationService";
 import { getDashboardPathForRole } from "@/lib/roleRoutes";
-import { formatDobForStorage, validateDob } from "@/lib/validation";
+import { formatDobForStorage, parseDobFromStorage, validateDob } from "@/lib/validation";
 
 const PRIVACY_POLICY_VERSION = "2026-06-18-minimal-halaxy-consult";
 const COLLECTION_NOTICE_VERSION = "2026-06-18-minimal-halaxy-consult";
@@ -89,6 +89,57 @@ export default function StartConsultation() {
     );
     return () => window.clearTimeout(timer);
   }, [resendCooldown]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    if (userRole?.role && userRole.role !== "patient") return;
+
+    let cancelled = false;
+
+    const prefillPatientDetails = async () => {
+      try {
+        const metadataName =
+          typeof user.user_metadata?.full_name === "string"
+            ? user.user_metadata.full_name
+            : typeof user.user_metadata?.name === "string"
+              ? user.user_metadata.name
+              : "";
+
+        if (metadataName) setFullName((current) => current || metadataName);
+        if (user.email) setEmail((current) => current || user.email || "");
+
+        const { data, error } = await withTimeout(
+          (supabase as any)
+            .from("profiles")
+            .select("full_name,email,phone,date_of_birth")
+            .eq("user_id", user.id)
+            .maybeSingle(),
+          "Loading your saved details",
+        );
+
+        if (cancelled || error || !data) return;
+
+        if (data.full_name) setFullName((current) => current || data.full_name);
+        if (data.email) setEmail((current) => current || data.email);
+        if (data.phone) setPhone((current) => current || data.phone);
+
+        if (data.date_of_birth) {
+          const dob = parseDobFromStorage(data.date_of_birth);
+          setDobDay(dob.day);
+          setDobMonth(dob.month);
+          setDobYear(dob.year);
+        }
+      } catch {
+        // Prefill is a convenience only; do not block the consult flow.
+      }
+    };
+
+    void prefillPatientDetails();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, user?.email, user?.user_metadata, userRole?.role]);
 
   const normalizeEmail = (value: string): string | null => {
     const trimmed = value.trim().toLowerCase();
