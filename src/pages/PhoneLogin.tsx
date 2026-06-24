@@ -105,7 +105,7 @@ export default function PhoneLogin() {
     return trimmed;
   };
 
-  const startResendCooldown = () => setResendCooldown(30);
+  const startResendCooldown = () => setResendCooldown(60);
 
   const otpDestination = authMethod === "email" ? pendingEmail : pendingPhone;
 
@@ -321,13 +321,10 @@ export default function PhoneLogin() {
         toast.success("New email verification code sent.");
       } else {
         if (!pendingPhone) return;
-        const { error } =
-          otpFlow === "phone_change"
-            ? await (supabase.auth.updateUser as any)({ phone: pendingPhone })
-            : await supabase.auth.signInWithOtp({
-                phone: pendingPhone,
-                options: { shouldCreateUser: createPatientAccount },
-              });
+        const { error } = await (supabase.auth.resend as any)({
+          type: otpFlow === "phone_change" ? "phone_change" : "sms",
+          phone: pendingPhone,
+        });
         if (error) throw error;
         toast.success("New verification code sent.");
       }

@@ -97,7 +97,7 @@ export default function StartConsultation() {
     return trimmed;
   };
 
-  const startResendCooldown = () => setResendCooldown(30);
+  const startResendCooldown = () => setResendCooldown(60);
 
   const validateDetails = () => {
     if (fullName.trim().length < 2)
@@ -270,12 +270,10 @@ export default function StartConsultation() {
     setIsBusy(true);
     try {
       const { error } = await withTimeout(
-        otpFlow === "phone_change"
-          ? (supabase.auth.updateUser as any)({ phone: pendingPhone })
-          : supabase.auth.signInWithOtp({
-              phone: pendingPhone,
-              options: { shouldCreateUser: true },
-            }),
+        (supabase.auth.resend as any)({
+          type: otpFlow === "phone_change" ? "phone_change" : "sms",
+          phone: pendingPhone,
+        }),
         "Resending SMS code",
       );
       if (error) throw error;
