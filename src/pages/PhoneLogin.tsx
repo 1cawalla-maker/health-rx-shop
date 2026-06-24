@@ -396,7 +396,7 @@ export default function PhoneLogin() {
         throw new Error(`This mobile is not registered as a ${requestedRole}.`);
 
       const path = nextPath || getDashboardPathForRole(roleRow.role) || "/";
-      navigate(path, { replace: true });
+      window.location.assign(path);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Could not verify code.",
