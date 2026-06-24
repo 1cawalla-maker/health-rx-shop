@@ -1,4 +1,27 @@
+import { supabase } from '@/integrations/supabase/client';
 import type { Product, ProductVariant } from '@/types/shop';
+
+type ProductRow = {
+  id: string;
+  display_name: string;
+  brand: string | null;
+  flavour: string | null;
+  description: string | null;
+  image_url: string | null;
+  can_size_pouches: number | null;
+  sort_order: number | null;
+  product_variants?: VariantRow[];
+};
+
+type VariantRow = {
+  id: string;
+  display_strength_mg: number | string;
+  display_price_cents: number;
+  currency: string | null;
+  stock_status: string | null;
+  visible: boolean | null;
+  sort_order: number | null;
+};
 
 type ShopifyMoney = {
   amount: string;
@@ -34,15 +57,15 @@ type ShopifyProductsResponse = {
 const SHOPIFY_DOMAIN = import.meta.env.VITE_SHOPIFY_STORE_DOMAIN || 'pouchcare.myshopify.com';
 const SHOPIFY_API_VERSION = '2026-04';
 
-function parseStrengthMg(variant: ShopifyVariantNode): 3 | 6 | 9 | null {
+function parseStrengthMg(variant: ShopifyVariantNode): number | null {
   const rawOptions = (variant.selectedOptions ?? [])
     .map((option) => `${option?.name ?? ''}: ${option?.value ?? ''}`)
     .join(' | ');
 
   const raw = [rawOptions, variant.title].filter(Boolean).join(' | ');
-  const parsed = Number(raw.match(/(3|6|9)\s*mg/i)?.[1] ?? NaN);
+  const parsed = Number(raw.match(/(\d+(?:\.\d+)?)\s*mg/i)?.[1] ?? NaN);
 
-  if (parsed === 3 || parsed === 6 || parsed === 9) return parsed;
+  if (Number.isFinite(parsed) && parsed > 0) return parsed;
   return null;
 }
 
@@ -59,7 +82,45 @@ function stripHtml(html?: string | null): string {
     .trim();
 }
 
-function productToCatalogProduct(node: ShopifyProductNode): Product | null {
+function rowToVariant(row: VariantRow): ProductVariant | null {
+  const strengthMg = Number(row.display_strength_mg);
+  const priceCents = Number(row.display_price_cents ?? 0);
+
+  if (!Number.isFinite(strengthMg) || strengthMg <= 0) return null;
+  if (!Number.isFinite(priceCents) || priceCents < 0) return null;
+
+  return {
+    id: row.id,
+    shopifyId: null,
+    strengthMg,
+    priceCents,
+    currency: 'AUD',
+    available: row.visible === true && row.stock_status !== 'out_of_stock',
+  };
+}
+
+function rowToProduct(row: ProductRow): Product | null {
+  const variants = (row.product_variants ?? [])
+    .map(rowToVariant)
+    .filter((variant): variant is ProductVariant => Boolean(variant))
+    .sort((a, b) => a.strengthMg - b.strengthMg);
+
+  if (!row.id || !row.display_name || variants.length === 0) return null;
+
+  return {
+    id: row.id,
+    shopifyId: null,
+    name: row.display_name,
+    brand: row.brand || 'PouchCare',
+    flavor: row.flavour || row.display_name,
+    canSizePouches: 20,
+    imageUrl: row.image_url || undefined,
+    description: row.description || 'Nicotine pouch product',
+    variants,
+  };
+}
+
+function shopifyProductToCatalogProduct(node: ShopifyProductNode): Product | null {
   const variants = (node.variants?.nodes ?? [])
     .map((variant): ProductVariant | null => {
       const strengthMg = parseStrengthMg(variant);
@@ -114,9 +175,86 @@ async function storefrontFetch<T>(query: string, variables: Record<string, unkno
   return json.data as T;
 }
 
+async function listShopifyFallbackProducts(): Promise<Product[]> {
+  const query = `
+    query PouchCareProducts($first: Int!) {
+      products(first: $first) {
+        nodes {
+          id
+          title
+          handle
+          description
+          descriptionHtml
+          vendor
+          featuredImage { url altText }
+          images(first: 1) { nodes { url altText } }
+          variants(first: 25) {
+            nodes {
+              id
+              title
+              availableForSale
+              price { amount currencyCode }
+              selectedOptions { name value }
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  const data = await storefrontFetch<ShopifyProductsResponse>(query, { first: 50 });
+  return (data.products?.nodes ?? [])
+    .map(shopifyProductToCatalogProduct)
+    .filter((product): product is Product => Boolean(product));
+}
+
 class CatalogService {
   private cache: { products: Product[]; fetchedAt: number } | null = null;
-  private readonly cacheTtlMs = 60_000;
+  private readonly cacheTtlMs = 30_000;
+
+  clearCache() {
+    this.cache = null;
+  }
+
+  private async listInternalProducts(): Promise<Product[]> {
+    const { data, error } = await (supabase as any)
+      .from('products')
+      .select(`
+        id,
+        display_name,
+        brand,
+        flavour,
+        description,
+        image_url,
+        can_size_pouches,
+        sort_order,
+        product_variants (
+          id,
+          display_strength_mg,
+          display_price_cents,
+          currency,
+          stock_status,
+          visible,
+          sort_order
+        )
+      `)
+      .eq('status', 'active')
+      .order('sort_order', { ascending: true })
+      .order('display_name', { ascending: true });
+
+    if (error) throw new Error(`Failed to load internal product catalogue: ${error.message}`);
+
+    return ((data ?? []) as ProductRow[])
+      .map((product) => ({
+        ...product,
+        product_variants: (product.product_variants ?? [])
+          .filter((variant) => variant.visible === true)
+          .filter((variant) => variant.stock_status !== 'out_of_stock')
+          .sort((a, b) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0)),
+      }))
+      .map(rowToProduct)
+      .filter((product): product is Product => Boolean(product));
+  }
 
   async listProducts(): Promise<Product[]> {
     const now = Date.now();
@@ -124,36 +262,18 @@ class CatalogService {
       return this.cache.products;
     }
 
-    const query = `
-      query PouchCareProducts($first: Int!) {
-        products(first: $first) {
-          nodes {
-            id
-            title
-            handle
-            description
-            descriptionHtml
-            vendor
-            featuredImage { url altText }
-            images(first: 1) { nodes { url altText } }
-            variants(first: 25) {
-              nodes {
-                id
-                title
-                availableForSale
-                price { amount currencyCode }
-                selectedOptions { name value }
-              }
-            }
-          }
-        }
-      }
-    `;
+    let products: Product[] = [];
+    try {
+      products = await this.listInternalProducts();
+    } catch (error) {
+      // Transitional safety: the internal catalogue tables may not exist until the
+      // migration is applied. Keep the existing Shopify catalogue live until cutover.
+      console.warn('catalogService: internal catalogue unavailable, falling back to Shopify', error);
+    }
 
-    const data = await storefrontFetch<ShopifyProductsResponse>(query, { first: 50 });
-    const products = (data.products?.nodes ?? [])
-      .map(productToCatalogProduct)
-      .filter((product): product is Product => Boolean(product));
+    if (products.length === 0) {
+      products = await listShopifyFallbackProducts();
+    }
 
     this.cache = { products, fetchedAt: now };
     return products;

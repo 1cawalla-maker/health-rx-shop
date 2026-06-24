@@ -12,7 +12,8 @@ import {
   Settings,
   Calendar,
   Package,
-  ClipboardList
+  ClipboardList,
+  ShoppingBag
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -21,6 +22,7 @@ const navItems = [
   { href: '/admin/doctors', label: 'Doctors', icon: Stethoscope },
   { href: '/admin/bookings', label: 'Bookings', icon: Calendar },
   { href: '/admin/halaxy-consults', label: 'Halaxy Queue', icon: ClipboardList },
+  { href: '/admin/catalog', label: 'Catalogue', icon: ShoppingBag },
   { href: '/admin/orders', label: 'Orders', icon: Package },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/prescriptions', label: 'Prescriptions', icon: FileText },

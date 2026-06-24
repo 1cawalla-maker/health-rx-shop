@@ -4,7 +4,7 @@
 export interface ProductVariant {
   id: string;
   shopifyId?: string | null;
-  strengthMg: 3 | 6 | 9;
+  strengthMg: number;
   priceCents: number;
   currency: 'AUD';
   available: boolean;
@@ -35,7 +35,7 @@ export interface CartItem {
   name: string;
   brand: string;
   flavor: string;
-  strengthMg: 3 | 6 | 9;
+  strengthMg: number;
   priceCents: number;
   qtyCans: number; // Quantity in cans
   totalPriceCents?: number; // Derived: priceCents * qtyCans (convenience field)
@@ -81,7 +81,7 @@ export interface OrderItem {
   productId: string;
   variantId: string;
   flavor: string;
-  strengthMg: 3 | 6 | 9;
+  strengthMg: number;
   qtyCans: number;
   unitPriceCents: number;
 }
@@ -112,7 +112,7 @@ export interface MockPrescription {
   id: string;
   userId: string;
   status: 'active' | 'expired' | 'revoked';
-  maxStrengthMg: 3 | 6 | 9;
+  maxStrengthMg: number;
   totalCansAllowed: 60;
   expiresAt?: string;
   createdAt: string;

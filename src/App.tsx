@@ -53,6 +53,7 @@ import AdminDoctors from "./pages/admin/Doctors";
 import AdminDoctorApprovals from "./pages/admin/DoctorApprovals";
 import AdminBookings from "./pages/admin/Bookings";
 import AdminOrders from "./pages/admin/Orders";
+import AdminCatalog from "./pages/admin/Catalog";
 import AdminUsers from "./pages/admin/Users";
 import AdminPrescriptions from "./pages/admin/Prescriptions";
 import AdminPrescriptionUploads from "./pages/admin/PrescriptionUploads";
@@ -169,6 +170,7 @@ const App = () => (
                 <Route path="doctor-approvals" element={<AdminDoctorApprovals />} />
                 <Route path="bookings" element={<AdminBookings />} />
                 <Route path="halaxy-consults" element={<AdminHalaxyConsults />} />
+                <Route path="catalog" element={<AdminCatalog />} />
                 <Route path="orders" element={<AdminOrders />} />
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="prescriptions" element={<AdminPrescriptions />} />
