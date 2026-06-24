@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Loader2, PackagePlus, RefreshCw, Save, Store, ToggleLeft, ToggleRight } from 'lucide-react';
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { ImagePlus, Loader2, PackagePlus, RefreshCw, Save, Store, ToggleLeft, ToggleRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { supabase } from '@/integrations/supabase/client';
@@ -81,6 +81,27 @@ function audToCents(value: string) {
   return Math.round(amount * 100);
 }
 
+
+const PRODUCT_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const PRODUCT_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+function fileExtension(file: File) {
+  const fromName = file.name.split('.').pop()?.toLowerCase();
+  if (fromName && /^[a-z0-9]+$/.test(fromName)) return fromName;
+  if (file.type === 'image/png') return 'png';
+  if (file.type === 'image/webp') return 'webp';
+  return 'jpg';
+}
+
+function safeFileBase(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80) || 'product-image';
+}
+
 function statusBadge(status: ProductRow['status']) {
   if (status === 'active') return <Badge className="bg-green-500/10 text-green-700 border-green-500/20">Active</Badge>;
   if (status === 'hidden') return <Badge className="bg-amber-500/10 text-amber-700 border-amber-500/20">Hidden</Badge>;
@@ -101,7 +122,9 @@ export default function AdminCatalog() {
   const [loading, setLoading] = useState(true);
   const [savingSupplier, setSavingSupplier] = useState(false);
   const [savingProduct, setSavingProduct] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const [supplierForm, setSupplierForm] = useState({
     name: '',
@@ -192,6 +215,47 @@ export default function AdminCatalog() {
       { ...emptyVariant, strengthMg: '6' },
       { ...emptyVariant, strengthMg: '9' },
     ]);
+  };
+
+  const handleProductImageSelect = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (imageInputRef.current) imageInputRef.current.value = '';
+    if (!file) return;
+
+    if (!PRODUCT_IMAGE_TYPES.includes(file.type)) {
+      toast.error('Please upload a JPG, PNG, or WebP image');
+      return;
+    }
+
+    if (file.size > PRODUCT_IMAGE_MAX_BYTES) {
+      toast.error('Product image must be 5 MB or smaller');
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const base = safeFileBase(productForm.displayName || productForm.flavour || file.name);
+      const path = `catalogue/${Date.now()}-${base}.${fileExtension(file)}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(path, file, { contentType: file.type, upsert: false });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('product-images').getPublicUrl(path);
+      const publicUrl = data?.publicUrl;
+      if (!publicUrl) throw new Error('Image uploaded but public URL was not returned');
+
+      setProductForm((form) => ({ ...form, imageUrl: publicUrl }));
+      toast.success('Product image uploaded');
+    } catch (error) {
+      console.error('AdminCatalog: failed to upload image', error);
+      const message = error instanceof Error ? error.message : 'Failed to upload image';
+      toast.error(message);
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const createSupplier = async () => {
@@ -451,9 +515,50 @@ export default function AdminCatalog() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Image URL</Label>
-                <Input value={productForm.imageUrl} onChange={(event) => setProductForm((form) => ({ ...form, imageUrl: event.target.value }))} placeholder="https://…" />
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label>Product image</Label>
+                  <p className="text-xs text-muted-foreground">Upload a JPG, PNG, or WebP image. Max 5 MB.</p>
+                </div>
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handleProductImageSelect}
+                />
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => imageInputRef.current?.click()}
+                    disabled={uploadingImage}
+                  >
+                    {uploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+                    {uploadingImage ? 'Uploading…' : productForm.imageUrl ? 'Replace image' : 'Upload image'}
+                  </Button>
+                  {productForm.imageUrl && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setProductForm((form) => ({ ...form, imageUrl: '' }))}
+                      disabled={uploadingImage}
+                    >
+                      Remove image
+                    </Button>
+                  )}
+                </div>
+                {productForm.imageUrl && (
+                  <div className="overflow-hidden rounded-xl border bg-muted/20">
+                    <img
+                      src={productForm.imageUrl}
+                      alt="Product preview"
+                      className="h-40 w-full object-cover"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
