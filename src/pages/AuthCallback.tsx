@@ -21,6 +21,11 @@ export default function AuthCallback() {
   const [status, setStatus] = useState('Finishing secure login…');
   const nextPath = useMemo(() => safeNextPath(searchParams.get('next')), [searchParams]);
   const mode = searchParams.get('mode');
+  const effectiveMode = useMemo(() => {
+    if (mode === 'signup') return 'signup';
+    if (nextPath?.includes('mode=signup') || nextPath?.includes('create=1')) return 'signup';
+    return mode;
+  }, [mode, nextPath]);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,7 +42,7 @@ export default function AuthCallback() {
           if (exchangeError) throw exchangeError;
         }
 
-        if (mode === 'signup') {
+        if (effectiveMode === 'signup') {
           setStatus('Preparing patient onboarding…');
           const { data: userData, error: userError } = await supabase.auth.getUser();
           if (userError || !userData.user) throw userError || new Error('Google sign-up did not return a valid session.');
@@ -78,7 +83,7 @@ export default function AuthCallback() {
     return () => {
       cancelled = true;
     };
-  }, [mode, navigate, nextPath, searchParams]);
+  }, [effectiveMode, navigate, nextPath, searchParams]);
 
   return (
     <PublicLayout>

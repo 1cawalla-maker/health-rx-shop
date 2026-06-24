@@ -44,7 +44,12 @@ export default function PhoneLogin() {
   const isPatient = intendedRole === 'patient';
   const isUploadPrescriptionFlow = nextPath === '/patient/upload-prescription';
   const enablePatientEmailLogin = true;
-  const createPatientAccount = isPatient && (isUploadPrescriptionFlow || searchParams.get('mode') === 'signup' || searchParams.get('create') === '1');
+  const createPatientAccount = isPatient && (
+    isUploadPrescriptionFlow ||
+    searchParams.get('mode') === 'signup' ||
+    searchParams.get('create') === '1' ||
+    (searchParams.get('google') === '1' && Boolean(user))
+  );
   const [phone, setPhone] = useState('');
   const [pendingPhone, setPendingPhone] = useState('');
   const [pendingEmail, setPendingEmail] = useState('');
