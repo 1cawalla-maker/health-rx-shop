@@ -68,7 +68,8 @@ export default function PhoneLogin() {
   const [busy, setBusy] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  const isGoogleOnboarding = createPatientAccount && searchParams.get('google') === '1' && Boolean(user);
+  const hasGoogleIdentity = Boolean(user && Array.isArray((user as any).identities) && (user as any).identities.some((identity: any) => identity?.provider === 'google'));
+  const isGoogleOnboarding = createPatientAccount && Boolean(user) && (searchParams.get('google') === '1' || hasGoogleIdentity);
   const googleEmail = typeof user?.email === 'string' ? user.email : '';
   const googleName = typeof user?.user_metadata?.full_name === 'string'
     ? user.user_metadata.full_name
@@ -338,6 +339,8 @@ export default function PhoneLogin() {
 
     setBusy(true);
     try {
+      const returnPath = `${window.location.pathname}${window.location.search}`;
+      sessionStorage.setItem('pouchcare_google_onboarding_next', returnPath);
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -478,7 +481,7 @@ export default function PhoneLogin() {
                   {isGoogleOnboarding && (
                     <Alert>
                       <ShieldCheck className="h-4 w-4" />
-                      <AlertDescription>Google verified your email. Complete the remaining patient details before continuing.</AlertDescription>
+                      <AlertDescription>Google account connected{googleEmail ? ` as ${googleEmail}` : ''}. Your email is verified; please complete DOB, mobile verification, and consent before continuing.</AlertDescription>
                     </Alert>
                   )}
                   {showLoginOptions && (

@@ -19,13 +19,15 @@ export default function AuthCallback() {
   const [searchParams] = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState('Finishing secure login…');
-  const nextPath = useMemo(() => safeNextPath(searchParams.get('next')), [searchParams]);
+  const storedSignupNext = typeof window !== 'undefined' ? sessionStorage.getItem('pouchcare_google_onboarding_next') : null;
+  const nextPath = useMemo(() => safeNextPath(searchParams.get('next')) || safeNextPath(storedSignupNext), [searchParams, storedSignupNext]);
   const mode = searchParams.get('mode');
   const effectiveMode = useMemo(() => {
     if (mode === 'signup') return 'signup';
+    if (storedSignupNext) return 'signup';
     if (nextPath?.includes('mode=signup') || nextPath?.includes('create=1')) return 'signup';
     return mode;
-  }, [mode, nextPath]);
+  }, [mode, nextPath, storedSignupNext]);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,6 +60,7 @@ export default function AuthCallback() {
 
           const path = nextPath || '/start-consult';
           const separator = path.includes('?') ? '&' : '?';
+          sessionStorage.removeItem('pouchcare_google_onboarding_next');
           if (!cancelled) navigate(`${path}${separator}google=1`, { replace: true });
           return;
         }
@@ -69,6 +72,7 @@ export default function AuthCallback() {
         if (finalizeError) throw finalizeError;
         if ((data as any)?.error) throw new Error((data as any).error);
 
+        sessionStorage.removeItem('pouchcare_google_onboarding_next');
         const path = nextPath || (data as any)?.path || '/patient/dashboard';
         if (!cancelled) navigate(path, { replace: true });
       } catch (err) {

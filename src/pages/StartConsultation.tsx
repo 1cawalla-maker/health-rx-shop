@@ -64,7 +64,8 @@ export default function StartConsultation() {
   const [isBusy, setIsBusy] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  const isGoogleOnboarding = searchParams.get('google') === '1' && Boolean(user);
+  const hasGoogleIdentity = Boolean(user && Array.isArray((user as any).identities) && (user as any).identities.some((identity: any) => identity?.provider === 'google'));
+  const isGoogleOnboarding = Boolean(user) && (searchParams.get('google') === '1' || hasGoogleIdentity);
   const googleEmail = typeof user?.email === 'string' ? user.email : '';
   const googleName = typeof user?.user_metadata?.full_name === 'string'
     ? user.user_metadata.full_name
@@ -119,6 +120,7 @@ export default function StartConsultation() {
   const continueWithGoogle = async () => {
     setIsBusy(true);
     try {
+      sessionStorage.setItem('pouchcare_google_onboarding_next', '/start-consult');
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -370,7 +372,7 @@ export default function StartConsultation() {
                   {isGoogleOnboarding && (
                     <Alert>
                       <ShieldCheck className="h-4 w-4" />
-                      <AlertDescription>Google verified your email. Complete the remaining patient details before booking.</AlertDescription>
+                      <AlertDescription>Google account connected{googleEmail ? ` as ${googleEmail}` : ''}. Your email is verified; please complete DOB, mobile verification, and consent before booking.</AlertDescription>
                     </Alert>
                   )}
                   <div className="space-y-2">
@@ -426,7 +428,7 @@ export default function StartConsultation() {
 
                   <Button type="submit" className="w-full gap-2" disabled={isBusy || authLoading}>
                     {isBusy || authLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
-                    {user ? 'Continue to Halaxy' : 'Send SMS code'}
+                    {isGoogleOnboarding ? 'Verify mobile and continue' : user ? 'Continue to Halaxy' : 'Send SMS code'}
                   </Button>
                 </form>
               ) : (
