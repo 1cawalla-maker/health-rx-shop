@@ -315,21 +315,13 @@ export default function PhoneLogin() {
     e.preventDefault();
     if (!isPatient || createPatientAccount) return;
 
-    const emailAddress = normalizeEmail(email);
-    if (!emailAddress) {
-      toast.error('Enter the email on your approved patient account first.');
-      return;
-    }
-
     setBusy(true);
     try {
-      await preparePatientEmailLogin(emailAddress);
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: getOAuthRedirectUrl(),
           queryParams: {
-            login_hint: emailAddress,
             prompt: 'select_account',
           },
         },
@@ -507,8 +499,8 @@ export default function PhoneLogin() {
                           </Button>
                         )}
                       </div>
-                      {isPatient && (
-                        <p className="text-xs text-muted-foreground">Google works only for existing approved patient accounts with a matching email.</p>
+                      {isPatient && authMethod === 'google' && (
+                        <p className="text-xs text-muted-foreground">Google works only for existing approved patient accounts. We check the Google email after you choose an account.</p>
                       )}
                     </div>
                   )}
@@ -540,16 +532,17 @@ export default function PhoneLogin() {
                       <Label htmlFor="phone">Mobile number</Label>
                       <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="04xx xxx xxx" inputMode="tel" required />
                     </div>
-                  ) : (
+                  ) : authMethod === 'email' ? (
                     <div className="space-y-2">
                       <Label htmlFor="loginEmail">Email address</Label>
                       <Input id="loginEmail" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" autoComplete="email" required />
-                      <p className="text-xs text-muted-foreground">
-                        {authMethod === 'google'
-                          ? 'Enter the email already saved on your approved patient account, then choose the same Google account.'
-                          : 'Email login only works for existing approved patient accounts. Staff must use mobile code.'}
-                      </p>
+                      <p className="text-xs text-muted-foreground">Email login only works for existing approved patient accounts. Staff must use mobile code.</p>
                     </div>
+                  ) : (
+                    <Alert>
+                      <ShieldCheck className="h-4 w-4" />
+                      <AlertDescription>Choose your Google account next. If its email does not match an approved patient profile, login will be refused.</AlertDescription>
+                    </Alert>
                   )}
                   {createPatientAccount && (
                     <div className="space-y-3 rounded-lg border p-3 text-sm">
