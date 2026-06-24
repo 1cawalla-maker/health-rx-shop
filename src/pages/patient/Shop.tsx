@@ -222,13 +222,13 @@ export default function PatientShop() {
                 return (
                   <Link key={product.id} to={`/patient/shop/${product.id}`} className="block">
                     <Card className="overflow-hidden hover:shadow-md transition-shadow h-full">
-                      <div className="aspect-[4/3] overflow-hidden bg-muted">
+                      <div className="aspect-[4/3] overflow-hidden bg-muted p-3">
                         {product.imageUrl ? (
                           <img
                             src={product.imageUrl}
                             alt={product.name}
                             loading="lazy"
-                            className="h-full w-full object-cover"
+                            className="h-full w-full object-contain"
                             onError={(e) => {
                               // Hide broken images and let the skeleton show instead.
                               e.currentTarget.style.display = 'none';

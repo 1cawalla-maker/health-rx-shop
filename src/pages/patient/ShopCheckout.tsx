@@ -133,9 +133,9 @@ export default function PatientShopCheckout() {
             <CardContent className="space-y-4">
               {cart.items.map((item) => (
                 <div key={item.id} className="flex gap-4 rounded-xl border bg-card p-4">
-                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-primary/10 to-primary/5">
+                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 p-2">
                     {item.imageUrl ? (
-                      <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
+                      <img src={item.imageUrl} alt={item.name} className="h-full w-full object-contain" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
                         {item.strengthMg}mg
