@@ -1,15 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom';
-import { ArrowLeft, Minus, Plus, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, FileText, Lock, Minus, Plus, ShoppingCart, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CartButton } from '@/components/shop/CartButton';
 import { CartDrawer } from '@/components/shop/CartDrawer';
-import { ShopExpiredOverlay } from '@/components/shop/ShopExpiredOverlay';
-import { ShopLockedOverlay } from '@/components/shop/ShopLockedOverlay';
-import { ShopPendingOverlay } from '@/components/shop/ShopPendingOverlay';
 import { catalogService } from '@/services/catalogService';
 import { allowanceUtils } from '@/lib/allowanceUtils';
 import { useCart } from '@/contexts/CartContext';
@@ -43,6 +40,7 @@ export default function PatientProductDetail() {
     remainingCans: remainingBeforeCart,
     isExpired,
     expiredAt,
+    isLoading: isPrescriptionLoading,
   } = usePrescriptionStatus();
 
   const hasActivePrescription = rxHasActive || outletContext.hasActivePrescription;
@@ -62,6 +60,13 @@ export default function PatientProductDetail() {
 
   useEffect(() => {
     const load = async () => {
+      if (!hasActivePrescription) {
+        setProduct(null);
+        setSelectedVariant(null);
+        setLoading(false);
+        return;
+      }
+
       if (!productId) {
         navigate('/patient/shop');
         return;
@@ -87,7 +92,7 @@ export default function PatientProductDetail() {
 
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productId, maxStrengthMg]);
+  }, [productId, maxStrengthMg, hasActivePrescription]);
 
   // Keep qty within bounds if allowance changes
   useEffect(() => {
@@ -96,6 +101,76 @@ export default function PatientProductDetail() {
   }, [remainingCans]);
 
   const canBuyAnything = hasActivePrescription && remainingCans > 0;
+
+  if (isPrescriptionLoading) {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <Card>
+          <CardHeader>
+            <CardTitle>Checking shop access…</CardTitle>
+            <CardDescription>Please wait while we confirm your prescription status.</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!hasActivePrescription) {
+    const state = isExpired
+      ? {
+          icon: Clock,
+          title: 'Prescription access unavailable',
+          description: expiredAt ? `Your prescription expired on ${expiredAt.toLocaleDateString('en-AU')}. Please renew access before viewing product details.` : 'Please renew access before viewing product details.',
+        }
+      : hasPendingPrescription
+        ? {
+            icon: FileText,
+            title: 'Prescription under review',
+            description: 'Product details are hidden until your prescription is approved.',
+          }
+        : {
+            icon: Lock,
+            title: 'Prescription required',
+            description: 'Product details are only shown after an approved prescription is active on your account.',
+          };
+    const Icon = state.icon;
+
+    return (
+      <div className="max-w-3xl mx-auto space-y-4">
+        <Button asChild variant="ghost" className="gap-2 w-fit">
+          <Link to="/patient/shop">
+            <ArrowLeft className="h-4 w-4" />
+            Back to shop
+          </Link>
+        </Button>
+        <Card>
+          <CardHeader className="text-center pb-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mx-auto mb-4">
+              <Icon className="h-8 w-8 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">{state.title}</CardTitle>
+            <CardDescription className="text-base">{state.description}</CardDescription>
+          </CardHeader>
+          <CardContent className="mx-auto flex w-full max-w-md flex-col gap-3">
+            {!hasPendingPrescription && (
+              <Button asChild className="w-full" size="lg">
+                <Link to="/patient/upload-prescription">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload existing prescription
+                </Link>
+              </Button>
+            )}
+            <Button asChild variant="outline" className="w-full" size="lg">
+              <Link to={hasPendingPrescription ? '/patient/prescriptions' : '/start-consult'}>
+                {hasPendingPrescription ? <FileText className="h-4 w-4 mr-2" /> : <Calendar className="h-4 w-4 mr-2" />}
+                {hasPendingPrescription ? 'View prescription status' : 'Need a prescription? Start consultation'}
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const isVariantAllowed = (variant: ProductVariant) => {
     return allowanceUtils.isVariantAllowed(variant.strengthMg, maxStrengthMg);
@@ -333,11 +408,6 @@ export default function PatientProductDetail() {
             </CardContent>
           </Card>
         </div>
-
-        {/* Overlays */}
-        {!hasActivePrescription && isExpired && <ShopExpiredOverlay expiredAt={expiredAt} />}
-        {!hasActivePrescription && hasPendingPrescription && <ShopPendingOverlay />}
-        {!hasActivePrescription && !hasPendingPrescription && !isExpired && <ShopLockedOverlay />}
       </div>
 
       <CartDrawer remainingCans={remainingCans} totalCansAllowed={totalAllowance} />

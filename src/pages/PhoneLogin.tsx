@@ -14,6 +14,7 @@ import { Loader2, Mail, Phone, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { getDashboardPathForRole } from '@/lib/roleRoutes';
 import { useAuth } from '@/hooks/useAuth';
+import { formatDobForStorage, validateDob } from '@/lib/validation';
 
 const PRIVACY_POLICY_VERSION = '2026-06-18-existing-prescription-upload';
 const COLLECTION_NOTICE_VERSION = '2026-06-18-existing-prescription-upload';
@@ -50,10 +51,15 @@ export default function PhoneLogin() {
   const [authMethod, setAuthMethod] = useState<'phone' | 'email' | 'google'>('phone');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [dobDay, setDobDay] = useState('');
+  const [dobMonth, setDobMonth] = useState('');
+  const [dobYear, setDobYear] = useState('');
+  const [dobError, setDobError] = useState('');
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const [otpFlow, setOtpFlow] = useState<'sms' | 'email' | 'phone_change'>('sms');
   const [busy, setBusy] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
@@ -168,6 +174,7 @@ export default function PhoneLogin() {
       .upsert({
         user_id: userId,
         full_name: fullName.trim(),
+        date_of_birth: formatDobForStorage(dobDay, dobMonth, dobYear),
         email: normalizeEmail(email),
         email_verified_at: googleIdentity ? now : null,
         email_verification_method: googleIdentity ? 'google_oauth' : null,
@@ -206,6 +213,13 @@ export default function PhoneLogin() {
         toast.error('Enter a valid email address.');
         return;
       }
+      const dobResult = validateDob(dobDay, dobMonth, dobYear);
+      if (!dobResult.valid) {
+        setDobError(dobResult.error || 'Invalid date of birth');
+        toast.error(dobResult.error || 'Enter a valid date of birth.');
+        return;
+      }
+      setDobError('');
       if (!ageConfirmed || !privacyAccepted) {
         toast.error('Please confirm the required patient account acknowledgements.');
         return;
@@ -222,9 +236,23 @@ export default function PhoneLogin() {
           return;
         }
 
-        await savePatientAccount(user.id, phoneE164);
-        const path = nextPath || getDashboardPathForRole('patient') || '/patient/dashboard';
-        window.location.assign(path);
+        const existingPhone = typeof (user as any).phone === 'string' ? (user as any).phone : '';
+        if (existingPhone === phoneE164) {
+          await savePatientAccount(user.id, phoneE164);
+          const path = nextPath || getDashboardPathForRole('patient') || '/patient/dashboard';
+          window.location.assign(path);
+          return;
+        }
+
+        const { error } = await (supabase.auth.updateUser as any)({ phone: phoneE164 });
+        if (error) throw error;
+        setPendingPhone(phoneE164);
+        setPendingEmail('');
+        setAuthMethod('phone');
+        setOtpFlow('phone_change');
+        setStep('otp');
+        startResendCooldown();
+        toast.success('Verification code sent.');
         return;
       }
 
@@ -234,6 +262,7 @@ export default function PhoneLogin() {
       });
       if (error) throw error;
       setPendingPhone(phoneE164);
+      setOtpFlow('sms');
       setStep('otp');
       startResendCooldown();
       toast.success('Verification code sent.');
@@ -266,6 +295,7 @@ export default function PhoneLogin() {
       setPendingEmail(emailAddress);
       setPendingPhone('');
       setAuthMethod('email');
+      setOtpFlow('email');
       setStep('otp');
       startResendCooldown();
       toast.success('Verification code sent by email.');
@@ -343,10 +373,12 @@ export default function PhoneLogin() {
         toast.success('New email verification code sent.');
       } else {
         if (!pendingPhone) return;
-        const { error } = await supabase.auth.signInWithOtp({
-          phone: pendingPhone,
-          options: { shouldCreateUser: createPatientAccount },
-        });
+        const { error } = otpFlow === 'phone_change'
+          ? await (supabase.auth.updateUser as any)({ phone: pendingPhone })
+          : await supabase.auth.signInWithOtp({
+              phone: pendingPhone,
+              options: { shouldCreateUser: createPatientAccount },
+            });
         if (error) throw error;
         toast.success('New verification code sent.');
       }
@@ -371,9 +403,9 @@ export default function PhoneLogin() {
     try {
       const { data, error } = authMethod === 'email'
         ? await supabase.auth.verifyOtp({ email: pendingEmail, token, type: 'email' })
-        : await supabase.auth.verifyOtp({ phone: pendingPhone, token, type: 'sms' });
+        : await (supabase.auth.verifyOtp as any)({ phone: pendingPhone, token, type: otpFlow === 'phone_change' ? 'phone_change' : 'sms' });
       if (error) throw error;
-      const userId = data.user?.id;
+      const userId = otpFlow === 'phone_change' ? user?.id : data.user?.id;
       if (!userId) throw new Error('Login succeeded but no session was returned.');
 
       if (createPatientAccount) {
@@ -413,7 +445,7 @@ export default function PhoneLogin() {
   const loginPath = nextPath && !isUploadPrescriptionFlow
     ? `/phone-login?role=patient&next=${encodeURIComponent(nextPath)}`
     : '/phone-login?role=patient';
-  const uploadSignupPath = '/phone-login?role=patient&mode=signup&next=/patient/upload-prescription';
+  const uploadSignupPath = '/phone-login?role=patient&mode=signup&next=%2Fpatient%2Fupload-prescription';
 
   return (
     <PublicLayout>
@@ -443,7 +475,7 @@ export default function PhoneLogin() {
                         {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                         Continue with Google
                       </Button>
-                      <p className="text-xs text-muted-foreground">Google can prefill your name and email. You still need to provide your Australian mobile, confirm you are 18+, and complete prescription review before shop access.</p>
+                      <p className="text-xs text-muted-foreground">Google can prefill your name and email. You still need to provide your date of birth, verify your Australian mobile, and complete prescription review before shop access.</p>
                     </div>
                   )}
                   {isGoogleOnboarding && (
@@ -485,6 +517,17 @@ export default function PhoneLogin() {
                     <div className="space-y-2">
                       <Label htmlFor="email">Email address</Label>
                       <Input id="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" autoComplete="email" readOnly={isGoogleOnboarding} required />
+                    </div>
+                  )}
+                  {createPatientAccount && (
+                    <div className="space-y-2">
+                      <Label>Date of birth</Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <Input value={dobDay} onChange={(e) => setDobDay(e.target.value.replace(/\D/g, '').slice(0, 2))} placeholder="DD" inputMode="numeric" autoComplete="bday-day" required />
+                        <Input value={dobMonth} onChange={(e) => setDobMonth(e.target.value.replace(/\D/g, '').slice(0, 2))} placeholder="MM" inputMode="numeric" autoComplete="bday-month" required />
+                        <Input value={dobYear} onChange={(e) => setDobYear(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="YYYY" inputMode="numeric" autoComplete="bday-year" required />
+                      </div>
+                      {dobError && <p className="text-xs text-destructive">{dobError}</p>}
                     </div>
                   )}
                   {authMethod === 'phone' ? (
@@ -532,12 +575,12 @@ export default function PhoneLogin() {
                     <p className="text-center text-sm text-muted-foreground">
                       Already have a PouchCare account and not uploading now? <Link className="underline" to={loginPath}>Log in instead</Link>
                     </p>
-                  ) : (
+                  ) : isPatient ? (
                     <div className="space-y-2 text-center text-sm text-muted-foreground">
                       <p>New patient with a prescription? <Link className="underline" to={uploadSignupPath}>Create an account to upload</Link></p>
                       <p>Need a prescription? <Link className="underline" to="/start-consult">Start a consult</Link></p>
                     </div>
-                  )}
+                  ) : null}
                 </form>
               ) : (
                 <form onSubmit={verifyCode} className="space-y-5">

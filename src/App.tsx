@@ -164,6 +164,7 @@ const App = () => (
 
               {/* Admin routes */}
               <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminLayout /></ProtectedRoute>}>
+                <Route index element={<Navigate to="/admin/dashboard" replace />} />
                 <Route path="dashboard" element={<AdminDashboard />} />
                 <Route path="doctors" element={<AdminDoctors />} />
                 <Route path="doctor-approvals" element={<AdminDoctorApprovals />} />

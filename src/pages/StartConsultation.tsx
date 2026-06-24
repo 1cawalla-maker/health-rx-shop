@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { halaxyConsultationService } from '@/services/halaxyConsultationService';
 import { getDashboardPathForRole } from '@/lib/roleRoutes';
+import { formatDobForStorage, validateDob } from '@/lib/validation';
 
 const PRIVACY_POLICY_VERSION = '2026-06-18-minimal-halaxy-consult';
 const COLLECTION_NOTICE_VERSION = '2026-06-18-minimal-halaxy-consult';
@@ -50,11 +51,16 @@ export default function StartConsultation() {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [dobDay, setDobDay] = useState('');
+  const [dobMonth, setDobMonth] = useState('');
+  const [dobYear, setDobYear] = useState('');
+  const [dobError, setDobError] = useState('');
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [step, setStep] = useState<'details' | 'otp'>('details');
   const [otp, setOtp] = useState('');
   const [pendingPhone, setPendingPhone] = useState('');
+  const [otpFlow, setOtpFlow] = useState<'sms' | 'phone_change'>('sms');
   const [isBusy, setIsBusy] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
@@ -92,6 +98,12 @@ export default function StartConsultation() {
     const phoneE164 = normalizeAuMobile(phone);
     if (!phoneE164) throw new Error('Please enter a valid Australian mobile number.');
     if (!normalizeEmail(email)) throw new Error('Please enter a valid email address.');
+    const dobResult = validateDob(dobDay, dobMonth, dobYear);
+    if (!dobResult.valid) {
+      setDobError(dobResult.error || 'Please enter a valid date of birth.');
+      throw new Error(dobResult.error || 'Please enter a valid date of birth.');
+    }
+    setDobError('');
     if (!ageConfirmed) throw new Error('Please confirm you are 18 or over.');
     if (!privacyAccepted) throw new Error('Please accept the privacy and collection notice.');
     return phoneE164;
@@ -174,6 +186,7 @@ export default function StartConsultation() {
         .upsert({
         user_id: userId,
         full_name: fullName.trim(),
+        date_of_birth: formatDobForStorage(dobDay, dobMonth, dobYear),
         email: normalizeEmail(email),
         email_verified_at: googleIdentity ? now : null,
         email_verification_method: googleIdentity ? 'google_oauth' : null,
@@ -226,8 +239,23 @@ export default function StartConsultation() {
           return;
         }
 
-        await saveProfileAndRole(user.id, phoneE164, Boolean((user as any).phone === phoneE164));
-        await continueToHalaxy();
+        const existingPhone = typeof (user as any).phone === 'string' ? (user as any).phone : '';
+        if (existingPhone === phoneE164) {
+          await saveProfileAndRole(user.id, phoneE164, true);
+          await continueToHalaxy();
+          return;
+        }
+
+        const { error } = await withTimeout(
+          (supabase.auth.updateUser as any)({ phone: phoneE164 }),
+          'Sending SMS code'
+        );
+        if (error) throw error;
+        setPendingPhone(phoneE164);
+        setOtpFlow('phone_change');
+        setStep('otp');
+        startResendCooldown();
+        toast.success('Verification code sent by SMS.');
         return;
       }
 
@@ -240,6 +268,7 @@ export default function StartConsultation() {
       );
       if (error) throw error;
       setPendingPhone(phoneE164);
+      setOtpFlow('sms');
       setStep('otp');
       startResendCooldown();
       toast.success('Verification code sent by SMS.');
@@ -256,10 +285,12 @@ export default function StartConsultation() {
     setIsBusy(true);
     try {
       const { error } = await withTimeout(
-        supabase.auth.signInWithOtp({
-          phone: pendingPhone,
-          options: { shouldCreateUser: true },
-        }),
+        otpFlow === 'phone_change'
+          ? (supabase.auth.updateUser as any)({ phone: pendingPhone })
+          : supabase.auth.signInWithOtp({
+              phone: pendingPhone,
+              options: { shouldCreateUser: true },
+            }),
         'Resending SMS code'
       );
       if (error) throw error;
@@ -283,15 +314,15 @@ export default function StartConsultation() {
     setIsBusy(true);
     try {
       const { data, error } = await withTimeout(
-        supabase.auth.verifyOtp({
+        (supabase.auth.verifyOtp as any)({
           phone: pendingPhone,
           token: otp.replace(/\D/g, ''),
-          type: 'sms',
+          type: otpFlow === 'phone_change' ? 'phone_change' : 'sms',
         }),
         'Verifying SMS code'
       );
       if (error) throw error;
-      const verifiedUserId = data.user?.id;
+      const verifiedUserId = otpFlow === 'phone_change' ? user?.id : data.user?.id;
       if (!verifiedUserId) throw new Error('Verification succeeded but no user session was returned.');
 
       await saveProfileAndRole(verifiedUserId, pendingPhone, true);
@@ -333,7 +364,7 @@ export default function StartConsultation() {
                         {isBusy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                         Continue with Google
                       </Button>
-                      <p className="text-xs text-muted-foreground">Google can prefill your name and email. You still need to provide your Australian mobile, confirm you are 18+, accept the privacy notice, and complete the consultation/prescription pathway.</p>
+                      <p className="text-xs text-muted-foreground">Google can prefill your name and email. You still need to provide your date of birth, verify your Australian mobile, accept the privacy notice, and complete the consultation/prescription pathway.</p>
                     </div>
                   )}
                   {isGoogleOnboarding && (
@@ -351,6 +382,17 @@ export default function StartConsultation() {
                     <Label htmlFor="email">Email address</Label>
                     <Input id="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" autoComplete="email" readOnly={isGoogleOnboarding} required />
                     <p className="text-xs text-muted-foreground">Used for account access, receipts, and prescription updates.</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Date of birth</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Input value={dobDay} onChange={(e) => setDobDay(e.target.value.replace(/\D/g, '').slice(0, 2))} placeholder="DD" inputMode="numeric" autoComplete="bday-day" required />
+                      <Input value={dobMonth} onChange={(e) => setDobMonth(e.target.value.replace(/\D/g, '').slice(0, 2))} placeholder="MM" inputMode="numeric" autoComplete="bday-month" required />
+                      <Input value={dobYear} onChange={(e) => setDobYear(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="YYYY" inputMode="numeric" autoComplete="bday-year" required />
+                    </div>
+                    {dobError && <p className="text-xs text-destructive">{dobError}</p>}
+                    <p className="text-xs text-muted-foreground">Used to confirm adult eligibility and match clinical records.</p>
                   </div>
 
                   <div className="space-y-2">

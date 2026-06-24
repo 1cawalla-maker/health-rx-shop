@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
-import { AlertTriangle, Package } from 'lucide-react';
+import { AlertTriangle, Clock, FileText, Lock, Package, Upload, Calendar } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -12,9 +12,7 @@ import { usePrescriptionStatus } from '@/hooks/usePrescriptionStatus';
 import { catalogService } from '@/services/catalogService';
 import { CartButton } from '@/components/shop/CartButton';
 import { CartDrawer } from '@/components/shop/CartDrawer';
-import { ShopLockedOverlay } from '@/components/shop/ShopLockedOverlay';
-import { ShopPendingOverlay } from '@/components/shop/ShopPendingOverlay';
-import { ShopExpiredOverlay } from '@/components/shop/ShopExpiredOverlay';
+import { Button } from '@/components/ui/button';
 
 import type { Product } from '@/types/shop';
 
@@ -38,6 +36,7 @@ export default function PatientShop() {
     remainingCans: remainingBeforeCart,
     isExpired,
     expiredAt,
+    isLoading: isPrescriptionLoading,
   } = usePrescriptionStatus();
 
   // Combine context and hook
@@ -53,6 +52,12 @@ export default function PatientShop() {
   const allowancePercentUsed = totalAllowance > 0 ? Math.min(100, ((usedBeforeCart + cart.totalCans) / totalAllowance) * 100) : 0;
 
   useEffect(() => {
+    if (!hasActivePrescription) {
+      setProducts([]);
+      setIsLoadingProducts(false);
+      return;
+    }
+
     const loadProducts = async () => {
       try {
         const loadedProducts = await catalogService.listProducts();
@@ -64,13 +69,85 @@ export default function PatientShop() {
       }
     };
     loadProducts();
-  }, []);
+  }, [hasActivePrescription]);
 
-  const productsForGrid = useMemo(() => {
-    // In Phase 1 we show the full catalogue even if locked.
-    // Strength gating happens on the product page.
-    return products;
-  }, [products]);
+  const productsForGrid = useMemo(() => products, [products]);
+
+  if (isPrescriptionLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="font-display text-3xl font-bold text-foreground">Product Shop</h1>
+          <p className="text-muted-foreground mt-1">Checking prescription access…</p>
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Loading access status</CardTitle>
+            <CardDescription>Please wait while we confirm your account.</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!hasActivePrescription) {
+    const state = isExpired
+      ? {
+          icon: Clock,
+          title: 'Prescription access unavailable',
+          description: expiredAt ? `Your prescription expired on ${expiredAt.toLocaleDateString('en-AU')}. Please renew access before viewing the shop.` : 'Please renew access before viewing the shop.',
+          tone: 'muted' as const,
+        }
+      : hasPendingPrescription
+        ? {
+            icon: FileText,
+            title: 'Prescription under review',
+            description: 'Your uploaded prescription is being reviewed. The product catalogue will unlock only after approval.',
+            tone: 'amber' as const,
+          }
+        : {
+            icon: Lock,
+            title: 'Prescription required',
+            description: 'Product listings are only shown after an approved prescription is active on your account.',
+            tone: 'primary' as const,
+          };
+    const Icon = state.icon;
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="font-display text-3xl font-bold text-foreground">Product Shop</h1>
+          <p className="text-muted-foreground mt-1">Prescription-gated ordering access</p>
+        </div>
+
+        <Card className={state.tone === 'amber' ? 'border-amber-500/30' : undefined}>
+          <CardHeader className="text-center pb-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mx-auto mb-4">
+              <Icon className="h-8 w-8 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">{state.title}</CardTitle>
+            <CardDescription className="text-base">{state.description}</CardDescription>
+          </CardHeader>
+          <CardContent className="mx-auto flex w-full max-w-md flex-col gap-3">
+            {!hasPendingPrescription && (
+              <Button asChild className="w-full" size="lg">
+                <Link to="/patient/upload-prescription">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload existing prescription
+                </Link>
+              </Button>
+            )}
+            <Button asChild variant="outline" className="w-full" size="lg">
+              <Link to={hasPendingPrescription ? '/patient/prescriptions' : '/start-consult'}>
+                {hasPendingPrescription ? <FileText className="h-4 w-4 mr-2" /> : <Calendar className="h-4 w-4 mr-2" />}
+                {hasPendingPrescription ? 'View prescription status' : 'Need a prescription? Start consultation'}
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -173,11 +250,6 @@ export default function PatientShop() {
                 );
               })}
         </div>
-
-        {/* Overlays */}
-        {!hasActivePrescription && isExpired && <ShopExpiredOverlay expiredAt={expiredAt} />}
-        {!hasActivePrescription && hasPendingPrescription && <ShopPendingOverlay />}
-        {!hasActivePrescription && !hasPendingPrescription && !isExpired && <ShopLockedOverlay />}
       </div>
 
       <CartDrawer remainingCans={remainingCans} totalCansAllowed={totalAllowance} />

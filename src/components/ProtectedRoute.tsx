@@ -47,7 +47,7 @@ export function ProtectedRoute({ children, allowedRoles, requireApproval = true 
       case 'patient':
         return <Navigate to="/patient/dashboard" replace />;
       case 'doctor':
-        return <Navigate to="/doctor/dashboard" replace />;
+        return <Navigate to="/doctor/halaxy-consults" replace />;
       case 'admin':
         return <Navigate to="/admin/dashboard" replace />;
       default:
