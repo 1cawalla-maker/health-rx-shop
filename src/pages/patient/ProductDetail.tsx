@@ -274,7 +274,7 @@ export default function PatientProductDetail() {
       <div className="relative">
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="overflow-hidden">
-            <div className="aspect-[4/3] overflow-hidden bg-muted p-4">
+            <div className="aspect-[4/3] overflow-hidden bg-white">
               {product.imageUrl ? (
                 <img
                   src={product.imageUrl}

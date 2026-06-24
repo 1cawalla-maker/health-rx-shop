@@ -222,7 +222,7 @@ export default function PatientShop() {
                 return (
                   <Link key={product.id} to={`/patient/shop/${product.id}`} className="block">
                     <Card className="overflow-hidden hover:shadow-md transition-shadow h-full">
-                      <div className="aspect-[4/3] overflow-hidden bg-muted p-3">
+                      <div className="aspect-[4/3] overflow-hidden bg-white">
                         {product.imageUrl ? (
                           <img
                             src={product.imageUrl}
