@@ -38,7 +38,7 @@ const faqCategories = [
       },
       {
         question: "How do I get Zyns in Australia?",
-        answer: "Start a Halaxy booking and complete the clinical intake there. If clinically appropriate, a doctor will guide you through the next steps to access nicotine pouches in Australia.",
+        answer: "Start a consultation request and complete the booking/intake steps. If clinically appropriate, a doctor will guide you through the next steps to access nicotine pouches in Australia.",
       },
       {
         question: "Do I need a prescription?",
@@ -46,7 +46,7 @@ const faqCategories = [
       },
       {
         question: "How much does it cost?",
-        answer: "Costs typically include a consultation fee (shown at booking), product pricing (shown in the shop), and shipping at checkout. Pricing can change over time.",
+        answer: "Costs include a $49.99 consultation fee, $10 per medication/product item where ordering is unlocked, and shipping calculated at checkout.",
       },
       {
         question: "What strengths are available?",
@@ -67,7 +67,7 @@ const faqCategories = [
       },
       {
         question: "How long does a consultation take?",
-        answer: "Initial consultations typically take 15-30 minutes. Follow-up consultations are usually shorter, around 10-15 minutes. The doctor will take as much time as needed to properly assess your situation.",
+        answer: "Consultation length can vary. The doctor will take the time needed to assess your situation and explain any clinically appropriate next steps.",
       },
       {
         question: "Can I reschedule my consultation?",
@@ -84,15 +84,15 @@ const faqCategories = [
     faqs: [
       {
         question: "What is included in my prescription?",
-        answer: "Your prescription specifies which nicotine pouch products you can order, the allowed nicotine strength range, maximum quantities per order and per month, and the prescription validity period. You can only order products that match your prescription.",
+        answer: "Your prescription entitlement controls which products/strengths you can order and the total quantity allowed. For the MVP, ordering is checked against the lifetime allowance recorded for that prescription, not a monthly limit.",
       },
       {
         question: "How long is my prescription valid?",
-        answer: "Prescription validity varies based on the doctor's assessment, typically ranging from 3 to 12 months. You'll receive a notification when your prescription is nearing expiry and can book a follow-up consultation for renewal.",
+        answer: "Prescription details depend on the doctor's assessment. PouchCare ordering is only unlocked when the prescription entitlement we have on file clearly supports the requested products and quantity.",
       },
       {
         question: "Can I get my prescription renewed?",
-        answer: "Yes, you can book a follow-up consultation before your prescription expires. The doctor will review your progress and determine if renewal is appropriate. Follow-up consultations are available at a reduced rate.",
+        answer: "If you need another clinical review, start a new consultation request or contact support. Renewal or repeat prescribing is always a clinical decision.",
       },
     ],
   },
@@ -101,11 +101,11 @@ const faqCategories = [
     faqs: [
       {
         question: "What products are available?",
-        answer: "We offer a range of nicotine pouch products from reputable brands. The products available to you depend on your prescription—you'll only see products that match your prescribed strength range and quantity limits.",
+        answer: "Available products depend on the current shop catalogue and your active prescription entitlement. You can only order products that fit your allowed strength and remaining quantity.",
       },
       {
         question: "How does ordering work?",
-        answer: "Once you have an active prescription, the product shop becomes accessible. You can browse eligible products, add them to your cart within your prescription limits, and complete checkout. Orders are shipped directly to your address.",
+        answer: "Once you have an active prescription entitlement, the shop becomes accessible. You can browse eligible products, add them to your cart within your prescription limits, and complete secure checkout.",
       },
       {
         question: "How long does delivery take?",
@@ -113,7 +113,7 @@ const faqCategories = [
       },
       {
         question: "What payment methods do you accept?",
-        answer: "We accept major credit cards (Visa, Mastercard, American Express), as well as PayPal and bank transfers. All payments are processed securely through our payment provider.",
+        answer: "Payment options are shown during secure checkout. Availability can vary by payment provider and order details.",
       },
     ],
   },

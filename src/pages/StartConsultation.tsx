@@ -240,10 +240,10 @@ export default function StartConsultation() {
     if (profileError) throw profileError;
   };
 
-  const continueToHalaxy = async () => {
+  const continueToBooking = async () => {
     const prepared = await withTimeout(
       halaxyConsultationService.prepareConsult(),
-      "Opening Halaxy booking",
+      "Opening booking",
       30000,
     );
     const bookingUrl =
@@ -275,7 +275,7 @@ export default function StartConsultation() {
           typeof (user as any).phone === "string" ? (user as any).phone : "";
         if (existingPhone === phoneE164) {
           await saveProfileAndRole(user.id, phoneE164, true);
-          await continueToHalaxy();
+          await continueToBooking();
           return;
         }
 
@@ -366,8 +366,8 @@ export default function StartConsultation() {
         );
 
       await saveProfileAndRole(verifiedUserId, pendingPhone, true);
-      toast.success("Mobile verified. Opening Halaxy booking.");
-      await continueToHalaxy();
+      toast.success("Mobile verified. Opening booking.");
+      await continueToBooking();
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -383,7 +383,7 @@ export default function StartConsultation() {
     <PublicLayout>
       <Seo
         title="Book a GP Consultation"
-        description="Start a PouchCare consultation request with minimal details, then book securely through Halaxy."
+        description="Start a PouchCare consultation request with minimal details, then continue to secure booking."
         canonicalPath="/start-consult"
         noIndex
       />
@@ -396,8 +396,8 @@ export default function StartConsultation() {
                 Book a GP consultation
               </CardTitle>
               <CardDescription>
-                Enter only the details PouchCare needs to link your Halaxy
-                booking and any prescription back to your account.
+                Enter only the details PouchCare needs to link your appointment
+                and any prescription back to your account.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -496,8 +496,8 @@ export default function StartConsultation() {
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      We verify this by SMS and use it to match your Halaxy
-                      booking.
+                      We verify this by SMS and use it to link your appointment
+                      and prescription back to your account.
                     </p>
                   </div>
 
@@ -516,7 +516,7 @@ export default function StartConsultation() {
                       />
                       <span>
                         I agree to PouchCare collecting these details to create
-                        my account, link my Halaxy booking, and process
+                        my account, link my appointment, and process
                         prescriptions under the{" "}
                         <Link className="underline" to="/privacy">
                           Privacy Policy
@@ -533,10 +533,10 @@ export default function StartConsultation() {
                   <Alert>
                     <Phone className="h-4 w-4" />
                     <AlertDescription>
-                      Halaxy will collect the clinical and booking details
-                      needed for the consultation. PouchCare only uses this
-                      mobile number to match the booking and prescription back
-                      to you.
+                      The booking provider will collect the clinical and booking details
+                      needed for the consultation. PouchCare uses your
+                      verified mobile number to link the appointment and prescription
+                      back to your account.
                     </AlertDescription>
                   </Alert>
 
@@ -592,7 +592,7 @@ export default function StartConsultation() {
                     ) : (
                       <ExternalLink className="h-4 w-4" />
                     )}
-                    Verify and continue to Halaxy
+                    Verify and continue to booking
                   </Button>
                   <Button
                     type="button"

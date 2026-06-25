@@ -6,8 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Mail, MapPin, Clock } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
+import type { FormEvent } from "react";
 
 const contactInfo = [
   {
@@ -31,18 +30,23 @@ const contactInfo = [
 ];
 
 export default function Contact() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    
-    // Simulate form submission
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    toast.success("Message sent successfully! We'll get back to you soon.");
-    setIsSubmitting(false);
-    (e.target as HTMLFormElement).reset();
+    const form = e.currentTarget;
+    const firstName = (form.elements.namedItem("firstName") as HTMLInputElement | null)?.value.trim() || "";
+    const lastName = (form.elements.namedItem("lastName") as HTMLInputElement | null)?.value.trim() || "";
+    const email = (form.elements.namedItem("email") as HTMLInputElement | null)?.value.trim() || "";
+    const subject = (form.elements.namedItem("subject") as HTMLInputElement | null)?.value.trim() || "PouchCare support enquiry";
+    const message = (form.elements.namedItem("message") as HTMLTextAreaElement | null)?.value.trim() || "";
+
+    const body = [
+      `Name: ${firstName} ${lastName}`.trim(),
+      `Email: ${email}`,
+      "",
+      message,
+    ].join("\n");
+
+    window.location.href = `mailto:support@pouchcare.com.au?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
   return (
@@ -106,7 +110,8 @@ export default function Contact() {
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name</Label>
                       <Input 
-                        id="firstName" 
+                        id="firstName"
+                        name="firstName"
                         placeholder="John" 
                         required 
                       />
@@ -114,7 +119,8 @@ export default function Contact() {
                     <div className="space-y-2">
                       <Label htmlFor="lastName">Last Name</Label>
                       <Input 
-                        id="lastName" 
+                        id="lastName"
+                        name="lastName"
                         placeholder="Doe" 
                         required 
                       />
@@ -123,7 +129,8 @@ export default function Contact() {
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
                     <Input 
-                      id="email" 
+                      id="email"
+                      name="email"
                       type="email" 
                       placeholder="john@example.com" 
                       required 
@@ -132,7 +139,8 @@ export default function Contact() {
                   <div className="space-y-2">
                     <Label htmlFor="subject">Subject</Label>
                     <Input 
-                      id="subject" 
+                      id="subject"
+                      name="subject"
                       placeholder="How can we help?" 
                       required 
                     />
@@ -140,7 +148,8 @@ export default function Contact() {
                   <div className="space-y-2">
                     <Label htmlFor="message">Message</Label>
                     <Textarea 
-                      id="message" 
+                      id="message"
+                      name="message"
                       placeholder="Tell us more about your inquiry..." 
                       rows={5}
                       required 
@@ -151,9 +160,8 @@ export default function Contact() {
                     variant="hero" 
                     size="lg" 
                     className="w-full"
-                    disabled={isSubmitting}
                   >
-                    {isSubmitting ? "Sending..." : "Send Message"}
+                    Open Email
                   </Button>
                 </form>
               </div>

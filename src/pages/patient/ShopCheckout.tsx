@@ -71,7 +71,7 @@ export default function PatientShopCheckout() {
       const { checkoutUrl } = await shopifyCheckoutService.createCheckoutUrlFromCartItems(cart.items);
       window.location.assign(checkoutUrl);
     } catch (error) {
-      console.error('ShopCheckout: failed to start Shopify checkout', error);
+      console.error('ShopCheckout: failed to start secure checkout', error);
       const message = error instanceof Error && error.message
         ? error.message
         : 'Failed to start secure checkout. Please try again.';
@@ -210,7 +210,7 @@ export default function PatientShopCheckout() {
                 </div>
                 <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
                   <div className="rounded-lg bg-background/70 p-3">1. Review your order on PouchCare</div>
-                  <div className="rounded-lg bg-background/70 p-3">2. Enter payment and shipping in Shopify</div>
+                  <div className="rounded-lg bg-background/70 p-3">2. Enter payment and shipping securely</div>
                   <div className="rounded-lg bg-background/70 p-3">3. Return to PouchCare after ordering</div>
                 </div>
               </div>
@@ -222,7 +222,7 @@ export default function PatientShopCheckout() {
           <Card>
             <CardHeader>
               <CardTitle>Order summary</CardTitle>
-              <CardDescription>Final shipping is calculated in Shopify checkout.</CardDescription>
+              <CardDescription>Final shipping is calculated in secure checkout.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2 text-sm">
@@ -242,7 +242,7 @@ export default function PatientShopCheckout() {
                 <span>Total today</span>
                 <span>{formatMoney(cart.subtotalCents)}</span>
               </div>
-              <p className="text-xs text-muted-foreground">Before shipping and any Shopify checkout adjustments.</p>
+              <p className="text-xs text-muted-foreground">Before shipping and any secure checkout adjustments.</p>
 
               <div className="rounded-xl border bg-muted/30 p-4 space-y-2">
                 <div className="flex items-center justify-between text-sm">
@@ -287,18 +287,18 @@ export default function PatientShopCheckout() {
                 {isRedirecting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Opening Shopify checkout…
+                    Opening secure checkout…
                   </>
                 ) : (
                   <>
-                    Continue to Shopify secure checkout
+                    Continue to secure checkout
                     <CheckCircle2 className="ml-2 h-4 w-4" />
                   </>
                 )}
               </Button>
 
               <p className="text-center text-xs text-muted-foreground">
-                Payment and shipping are completed securely through Shopify for your PouchCare order.
+                Payment and shipping are completed through secure checkout for your PouchCare order.
               </p>
             </CardContent>
           </Card>

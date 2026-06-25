@@ -11,16 +11,16 @@ const consultationFeatures = [
   "15-30 minute phone consultation",
   "Assessment by AHPRA-registered doctor",
   "Review of your medical history",
-  "Personalized medical advice",
+  "Personalised clinical advice",
   "Prescription if clinically appropriate",
-  "Follow-up support via messaging",
+  "Next steps explained if clinically appropriate",
 ];
 
 const productInfo = [
   {
     title: "Nicotine Pouches",
-    description: "Various brands and strengths available based on your prescription.",
-    priceRange: "See current pricing in the shop",
+    description: "Medication/product access is limited by your active prescription entitlement.",
+    priceRange: "$10 per medication",
   },
 ];
 
@@ -65,7 +65,7 @@ export default function Pricing() {
               Simple, Transparent Pricing
             </h1>
             <p className="text-lg text-muted-foreground">
-              Pay only for your consultation. Products are priced separately based on your prescription needs.
+              Consultation pricing is shown upfront. Medication/product charges are separate and only available after prescription approval.
             </p>
           </div>
         </div>
@@ -108,42 +108,42 @@ export default function Pricing() {
                 </div>
               </div>
 
-              {/* Follow-up Card */}
+              {/* Medication/Medication/Product Pricing Card */}
               <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
                 <div className="bg-secondary p-6 text-center">
                   <h2 className="font-display text-2xl font-bold text-secondary-foreground mb-2">
-                    Follow-up Consultation
+                    Medication/Product Charge
                   </h2>
                   <p className="text-muted-foreground text-sm">
-                    For existing patients
+                    Only available after prescription approval
                   </p>
                 </div>
                 <div className="p-6 md:p-8">
                   <div className="text-center mb-8">
-                    <span className="font-display text-5xl font-bold text-foreground">$29</span>
+                    <span className="font-display text-5xl font-bold text-foreground">$10</span>
                     <span className="text-muted-foreground ml-2">AUD</span>
                   </div>
                   <ul className="space-y-4 mb-8">
                     <li className="flex items-start gap-3">
                       <CheckCircle className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                      <span className="text-muted-foreground">10-15 minute follow-up session</span>
+                      <span className="text-muted-foreground">Per medication/product item</span>
                     </li>
                     <li className="flex items-start gap-3">
                       <CheckCircle className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                      <span className="text-muted-foreground">Prescription renewal if appropriate</span>
+                      <span className="text-muted-foreground">Only products allowed by your active prescription can be ordered</span>
                     </li>
                     <li className="flex items-start gap-3">
                       <CheckCircle className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                      <span className="text-muted-foreground">Dosage adjustments</span>
+                      <span className="text-muted-foreground">Shipping is calculated at checkout</span>
                     </li>
                     <li className="flex items-start gap-3">
                       <CheckCircle className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                      <span className="text-muted-foreground">Progress check and support</span>
+                      <span className="text-muted-foreground">Ordering remains limited by prescription allowance</span>
                     </li>
                   </ul>
                   <Button variant="outline" size="lg" className="w-full" asChild>
                     <Link to="/phone-login">
-                      Log In to Book
+                      Log In to View Shop
                     </Link>
                   </Button>
                 </div>
@@ -153,16 +153,16 @@ export default function Pricing() {
         </div>
       </section>
 
-      {/* Product Pricing Info */}
+      {/* Medication/Product Pricing Info */}
       <section className="py-16 md:py-24 gradient-section">
         <div className="container">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
               <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-                Product Pricing
+                Medication/Product Pricing
               </h2>
               <p className="text-lg text-muted-foreground">
-                Products are priced separately and available only after prescription approval.
+                Medication/product pricing is separate from the consultation fee and available only after prescription approval.
               </p>
             </div>
 
@@ -189,8 +189,7 @@ export default function Pricing() {
                 <div className="flex items-start gap-3 text-sm text-muted-foreground">
                   <HelpCircle className="h-5 w-5 shrink-0 mt-0.5" />
                   <p>
-                    Product availability and pricing depend on your prescription details. 
-                    Shipping costs are calculated at checkout based on your location.
+                    Medication/product availability depends on your prescription details. Pricing is $10 per medication/product item, with shipping calculated at checkout based on your location.
                   </p>
                 </div>
               </div>
@@ -231,7 +230,7 @@ export default function Pricing() {
               className="block rounded-xl border border-border bg-card p-6 hover:shadow-md transition-shadow"
             >
               <p className="font-display text-lg font-semibold text-foreground">How to get nicotine pouches</p>
-              <p className="text-sm text-muted-foreground mt-1">Step-by-step from Halaxy booking to consult.</p>
+              <p className="text-sm text-muted-foreground mt-1">Step-by-step from booking to consultation.</p>
             </Link>
 
             <Link

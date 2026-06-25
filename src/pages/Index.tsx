@@ -155,7 +155,7 @@ export default function Index() {
               Already have a prescription?
             </h2>
             <p className="text-lg text-muted-foreground">
-              Choose the path that matches where you are now. Existing prescriptions can be uploaded for review, and new patients who need a prescription can start with a Halaxy consultation.
+              Choose the path that matches where you are now. Existing prescriptions can be uploaded for review, and new patients who need a prescription can start with a consultation request.
             </p>
           </div>
 
@@ -193,7 +193,7 @@ export default function Index() {
               </div>
               <h3 className="font-display text-2xl font-bold text-foreground mb-3">I need a prescription</h3>
               <p className="text-muted-foreground mb-5">
-                Start a consultation request and continue through Halaxy for the clinical appointment. A prescription is not guaranteed and depends on the doctor's assessment.
+                Start a consultation request and continue to a secure clinical appointment. A prescription is not guaranteed and depends on the doctor's assessment.
               </p>
               <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
                 <Link to="/start-consult">
