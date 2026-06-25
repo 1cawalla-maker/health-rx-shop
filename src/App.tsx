@@ -121,6 +121,7 @@ const App = () => (
 
               {/* Patient routes */}
               <Route path="/patient" element={<ProtectedRoute allowedRoles={['patient']}><PatientLayout /></ProtectedRoute>}>
+                <Route index element={<Navigate to="dashboard" replace />} />
                 <Route path="dashboard" element={<PatientDashboard />} />
                 <Route path="book" element={<Navigate to="/start-consult" replace />} />
                 <Route path="booking/payment/:bookingId" element={<Navigate to="/patient/consultations" replace />} />

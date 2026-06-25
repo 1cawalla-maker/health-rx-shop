@@ -36,7 +36,7 @@ export function PatientLayout() {
   const { user, signOut } = useAuth();
   const prescriptionStatus = usePrescriptionStatus();
   const hasActivePrescription = prescriptionStatus.hasActivePrescription;
-  const hasPendingPrescription = false;
+  const hasPendingPrescription = prescriptionStatus.hasPendingPrescription;
   const checkActivePrescription = prescriptionStatus.refreshStatus;
 
   const handleSignOut = async () => {

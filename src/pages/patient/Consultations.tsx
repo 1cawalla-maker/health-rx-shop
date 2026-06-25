@@ -82,7 +82,7 @@ export default function PatientConsultations() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground">Consultation status</h1>
-          <p className="text-muted-foreground mt-1">Your PouchCare/Halaxy consultation pathway.</p>
+          <p className="text-muted-foreground mt-1">Your consultation booking and prescription pathway.</p>
         </div>
         <Button asChild><Link to="/start-consult">Start another consult</Link></Button>
       </div>
@@ -91,7 +91,7 @@ export default function PatientConsultations() {
         <Card>
           <CardHeader className="text-center">
             <CardTitle>No consultation started yet</CardTitle>
-            <CardDescription>Start a consultation to book with Halaxy and link your prescription to PouchCare.</CardDescription>
+            <CardDescription>Start a consultation so we can guide you through booking and prescription review.</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center"><Button asChild><Link to="/start-consult">Start consultation</Link></Button></CardContent>
         </Card>
@@ -124,8 +124,8 @@ export default function PatientConsultations() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-3 text-sm md:grid-cols-2">
-                  <p><strong>Halaxy appointment:</strong> {consult.halaxyAppointmentId || 'Pending'}</p>
-                  <p><strong>Halaxy status:</strong> {consult.halaxyAppointmentStatus || 'Pending'}</p>
+                  <p><strong>Appointment reference:</strong> {consult.halaxyAppointmentId || 'Pending'}</p>
+                  <p><strong>Appointment status:</strong> {consult.halaxyAppointmentStatus || 'Pending'}</p>
                   <p><strong>Practitioner:</strong> {consult.practitionerName || 'Pending'}</p>
                   <p><strong>Location:</strong> {consult.locationName || 'Pending'}</p>
                 </div>
@@ -142,15 +142,15 @@ export default function PatientConsultations() {
 
                 <div className="flex flex-col gap-2 sm:flex-row">
                   {consult.halaxyBookingUrl && ['sent_to_booking', 'booking_in_progress', 'webhook_pending'].includes(consult.bookingStatus) && (
-                    <Button asChild><a href={consult.halaxyBookingUrl} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4 mr-2" />Continue in Halaxy</a></Button>
+                    <Button asChild><a href={consult.halaxyBookingUrl} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4 mr-2" />Continue booking</a></Button>
                   )}
                   {consult.halaxyManageUrl && (
-                    <Button variant="outline" asChild><a href={consult.halaxyManageUrl} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4 mr-2" />Manage in Halaxy</a></Button>
+                    <Button variant="outline" asChild><a href={consult.halaxyManageUrl} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4 mr-2" />Manage booking</a></Button>
                   )}
                 </div>
 
                 <div className="text-xs text-muted-foreground flex items-center gap-2">
-                  <CalendarClock className="h-3 w-3" /> PouchCare consult ID: {consult.id}
+                  <CalendarClock className="h-3 w-3" /> Reference ID: {consult.id}
                 </div>
               </CardContent>
             </Card>
