@@ -28,9 +28,9 @@ const faqCategories = [
 
 1. **Start with PouchCare**: Enter only the minimum account/linking details PouchCare needs, including your name, Australian mobile number, age confirmation and privacy consent.
 
-2. **Book in Halaxy**: Continue to Halaxy to choose a consultation time and complete any clinical intake requested there.
+2. **Book securely**: Continue to the booking provider to choose a consultation time and complete any clinical intake requested there.
 
-3. **Doctor consultation**: The doctor reviews the Halaxy intake and conducts the consultation.
+3. **Doctor consultation**: The doctor reviews the clinical intake and conducts the consultation.
 
 4. **Clinical assessment**: The doctor makes an independent clinical decision on whether nicotine pouches are appropriate for you.
 
@@ -38,7 +38,7 @@ const faqCategories = [
 
 6. **Order products**: If your prescription entitlement is active, you can purchase eligible products within those limits and provide shipping details at order time.
 
-The clinical intake and consultation are handled through Halaxy and AHPRA-registered Australian doctors.`
+The clinical intake and consultation are handled through a secure booking provider and AHPRA-registered Australian doctors.`
       },
       {
         question: 'Can doctors legally prescribe nicotine pouches in Australia?',

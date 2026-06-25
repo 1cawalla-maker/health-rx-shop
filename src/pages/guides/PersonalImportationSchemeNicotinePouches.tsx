@@ -32,7 +32,7 @@ export default function GuidePersonalImportationSchemeNicotinePouches() {
     {
       question: 'What is the safest next step?',
       answer:
-        'Start a Halaxy booking and complete the clinical intake there so a qualified doctor can assess suitability and explain the appropriate pathway.',
+        'Start a secure booking and complete the clinical intake if prompted so a qualified doctor can assess suitability and explain the appropriate pathway.',
     },
   ];
 
@@ -120,7 +120,7 @@ export default function GuidePersonalImportationSchemeNicotinePouches() {
               </p>
               <p>
                 If you’re reading about importing nicotine pouches yourself, don’t guess—start with the
-                Halaxy clinical intake and a consultation so you understand what applies to your situation.
+                clinical intake and a consultation so you understand what applies to your situation.
               </p>
             </CardContent>
           </Card>
@@ -189,7 +189,7 @@ export default function GuidePersonalImportationSchemeNicotinePouches() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-muted-foreground">
-                  Start a Halaxy booking and complete the clinical intake there. A qualified doctor will make the final
+                  Start a secure booking and complete the clinical intake if prompted. A qualified doctor will make the final
                   clinical assessment.
                 </p>
                 <Button asChild size="lg" className="w-full sm:w-auto">

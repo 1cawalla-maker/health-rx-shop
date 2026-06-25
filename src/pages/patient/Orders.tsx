@@ -113,7 +113,7 @@ export default function PatientOrders() {
       setItemsByOrderId(itemsByOrderId);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      console.error('Error loading Shopify orders:', e);
+      console.error('Error loading orders:', e);
       setLoadError(msg);
     } finally {
       setIsLoading(false);
@@ -183,7 +183,7 @@ export default function PatientOrders() {
             <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="font-medium text-lg mb-2">No orders yet</h3>
             <p className="text-muted-foreground mb-4 max-w-md mx-auto">
-              Once you complete payment, your order will appear here after Shopify confirms it.
+              Once you complete payment, your order will appear here after payment is confirmed.
             </p>
             <Button asChild>
               <Link to="/patient/shop">Browse Products</Link>
@@ -251,7 +251,7 @@ export default function PatientOrders() {
                       <OrderStep
                         done={financialPaid}
                         label="Payment confirmed"
-                        description={financialPaid ? 'Your order has been paid.' : 'Waiting for Shopify payment confirmation.'}
+                        description={financialPaid ? 'Your order has been paid.' : 'Waiting for payment confirmation.'}
                       />
                       <OrderStep
                         done={financialPaid}
@@ -275,7 +275,7 @@ export default function PatientOrders() {
                         {tracking.number ? (
                           <>
                             <p className="font-medium text-foreground">Tracking {tracking.number}</p>
-                            <p>{tracking.company || 'Carrier details provided by Shopify'}</p>
+                            <p>{tracking.company || 'Carrier details pending'}</p>
                           </>
                         ) : (
                           <>

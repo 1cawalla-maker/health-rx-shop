@@ -12,12 +12,12 @@ export default function GuideHowToGetNicotinePouchesAustralia() {
     {
       question: 'How do I get nicotine pouches in Australia?',
       answer:
-        'Start a Halaxy booking and complete the clinical intake there. If clinically appropriate, a doctor will guide you through the next steps.',
+        'Start a secure booking and complete the clinical intake if prompted. If clinically appropriate, a doctor will guide you through the next steps.',
     },
     {
       question: 'How do I get Zyns in Australia?',
       answer:
-        'Zyn is a brand of nicotine pouches. The simplest compliant path is the same: start a Halaxy booking and complete the clinical intake there so a doctor can assess suitability and explain next steps.',
+        'Zyn is a brand of nicotine pouches. The simplest compliant path is the same: start a secure booking and complete the clinical intake if prompted so a doctor can assess suitability and explain next steps.',
     },
     {
       question: 'Do I choose a doctor?',
@@ -32,7 +32,7 @@ export default function GuideHowToGetNicotinePouchesAustralia() {
     {
       question: 'How long does it take?',
       answer:
-        'Timeframes vary. The fastest way to start is to start a Halaxy booking and complete the clinical intake there time that suits you.',
+        'Timeframes vary. The fastest way to start is to start a secure booking and choose a time that suits you.',
     },
     {
       question: 'What happens if I’m not approved?',
@@ -110,7 +110,7 @@ export default function GuideHowToGetNicotinePouchesAustralia() {
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-3">
               <ol className="list-decimal pl-5 space-y-2">
-                <li>Complete Halaxy’s clinical intake if prompted.</li>
+                <li>Complete the clinical intake if prompted.</li>
                 <li>Book a consultation time that suits you.</li>
                 <li>A qualified doctor assesses suitability during your consultation.</li>
                 <li>If clinically appropriate, next steps are explained and access is enabled.</li>
@@ -187,7 +187,7 @@ export default function GuideHowToGetNicotinePouchesAustralia() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-muted-foreground">
-                  Start a Halaxy booking and complete the clinical intake there. A qualified doctor will make the final
+                  Start a secure booking and complete the clinical intake if prompted. A qualified doctor will make the final
                   clinical assessment.
                 </p>
                 <Button asChild size="lg" className="w-full sm:w-auto">

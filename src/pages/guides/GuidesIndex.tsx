@@ -19,7 +19,7 @@ const guides = [
   },
   {
     title: 'How to get nicotine pouches in Australia',
-    description: 'Step-by-step from Halaxy booking to consultation.',
+    description: 'Step-by-step from secure booking to consultation.',
     to: '/guides/how-to-get-nicotine-pouches-in-australia',
   },
   {

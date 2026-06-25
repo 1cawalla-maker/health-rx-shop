@@ -27,7 +27,7 @@ export default function GuideNicotinePouchesVsVaping() {
     {
       question: 'How do I access nicotine pouches in Australia?',
       answer:
-        'Start a Halaxy booking and complete the clinical intake there. A qualified doctor will assess suitability and explain next steps if clinically appropriate.',
+        'Start a secure booking and complete the clinical intake if prompted. A qualified doctor will assess suitability and explain next steps if clinically appropriate.',
     },
     {
       question: 'How much does it cost?',
@@ -168,7 +168,7 @@ export default function GuideNicotinePouchesVsVaping() {
             <div className="space-y-2">
               <h2 className="font-display text-2xl font-semibold">Access in Australia</h2>
               <p className="text-muted-foreground">
-                Nicotine products in Australia are regulated. Start a Halaxy booking and complete Halaxy’s clinical intake so
+                Nicotine products in Australia are regulated. Start a secure booking and complete the clinical intake so
                 a doctor can assess suitability and explain the compliant next steps.
               </p>
             </div>
@@ -212,7 +212,7 @@ export default function GuideNicotinePouchesVsVaping() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-muted-foreground">
-                  Start a Halaxy booking.  A qualified doctor will make the final clinical
+                  Start a secure booking. A qualified doctor will make the final clinical
                   assessment and guide you.
                 </p>
                 <Button asChild size="lg" className="w-full sm:w-auto">

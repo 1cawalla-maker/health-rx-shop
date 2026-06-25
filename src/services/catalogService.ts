@@ -10,6 +10,7 @@ type ProductRow = {
   image_url: string | null;
   can_size_pouches: number | null;
   sort_order: number | null;
+  shopify_product_gid?: string | null;
   product_variants?: VariantRow[];
 };
 
@@ -21,6 +22,8 @@ type VariantRow = {
   stock_status: string | null;
   visible: boolean | null;
   sort_order: number | null;
+  shopify_variant_gid?: string | null;
+  raw?: Record<string, unknown> | null;
 };
 
 type ShopifyMoney = {
@@ -91,7 +94,7 @@ function rowToVariant(row: VariantRow): ProductVariant | null {
 
   return {
     id: row.id,
-    shopifyId: null,
+    shopifyId: row.shopify_variant_gid || (typeof row.raw?.shopify_variant_gid === 'string' ? row.raw.shopify_variant_gid : null),
     strengthMg,
     priceCents,
     currency: 'AUD',
@@ -109,7 +112,7 @@ function rowToProduct(row: ProductRow): Product | null {
 
   return {
     id: row.id,
-    shopifyId: null,
+    shopifyId: row.shopify_product_gid || (typeof (row as any).raw?.shopify_product_gid === 'string' ? (row as any).raw.shopify_product_gid : null),
     name: row.display_name,
     brand: row.brand || 'PouchCare',
     flavor: row.flavour || row.display_name,
@@ -228,6 +231,7 @@ class CatalogService {
         image_url,
         can_size_pouches,
         sort_order,
+        shopify_product_gid,
         product_variants (
           id,
           display_strength_mg,
@@ -235,7 +239,9 @@ class CatalogService {
           currency,
           stock_status,
           visible,
-          sort_order
+          sort_order,
+          shopify_variant_gid,
+          raw
         )
       `)
       .eq('status', 'active')

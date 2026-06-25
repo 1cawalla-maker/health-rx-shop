@@ -26,7 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { halaxyConsultationService } from "@/services/halaxyConsultationService";
 import { getDashboardPathForRole } from "@/lib/roleRoutes";
-import { formatDobForStorage, parseDobFromStorage, validateDob } from "@/lib/validation";
+import { formatDobForStorage, parseDobFromStorage, stripAuPrefix, validateDob } from "@/lib/validation";
 
 const PRIVACY_POLICY_VERSION = "2026-06-18-minimal-halaxy-consult";
 const COLLECTION_NOTICE_VERSION = "2026-06-18-minimal-halaxy-consult";
@@ -106,7 +106,6 @@ export default function StartConsultation() {
               : "";
 
         if (metadataName) setFullName((current) => current || metadataName);
-        if (user.email) setEmail((current) => current || user.email || "");
 
         const { data, error } = await withTimeout(
           (supabase as any)
@@ -121,7 +120,8 @@ export default function StartConsultation() {
 
         if (data.full_name) setFullName((current) => current || data.full_name);
         if (data.email) setEmail((current) => current || data.email);
-        if (data.phone) setPhone((current) => current || data.phone);
+        else if (user.email) setEmail((current) => current || user.email || "");
+        if (data.phone) setPhone((current) => current || stripAuPrefix(data.phone));
 
         if (data.date_of_birth) {
           const dob = parseDobFromStorage(data.date_of_birth);
@@ -484,14 +484,15 @@ export default function StartConsultation() {
                     <Label htmlFor="mobile">Mobile number</Label>
                     <div className="flex items-center gap-2">
                       <span className="flex h-10 items-center rounded-md border border-input bg-muted px-3 text-sm font-medium text-muted-foreground">
-                        AU
+                        +61
                       </span>
                       <Input
                         id="mobile"
                         value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="04xx xxx xxx"
-                        inputMode="tel"
+                        onChange={(e) => setPhone(stripAuPrefix(e.target.value).replace(/\D/g, "").slice(0, 9))}
+                        placeholder="4xx xxx xxx"
+                        inputMode="numeric"
+                        maxLength={9}
                         required
                       />
                     </div>

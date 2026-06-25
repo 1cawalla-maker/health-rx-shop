@@ -8,9 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CalendarClock, ExternalLink, FileText, Loader2 } from 'lucide-react';
+import { CalendarClock, ExternalLink, FileText, Loader2, ShoppingBag } from 'lucide-react';
 import { format } from 'date-fns';
 import type { HalaxyConsultationSummary } from '@/types/halaxy';
+import { usePrescriptionStatus } from '@/hooks/usePrescriptionStatus';
 
 type PrescriptionRow = {
   id: string;
@@ -22,9 +23,9 @@ type PrescriptionRow = {
 
 function statusCopy(status: string | null | undefined) {
   switch (status) {
-    case 'sent_to_booking': return 'Continue booking in Halaxy';
-    case 'booking_in_progress': return 'Waiting for Halaxy confirmation';
-    case 'webhook_pending': return 'Waiting for Halaxy confirmation';
+    case 'sent_to_booking': return 'Continue booking';
+    case 'booking_in_progress': return 'Waiting for booking confirmation';
+    case 'webhook_pending': return 'Waiting for booking confirmation';
     case 'booked': return 'Booked';
     case 'completed': return 'Consult completed';
     case 'cancelled': return 'Cancelled';
@@ -46,6 +47,7 @@ export default function PatientConsultations() {
   const [consults, setConsults] = useState<HalaxyConsultationSummary[]>([]);
   const [prescriptions, setPrescriptions] = useState<Record<string, PrescriptionRow>>({});
   const [loading, setLoading] = useState(true);
+  const prescriptionStatus = usePrescriptionStatus();
 
   const load = useCallback(async () => {
     if (!user?.id) return;
@@ -109,6 +111,7 @@ export default function PatientConsultations() {
       <div className="space-y-4">
         {consults.map((consult) => {
           const rx = prescriptions[consult.id];
+          const hasActiveEntitlement = prescriptionStatus.hasActivePrescription;
           return (
             <Card key={consult.id}>
               <CardHeader>
@@ -134,9 +137,16 @@ export default function PatientConsultations() {
                   <div className="rounded-lg border bg-muted/30 p-3 text-sm">
                     Prescription received · status: <strong>{rx.status || 'pending'}</strong> · OCR: <strong>{rx.ocr_status || 'not started'}</strong>
                   </div>
+                ) : hasActiveEntitlement ? (
+                  <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+                    <div className="flex items-start gap-2">
+                      <ShoppingBag className="mt-0.5 h-4 w-4 text-primary" />
+                      <span>You have active shop access from a prescription on file.</span>
+                    </div>
+                  </div>
                 ) : (
                   <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
-                    Prescription not received in PouchCare yet.
+                    Prescription status pending. We’ll update your shop access once a prescription is received and reviewed.
                   </div>
                 )}
 

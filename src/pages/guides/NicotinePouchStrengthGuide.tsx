@@ -173,7 +173,7 @@ export default function GuideNicotinePouchStrengthGuide() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-muted-foreground">
-                  Start a Halaxy booking and complete the clinical intake there. A qualified doctor will make the final
+                  Start a secure booking and complete the clinical intake if prompted. A qualified doctor will make the final
                   clinical assessment.
                 </p>
                 <Button asChild size="lg" className="w-full sm:w-auto">

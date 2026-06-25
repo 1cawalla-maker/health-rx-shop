@@ -118,7 +118,7 @@ export default function PatientShopCheckout() {
           </Button>
           <h1 className="font-display text-3xl font-bold text-foreground">Review your order</h1>
           <p className="text-muted-foreground">
-            Review your PouchCare order first. Shopify securely handles the final payment and shipping details.
+            Review your PouchCare order first. Payment and shipping details are completed securely at checkout.
           </p>
         </div>
       </div>
@@ -203,9 +203,9 @@ export default function PatientShopCheckout() {
               <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
               <div className="space-y-3 text-sm">
                 <div className="space-y-1">
-                  <p className="font-medium">Secure Shopify handoff</p>
+                  <p className="font-medium">Secure checkout</p>
                   <p className="text-muted-foreground">
-                    PouchCare validates your prescription, strength limit, and remaining prescription allowance before Shopify opens for payment and shipping.
+                    PouchCare validates your prescription, strength limit, and remaining prescription allowance before opening secure payment and shipping.
                   </p>
                 </div>
                 <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">

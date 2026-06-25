@@ -20,6 +20,14 @@ function statusBadge(row: UploadedPrescriptionStatus | null) {
   return <Badge variant="outline">Pending</Badge>;
 }
 
+function displayPrescriptionName(row: UploadedPrescriptionStatus, index: number) {
+  const rawName = (row.file_name || '').trim();
+  if (!rawName || /^manual-shop-access/i.test(rawName)) {
+    return row.status === 'active' ? 'Prescription entitlement' : `Prescription document ${index + 1}`;
+  }
+  return rawName;
+}
+
 function statusMessage(row: UploadedPrescriptionStatus) {
   if (row.status === 'active') return 'This prescription is active and can unlock products within its limits.';
   if (row.status === 'rejected') return row.review_reason || 'This prescription needs review before it can unlock ordering.';
@@ -122,11 +130,11 @@ export default function PatientPrescriptions() {
             <CardDescription>{uploads.length} prescription document{uploads.length === 1 ? '' : 's'} on file.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {uploads.map((upload) => (
+            {uploads.map((upload, index) => (
               <div key={upload.id} className="rounded-lg border p-3 text-sm">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0 space-y-1">
-                    <p className="font-medium truncate">{upload.file_name || 'Prescription'}</p>
+                    <p className="font-medium truncate">{displayPrescriptionName(upload, index)}</p>
                     <p className="flex items-center gap-1 text-muted-foreground">
                       <Calendar className="h-4 w-4" />
                       Added {format(new Date(upload.created_at), 'MMM d, yyyy')}

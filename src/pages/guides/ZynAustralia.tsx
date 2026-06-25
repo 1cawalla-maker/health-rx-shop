@@ -18,7 +18,7 @@ export default function GuideZynAustralia() {
     {
       question: 'How can I get Zyns in Australia legally?',
       answer:
-        'Start a Halaxy booking and complete the clinical intake there. If clinically appropriate, a doctor can guide you through the next steps to access nicotine pouches in Australia.',
+        'Start a secure booking and complete the clinical intake if prompted. If clinically appropriate, a doctor can guide you through the next steps to access nicotine pouches in Australia.',
     },
     {
       question: 'Do I need a prescription for nicotine pouches in Australia?',
@@ -48,7 +48,7 @@ export default function GuideZynAustralia() {
     {
       question: 'How long does it take?',
       answer:
-        'Timeframes vary. You can start a Halaxy booking and complete Halaxy’s clinical intake; the rest depends on clinical suitability and the steps required for your situation.',
+        'Timeframes vary. You can start a secure booking and complete the clinical intake; the rest depends on clinical suitability and the steps required for your situation.',
     },
     {
       question: 'Can I choose strength and flavours?',
@@ -157,7 +157,7 @@ export default function GuideZynAustralia() {
                 explains what is appropriate for you.
               </p>
               <p className="text-muted-foreground">
-                If you’re unsure, the most reliable next step is to start a Halaxy booking and complete the clinical intake there—
+                If you’re unsure, the most reliable next step is to start a secure booking and complete the clinical intake if prompted—
                 a doctor can explain what applies to your situation.
               </p>
             </div>
@@ -165,11 +165,11 @@ export default function GuideZynAustralia() {
             <div className="space-y-2">
               <h2 className="font-display text-2xl font-semibold">How Australians access nicotine pouches</h2>
               <p className="text-muted-foreground">
-                The typical path is: book in Halaxy → complete Halaxy clinical intake if prompted → doctor assesses your
+                The typical path is: book securely → complete clinical intake if prompted → doctor assesses your
                 situation → next steps are explained if clinically appropriate.
               </p>
               <ol className="list-decimal pl-5 text-muted-foreground space-y-2">
-                <li>Complete Halaxy’s clinical intake if prompted.</li>
+                <li>Complete the clinical intake if prompted.</li>
                 <li>Book a consultation time that suits you.</li>
                 <li>Speak with an AHPRA‑registered doctor by phone.</li>
                 <li>If clinically appropriate, your doctor will explain next steps and any limits (like max strength).</li>
@@ -254,7 +254,7 @@ export default function GuideZynAustralia() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-muted-foreground">
-                  Start a Halaxy booking and complete the clinical intake there. A qualified doctor will make the final
+                  Start a secure booking and complete the clinical intake if prompted. A qualified doctor will make the final
                   clinical assessment.
                 </p>
                 <Button asChild size="lg" className="w-full sm:w-auto">

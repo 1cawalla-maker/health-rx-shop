@@ -4,7 +4,6 @@ import { userProfileService } from '@/services/userProfileService';
 import { supabase } from '@/integrations/supabase/client';
 import { validateDob, formatDobForStorage, parseDobFromStorage, validateAuPhone, stripAuPrefix } from '@/lib/validation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -183,11 +182,8 @@ export default function PatientAccount() {
             />
             {emailError && <p className="text-xs text-destructive">{emailError}</p>}
             <p className="text-xs text-muted-foreground">
-              Used for account access, receipts, and prescription updates. Email-code login will be enabled after verification is configured.
+              Used for receipts, prescription updates, and support.
             </p>
-            {user?.email && user.email !== contactEmail && (
-              <Badge variant="outline" className="w-fit">Auth email: {user.email}</Badge>
-            )}
           </div>
 
           <div className="space-y-1">

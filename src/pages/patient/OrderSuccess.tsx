@@ -6,9 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 /**
- * Shopify hosts the thank-you page.
+ * Secure checkout hosts the thank-you page.
  * This route is kept as a light-weight fallback in case we ever redirect back,
- * but it should not claim payment success without Shopify-confirmed data.
+ * but it should not claim payment success without confirmed order data.
  */
 export default function PatientOrderSuccess() {
   return (
@@ -19,14 +19,14 @@ export default function PatientOrderSuccess() {
         </div>
         <h1 className="font-display text-3xl font-bold text-foreground">Order syncing…</h1>
         <p className="text-muted-foreground">
-          If you completed payment in Shopify, your order will appear in your Order History shortly.
+          If you completed payment, your order will appear in your Order History shortly.
         </p>
       </div>
 
       <Alert>
         <Package className="h-4 w-4" />
         <AlertDescription>
-          Orders are imported from Shopify after payment via webhook. If it doesn’t show up within a minute, refresh.
+          Orders appear after payment is confirmed. If it doesn’t show up within a minute, refresh.
         </AlertDescription>
       </Alert>
 

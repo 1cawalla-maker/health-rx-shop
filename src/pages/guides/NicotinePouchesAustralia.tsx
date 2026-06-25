@@ -22,7 +22,7 @@ export default function GuideNicotinePouchesAustralia() {
     {
       question: 'How do I get nicotine pouches in Australia?',
       answer:
-        'Start a Halaxy booking and complete the clinical intake there. If clinically appropriate, a doctor will guide you through the next steps.',
+        'Start a secure booking and complete the clinical intake if prompted. If clinically appropriate, a doctor will guide you through the next steps.',
     },
     {
       question: 'What strengths are available (3mg / 6mg / 9mg)?',
@@ -146,10 +146,10 @@ export default function GuideNicotinePouchesAustralia() {
               <h2 className="font-display text-2xl font-semibold">How access works in Australia</h2>
               <p className="text-muted-foreground">
                 Nicotine products are regulated. We provide a doctor‑supervised pathway that starts with a short
-                Halaxy clinical intake and a telehealth consultation.
+                clinical intake and a telehealth consultation.
               </p>
               <ol className="list-decimal pl-5 text-muted-foreground space-y-2">
-                <li>Complete Halaxy’s clinical intake if prompted.</li>
+                <li>Complete the clinical intake if prompted.</li>
                 <li>Book a consultation time that suits you.</li>
                 <li>A doctor assesses suitability and discusses options.</li>
                 <li>If clinically appropriate, access is enabled and any limits are explained.</li>
@@ -213,7 +213,7 @@ export default function GuideNicotinePouchesAustralia() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-muted-foreground">
-                  Start a Halaxy booking.  A qualified doctor will make the final clinical
+                  Start a secure booking. A qualified doctor will make the final clinical
                   assessment.
                 </p>
                 <Button asChild size="lg" className="w-full sm:w-auto">

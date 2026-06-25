@@ -11,7 +11,7 @@ export type ShopifyLineItemInput = {
 function cartItemToMerchandiseGid(item: CartItem): string {
   const gid = item.shopifyVariantId || item.variantId;
   if (!gid?.startsWith('gid://shopify/ProductVariant/')) {
-    throw new Error(`Cart item is missing a Shopify ProductVariant GID: ${item.name} ${item.strengthMg}mg`);
+    throw new Error(`${item.name} ${item.strengthMg}mg is not ready for secure checkout yet. Please contact support before ordering.`);
   }
   return gid;
 }
@@ -35,7 +35,7 @@ class ShopifyCheckoutService {
           // Ignore body parse failures and fall back to the wrapper message.
         }
       }
-      throw new Error(serverMessage || error.message || 'Failed to create Shopify checkout');
+      throw new Error(serverMessage || error.message || 'Failed to start secure checkout');
     }
 
     if (!data?.checkoutUrl || !data?.cartId) {
