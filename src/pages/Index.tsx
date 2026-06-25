@@ -111,11 +111,8 @@ export default function Index() {
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up animation-delay-200">
-              <Button variant="hero" size="xl" asChild>
-                <Link to="/start-consult">
-                  Start Consultation
-                  <ArrowRight className="h-5 w-5" />
-                </Link>
+              <Button variant="hero" size="xl" disabled>
+                Consultations coming soon
               </Button>
               <Button variant="hero-outline" size="xl" asChild>
                 <Link to="/phone-login">Log In</Link>
@@ -155,7 +152,7 @@ export default function Index() {
               Already have a prescription?
             </h2>
             <p className="text-lg text-muted-foreground">
-              Choose the path that matches where you are now. Existing prescriptions can be uploaded for review, and new patients who need a prescription can start with a consultation request.
+              Choose the path that matches where you are now. Existing prescriptions can be uploaded for review. New consultation requests are coming soon.
             </p>
           </div>
 
@@ -193,13 +190,10 @@ export default function Index() {
               </div>
               <h3 className="font-display text-2xl font-bold text-foreground mb-3">I need a prescription</h3>
               <p className="text-muted-foreground mb-5">
-                Start a consultation request and continue to a secure clinical appointment. A prescription is not guaranteed and depends on the doctor's assessment.
+                New consultation requests are coming soon. A prescription is not guaranteed and depends on the doctor's assessment.
               </p>
-              <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
-                <Link to="/start-consult">
-                  Start consultation
-                  <ArrowRight className="h-5 w-5" />
-                </Link>
+              <Button variant="outline" size="lg" className="w-full sm:w-auto" disabled>
+                Consultations coming soon
               </Button>
             </div>
           </div>
@@ -310,19 +304,15 @@ export default function Index() {
               Ready to Get Started?
             </h2>
             <p className="text-lg text-primary-foreground/80">
-              Book your consultation today and take the first step towards accessing 
-              nicotine pouches through our secure, doctor-supervised platform.
+              Consultation requests are coming soon. Existing prescription uploads remain available for review.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button 
                 size="xl" 
                 className="bg-background text-primary hover:bg-background/90 shadow-lg"
-                asChild
+                disabled
               >
-                <Link to="/start-consult">
-                  Start Your Consultation
-                  <ArrowRight className="h-5 w-5" />
-                </Link>
+                Consultations coming soon
               </Button>
               <Button 
                 variant="outline" 
