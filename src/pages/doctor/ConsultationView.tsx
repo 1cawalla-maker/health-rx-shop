@@ -25,6 +25,9 @@ import { toast } from 'sonner';
 import { Calendar, Clock, Phone, Plus, CheckCircle, XCircle, AlertCircle, FileText, PhoneOff, Copy, User } from 'lucide-react';
 import { format } from 'date-fns';
 import type { BookingStatus, MockBooking } from '@/types/telehealth';
+import type { Database } from '@/integrations/supabase/types';
+
+type ConsultationStatus = Database['public']['Enums']['consultation_status'];
 
 const TERMINAL: BookingStatus[] = ['completed', 'no_answer', 'cancelled'];
 

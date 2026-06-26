@@ -4,13 +4,21 @@ import type { DoctorRecord } from '@/types/services';
 import type { DoctorApprovalStatus } from '@/types/enums';
 import type { Database } from '@/integrations/supabase/types';
 
-// Database user_status type (without 'rejected')
+// Database user_status type.
 type DbUserStatus = Database['public']['Enums']['user_status'];
+const adminSupabase = supabase as any;
 
-// Map app status to database status
+// Map app status labels to production database status labels.
 const mapToDbStatus = (status: DoctorApprovalStatus): DbUserStatus => {
-  if (status === 'rejected') return 'deactivated';
+  if (status === 'pending_approval') return 'pending';
+  if (status === 'deactivated') return 'suspended';
   return status as DbUserStatus;
+};
+
+const mapFromDbStatus = (status: string | null | undefined): DoctorApprovalStatus => {
+  if (status === 'pending') return 'pending_approval';
+  if (status === 'suspended') return 'deactivated';
+  return (status || 'pending_approval') as DoctorApprovalStatus;
 };
 
 export const doctorService = {
@@ -18,7 +26,7 @@ export const doctorService = {
   listDoctors: async (statusFilter?: DoctorApprovalStatus): Promise<DoctorRecord[]> => {
     try {
       // Query the admin_user_overview view which joins all the relevant tables
-      let query = supabase
+      let query = adminSupabase
         .from('admin_user_overview')
         .select('*')
         .eq('role', 'doctor');
@@ -54,7 +62,7 @@ export const doctorService = {
         specialties: row.specialties || doctorsMap.get(row.user_id)?.specialties || [],
         practiceLocation: doctorsMap.get(row.user_id)?.practice_location || null,
         specialty: row.specialty,
-        status: row.status as DoctorApprovalStatus,
+        status: mapFromDbStatus(row.status),
         isActive: row.doctor_is_active ?? false,
         createdAt: row.role_created_at,
         updatedAt: row.profile_created_at,
@@ -71,7 +79,7 @@ export const doctorService = {
       .from('user_roles')
       .select('*', { count: 'exact', head: true })
       .eq('role', 'doctor')
-      .eq('status', 'pending_approval');
+      .eq('status', 'pending');
 
     if (error) {
       console.error('Error fetching pending count:', error);
@@ -120,7 +128,7 @@ export const doctorService = {
       specialties: doctorData?.specialties || [],
       practiceLocation: doctorData?.practice_location || null,
       specialty: doctorProfileData?.specialty || null,
-      status: roleData.status as DoctorApprovalStatus,
+      status: mapFromDbStatus(roleData.status),
       isActive: doctorData?.is_active ?? false,
       createdAt: roleData.created_at,
       updatedAt: profileData?.updated_at || roleData.created_at,

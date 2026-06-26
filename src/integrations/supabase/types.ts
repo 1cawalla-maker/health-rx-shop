@@ -1459,6 +1459,156 @@ export type Database = {
           },
         ]
       }
+      product_variants: {
+        Row: {
+          created_at: string
+          currency: string
+          display_price_cents: number
+          display_strength_mg: number
+          id: string
+          max_order_qty: number | null
+          product_id: string
+          raw: Json
+          shopify_variant_gid: string | null
+          sort_order: number
+          stock_status: string
+          supplier_catalog_item_id: string | null
+          supplier_cost_cents: number | null
+          supplier_payment_url: string | null
+          supplier_sku: string | null
+          supplier_url: string | null
+          updated_at: string
+          visible: boolean
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          display_price_cents: number
+          display_strength_mg: number
+          id?: string
+          max_order_qty?: number | null
+          product_id: string
+          raw?: Json
+          shopify_variant_gid?: string | null
+          sort_order?: number
+          stock_status?: string
+          supplier_catalog_item_id?: string | null
+          supplier_cost_cents?: number | null
+          supplier_payment_url?: string | null
+          supplier_sku?: string | null
+          supplier_url?: string | null
+          updated_at?: string
+          visible?: boolean
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          display_price_cents?: number
+          display_strength_mg?: number
+          id?: string
+          max_order_qty?: number | null
+          product_id?: string
+          raw?: Json
+          shopify_variant_gid?: string | null
+          sort_order?: number
+          stock_status?: string
+          supplier_catalog_item_id?: string | null
+          supplier_cost_cents?: number | null
+          supplier_payment_url?: string | null
+          supplier_sku?: string | null
+          supplier_url?: string | null
+          updated_at?: string
+          visible?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_variants_supplier_catalog_item_id_fkey"
+            columns: ["supplier_catalog_item_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_catalog_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          admin_notes: string | null
+          brand: string
+          can_size_pouches: number
+          created_at: string
+          description: string | null
+          display_name: string
+          flavour: string | null
+          id: string
+          image_url: string | null
+          requires_prescription: boolean
+          shopify_product_gid: string | null
+          sort_order: number
+          status: string
+          supplier_catalog_item_id: string | null
+          supplier_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          brand?: string
+          can_size_pouches?: number
+          created_at?: string
+          description?: string | null
+          display_name: string
+          flavour?: string | null
+          id?: string
+          image_url?: string | null
+          requires_prescription?: boolean
+          shopify_product_gid?: string | null
+          sort_order?: number
+          status?: string
+          supplier_catalog_item_id?: string | null
+          supplier_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          brand?: string
+          can_size_pouches?: number
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          flavour?: string | null
+          id?: string
+          image_url?: string | null
+          requires_prescription?: boolean
+          shopify_product_gid?: string | null
+          sort_order?: number
+          status?: string
+          supplier_catalog_item_id?: string | null
+          supplier_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_supplier_catalog_item_id_fkey"
+            columns: ["supplier_catalog_item_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           age_attestation_version: string | null
@@ -1676,6 +1826,101 @@ export type Database = {
           },
         ]
       }
+      supplier_catalog_items: {
+        Row: {
+          created_at: string
+          external_product_id: string | null
+          external_variant_id: string | null
+          id: string
+          last_seen_at: string | null
+          raw: Json
+          raw_description: string | null
+          raw_image_url: string | null
+          raw_name: string | null
+          raw_price: number | null
+          raw_stock: string | null
+          raw_strength: string | null
+          source_url: string | null
+          supplier_id: string
+          sync_status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          external_product_id?: string | null
+          external_variant_id?: string | null
+          id?: string
+          last_seen_at?: string | null
+          raw?: Json
+          raw_description?: string | null
+          raw_image_url?: string | null
+          raw_name?: string | null
+          raw_price?: number | null
+          raw_stock?: string | null
+          raw_strength?: string | null
+          source_url?: string | null
+          supplier_id: string
+          sync_status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          external_product_id?: string | null
+          external_variant_id?: string | null
+          id?: string
+          last_seen_at?: string | null
+          raw?: Json
+          raw_description?: string | null
+          raw_image_url?: string | null
+          raw_name?: string | null
+          raw_price?: number | null
+          raw_stock?: string | null
+          raw_strength?: string | null
+          source_url?: string | null
+          supplier_id?: string
+          sync_status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_catalog_items_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suppliers: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          status: string
+          updated_at: string
+          website_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          website_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       twilio_call_logs: {
         Row: {
           answered: boolean | null
@@ -1853,6 +2098,7 @@ export type Database = {
         Args: { _patient_id: string }
         Returns: boolean
       }
+      has_active_shop_entitlement: { Args: never; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1860,6 +2106,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin_user: { Args: never; Returns: boolean }
       is_approved_doctor: { Args: { _user_id: string }; Returns: boolean }
       is_booking_doctor: {
         Args: { _booking_id: string; _user_id: string }

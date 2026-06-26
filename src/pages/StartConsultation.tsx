@@ -13,7 +13,7 @@ export default function StartConsultation() {
         title="Consultations coming soon | PouchCare"
         description="PouchCare consultation requests are coming soon. Existing prescription uploads remain available for review."
         canonicalPath="/start-consult"
-        noindex
+        noIndex
       />
 
       <section className="py-20 md:py-28 bg-background">

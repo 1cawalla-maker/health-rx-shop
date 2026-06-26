@@ -1,5 +1,9 @@
 // Consultation Service - handles consultation booking and management
 import { supabase } from '@/integrations/supabase/client';
+
+// Legacy booking service references tables that are no longer in the production schema.
+// Keep runtime code isolated from generated Supabase types until this service is removed.
+const legacySupabase = supabase as any;
 import type { ConsultationBooking, BookingStatus, LegacyCallAttempt, IntakeFormData, MockBooking, MockCallAttempt } from '@/types/telehealth';
 import { mockAvailabilityService } from './availabilityService';
 import { CONSULTATION_FEE_CENTS } from '@/config/consultations';
@@ -401,7 +405,7 @@ export const consultationService = {
   async getTodayBookings(doctorId: string): Promise<ConsultationBooking[]> {
     const today = new Date().toISOString().split('T')[0];
     
-    const { data, error } = await supabase
+    const { data, error } = await legacySupabase
       .from('consultation_bookings')
       .select('*')
       .eq('scheduled_date', today)
@@ -420,7 +424,7 @@ export const consultationService = {
   async getUpcomingBookings(doctorId: string, limit: number = 10): Promise<ConsultationBooking[]> {
     const today = new Date().toISOString().split('T')[0];
     
-    const { data, error } = await supabase
+    const { data, error } = await legacySupabase
       .from('consultation_bookings')
       .select('*')
       .gte('scheduled_date', today)
@@ -443,7 +447,7 @@ export const consultationService = {
     const endOfWeek = new Date(today);
     endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
     
-    const { data, error } = await supabase
+    const { data, error } = await legacySupabase
       .from('consultation_bookings')
       .select('*')
       .gte('scheduled_date', today.toISOString().split('T')[0])
@@ -462,7 +466,7 @@ export const consultationService = {
 
   // Get past consultations
   async getPastConsultations(doctorId: string, limit: number = 20): Promise<ConsultationBooking[]> {
-    const { data, error } = await supabase
+    const { data, error } = await legacySupabase
       .from('consultation_bookings')
       .select('*')
       .in('status', ['completed', 'cancelled', 'no_answer'])
@@ -480,7 +484,7 @@ export const consultationService = {
 
   // Get single booking with patient details
   async getBookingWithDetails(bookingId: string): Promise<ConsultationBooking | null> {
-    const { data: booking, error: bookingError } = await supabase
+    const { data: booking, error: bookingError } = await legacySupabase
       .from('consultation_bookings')
       .select('*')
       .eq('id', bookingId)
@@ -494,21 +498,21 @@ export const consultationService = {
     if (!booking) return null;
 
     // Get patient profile
-    const { data: profile } = await supabase
+    const { data: profile } = await legacySupabase
       .from('profiles')
       .select('full_name, phone, date_of_birth')
       .eq('user_id', booking.patient_id)
       .single();
 
     // Get call attempts
-    const { data: attempts } = await supabase
+    const { data: attempts } = await legacySupabase
       .from('call_attempts')
       .select('*')
       .eq('booking_id', bookingId)
       .order('attempt_number', { ascending: true });
 
     // Get intake form
-    const { data: intake } = await supabase
+    const { data: intake } = await legacySupabase
       .from('intake_forms')
       .select('*')
       .eq('booking_id', bookingId)
@@ -539,7 +543,7 @@ export const consultationService = {
 
   // Update booking status
   async updateBookingStatus(bookingId: string, status: BookingStatus): Promise<void> {
-    const { error } = await supabase
+    const { error } = await legacySupabase
       .from('consultation_bookings')
       .update({ status })
       .eq('id', bookingId);
@@ -552,7 +556,7 @@ export const consultationService = {
 
   // Assign doctor to booking
   async assignDoctor(bookingId: string, doctorId: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await legacySupabase
       .from('consultation_bookings')
       .update({ doctor_id: doctorId })
       .eq('id', bookingId);
@@ -566,7 +570,7 @@ export const consultationService = {
   // Log call attempt (legacy Supabase integration - not used by mock)
   async logCallAttempt(bookingId: string, doctorId: string, notes?: string): Promise<LegacyCallAttempt> {
     // Get current attempt count
-    const { data: existing } = await supabase
+    const { data: existing } = await legacySupabase
       .from('call_attempts')
       .select('attempt_number')
       .eq('booking_id', bookingId)
@@ -579,7 +583,7 @@ export const consultationService = {
       throw new Error('Maximum call attempts reached');
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await legacySupabase
       .from('call_attempts')
       .insert({
         booking_id: bookingId,
@@ -600,7 +604,7 @@ export const consultationService = {
 
   // Get call attempts for booking (legacy Supabase integration)
   async getCallAttempts(bookingId: string): Promise<LegacyCallAttempt[]> {
-    const { data, error } = await supabase
+    const { data, error } = await legacySupabase
       .from('call_attempts')
       .select('*')
       .eq('booking_id', bookingId)
@@ -627,7 +631,7 @@ export const consultationService = {
 
   // Update doctor notes
   async updateDoctorNotes(bookingId: string, notes: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await legacySupabase
       .from('consultation_bookings')
       .update({ doctor_notes: notes })
       .eq('id', bookingId);
@@ -644,12 +648,12 @@ export const consultationService = {
 
     const patientIds = [...new Set(bookings.map(b => b.patientId))];
     
-    const { data: profiles } = await supabase
+    const { data: profiles } = await legacySupabase
       .from('profiles')
       .select('user_id, full_name, phone, date_of_birth')
       .in('user_id', patientIds);
 
-    const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+    const profileMap = new Map<string, any>((profiles || []).map((p: any) => [p.user_id, p]));
 
     return bookings.map(booking => ({
       ...booking,
@@ -665,7 +669,7 @@ export const consultationService = {
     const today = now.toISOString().split('T')[0];
     const currentTime = now.toTimeString().split(' ')[0];
 
-    const { data, error } = await supabase
+    const { data, error } = await legacySupabase
       .from('consultation_bookings')
       .select('*')
       .eq('status', 'booked')

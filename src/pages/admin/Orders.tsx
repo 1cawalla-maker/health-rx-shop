@@ -403,7 +403,8 @@ export default function AdminOrders() {
     const paid = orders.filter((order) => (order.financial_status || '').toLowerCase() === 'paid').length;
     const unfulfilled = orders.filter((order) => (order.financial_status || '').toLowerCase() === 'paid' && (order.fulfillment_status || '').toLowerCase() !== 'fulfilled').length;
     const needsAttention = orders.filter((order) => getOrderAttentionIssues(order).length > 0).length;
-    return { paid, unfulfilled, needsAttention };
+    const missingDocs = needsAttention;
+    return { paid, unfulfilled, needsAttention, missingDocs };
   }, [orders]);
 
   const visibleOrders = useMemo(
@@ -559,6 +560,7 @@ export default function AdminOrders() {
             const tracking = getTracking(order);
             const supplierPdfReady = order.pdfs.some((pdf) => pdf.kind === 'prescription');
             const originalPrescriptionReady = hasOriginalPrescriptionFile(order);
+            const attentionIssues = getOrderAttentionIssues(order);
             const processedAt = order.processed_at ? new Date(order.processed_at) : null;
             const totalCans = order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
 

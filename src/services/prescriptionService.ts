@@ -154,7 +154,7 @@ export const prescriptionService = {
   // Check if patient has active prescription
   async hasActivePrescription(patientId: string): Promise<boolean> {
     const { data, error } = await supabase
-      .rpc('has_active_issued_prescription', { _patient_id: patientId });
+      .rpc('has_active_prescription', { _patient_id: patientId });
 
     if (error) {
       console.error('Error checking active prescription:', error);
@@ -198,7 +198,7 @@ export const prescriptionService = {
   async revokePrescription(prescriptionId: string): Promise<void> {
     const { error } = await supabase
       .from('doctor_issued_prescriptions')
-      .update({ status: 'revoked' as IssuedPrescriptionStatus })
+      .update({ status: 'revoked' })
       .eq('id', prescriptionId);
 
     if (error) {

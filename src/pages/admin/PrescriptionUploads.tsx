@@ -52,6 +52,7 @@ const statusLabels: Record<PrescriptionStatus, string> = {
   active: 'Approved',
   rejected: 'Rejected',
   expired: 'Expired',
+  cancelled: 'Cancelled',
 };
 
 const statusColors: Record<PrescriptionStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -59,6 +60,7 @@ const statusColors: Record<PrescriptionStatus, 'default' | 'secondary' | 'destru
   active: 'default',
   rejected: 'destructive',
   expired: 'outline',
+  cancelled: 'outline',
 };
 
 export default function AdminPrescriptionUploads() {
@@ -131,6 +133,7 @@ export default function AdminPrescriptionUploads() {
     // Combine data
     const combinedData: PrescriptionRecord[] = (prescriptionsData || []).map(p => ({
       ...p,
+      ocr_status: p.ocr_status as PrescriptionRecord['ocr_status'],
       patient_name: profilesMap[p.patient_id]?.full_name || null,
       patient_email: null, // Email not stored in profiles
     }));

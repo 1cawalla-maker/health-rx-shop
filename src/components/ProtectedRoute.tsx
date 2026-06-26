@@ -55,8 +55,8 @@ export function ProtectedRoute({ children, allowedRoles, requireApproval = true 
     }
   }
 
-  // TODO(phase2): restore pending_approval redirect for doctors
-  if (userRole.status === 'deactivated') {
+  // TODO(phase2): restore pending doctor redirect once doctor approval UX is finalized.
+  if (userRole.status === 'suspended') {
     return <Navigate to={loginPath} replace />;
   }
 

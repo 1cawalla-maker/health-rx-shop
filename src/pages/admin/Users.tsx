@@ -43,8 +43,8 @@ export default function AdminUsers() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="capitalize">{u.status.replace('_', ' ')}</Badge>
-                  {u.status === 'pending_approval' && <Button size="sm" onClick={() => updateStatus(u.id, 'approved')}>Approve</Button>}
-                  {u.status === 'approved' && <Button size="sm" variant="destructive" onClick={() => updateStatus(u.id, 'deactivated')}>Deactivate</Button>}
+                  {u.status === 'pending' && <Button size="sm" onClick={() => updateStatus(u.id, 'approved')}>Approve</Button>}
+                  {u.status === 'approved' && <Button size="sm" variant="destructive" onClick={() => updateStatus(u.id, 'suspended')}>Suspend</Button>}
                 </div>
               </div>
             </CardContent>

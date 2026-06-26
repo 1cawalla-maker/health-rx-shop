@@ -11,7 +11,7 @@ export default function AdminDashboard() {
     const fetchStats = async () => {
       const [{ count: users }, { count: pendingDoctors }, { count: consultations }, { count: prescriptions }] = await Promise.all([
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('user_roles').select('*', { count: 'exact', head: true }).eq('role', 'doctor').eq('status', 'pending_approval'),
+        supabase.from('user_roles').select('*', { count: 'exact', head: true }).eq('role', 'doctor').eq('status', 'pending'),
         supabase.from('consultations').select('*', { count: 'exact', head: true }),
         supabase.from('prescriptions').select('*', { count: 'exact', head: true }).eq('status', 'active'),
       ]);

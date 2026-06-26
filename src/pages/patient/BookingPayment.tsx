@@ -456,7 +456,7 @@ export default function BookingPayment() {
             <Button variant="outline" onClick={handleCancel} className="flex-1" disabled={processing || !!checkoutClientSecret}>
               Cancel
             </Button>
-            <Button onClick={handlePayment} disabled={!policyAgreed || processing || !!checkoutClientSecret} className="flex-1" size="lg">
+            <Button onClick={() => handlePayment()} disabled={!policyAgreed || processing || !!checkoutClientSecret} className="flex-1" size="lg">
               {processing ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
