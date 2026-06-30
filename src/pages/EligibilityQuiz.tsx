@@ -193,7 +193,7 @@ export default function EligibilityQuiz() {
   };
 
   const handleContinueToSignup = () => {
-    navigate('/phone-login?role=patient&mode=signup&next=/start-consult');
+    navigate('/phone-login?role=patient&mode=signup&next=/patient/start-consult');
   };
 
   if (blockedUnder21) {

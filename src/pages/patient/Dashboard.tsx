@@ -82,7 +82,7 @@ export default function PatientDashboard() {
 
       <div className="grid gap-4 md:grid-cols-3">
         <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2">
-          <Link to="/start-consult"><Calendar className="h-6 w-6 text-primary" /><span>Start Consultation</span></Link>
+          <Link to="/patient/start-consult"><Calendar className="h-6 w-6 text-primary" /><span>Start Consultation</span></Link>
         </Button>
         <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2">
           <Link to="/patient/consultations"><FileText className="h-6 w-6 text-primary" /><span>Consultation Status</span></Link>
@@ -116,7 +116,7 @@ export default function PatientDashboard() {
             ) : (
               <div className="space-y-3 text-sm text-muted-foreground">
                 <p>No consultation started yet.</p>
-                <Button size="sm" asChild><Link to="/start-consult">Start consultation</Link></Button>
+                <Button size="sm" asChild><Link to="/patient/start-consult">Start consultation</Link></Button>
               </div>
             )}
           </CardContent>

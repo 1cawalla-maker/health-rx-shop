@@ -102,6 +102,7 @@ const App = () => (
               <Route path="/auth/callback" element={<Navigate to="/phone-login" replace />} />
               <Route path="/phone-login" element={<PhoneLogin />} />
               <Route path="/start-consult" element={<StartConsultation />} />
+              <Route path="/patient/start-consult" element={<ProtectedRoute allowedRoles={['patient']}><StartConsultation /></ProtectedRoute>} />
               <Route path="/eligibility" element={<EligibilityQuiz />} />
               <Route path="/patient/book" element={<Navigate to="/start-consult" replace />} />
               <Route path="/patient/booking/payment/:bookingId" element={<Navigate to="/patient/consultations" replace />} />
@@ -124,7 +125,7 @@ const App = () => (
               <Route path="/patient" element={<ProtectedRoute allowedRoles={['patient']}><PatientLayout /></ProtectedRoute>}>
                 <Route index element={<Navigate to="dashboard" replace />} />
                 <Route path="dashboard" element={<PatientDashboard />} />
-                <Route path="book" element={<Navigate to="/start-consult" replace />} />
+                <Route path="book" element={<Navigate to="/patient/start-consult" replace />} />
                 <Route path="booking/payment/:bookingId" element={<Navigate to="/patient/consultations" replace />} />
                 <Route path="booking/confirmation/:bookingId" element={<Navigate to="/patient/consultations" replace />} />
                 <Route path="consultations" element={<PatientConsultations />} />

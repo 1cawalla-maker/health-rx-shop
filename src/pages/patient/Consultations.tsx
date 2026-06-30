@@ -86,7 +86,7 @@ export default function PatientConsultations() {
           <h1 className="font-display text-3xl font-bold text-foreground">Consultation status</h1>
           <p className="text-muted-foreground mt-1">Your consultation booking and prescription pathway.</p>
         </div>
-        <Button asChild><Link to="/start-consult">Start another consult</Link></Button>
+        <Button asChild><Link to="/patient/start-consult">Start another consult</Link></Button>
       </div>
 
       {!latest && (
@@ -95,7 +95,7 @@ export default function PatientConsultations() {
             <CardTitle>No consultation started yet</CardTitle>
             <CardDescription>Start a consultation so we can guide you through booking and prescription review.</CardDescription>
           </CardHeader>
-          <CardContent className="flex justify-center"><Button asChild><Link to="/start-consult">Start consultation</Link></Button></CardContent>
+          <CardContent className="flex justify-center"><Button asChild><Link to="/patient/start-consult">Start consultation</Link></Button></CardContent>
         </Card>
       )}
 

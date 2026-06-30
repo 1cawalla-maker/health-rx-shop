@@ -88,7 +88,7 @@ export default function PhoneLogin() {
   const destinationDescription =
     nextPath === "/patient/upload-prescription"
       ? "After verification, you will go straight to prescription upload."
-      : nextPath === "/start-consult"
+      : nextPath === "/start-consult" || nextPath === "/patient/start-consult"
         ? "After verification, you will continue to consultation booking."
         : "After verification, you will continue to your patient account.";
 
