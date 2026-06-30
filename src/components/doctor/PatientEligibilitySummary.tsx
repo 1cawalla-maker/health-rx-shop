@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, ClipboardList, AlertTriangle } from 'lucide-react';
 import { getPatientEligibilityQuiz } from '@/services/eligibilityService';
-import { generateEligibilitySummary, type EligibilityQuizResult, type EligibilitySummary } from '@/types/eligibility';
+import { generateEligibilitySummarySections, type EligibilityQuizResult } from '@/types/eligibility';
 
 interface PatientEligibilitySummaryProps {
   patientId: string;
@@ -13,7 +13,6 @@ interface PatientEligibilitySummaryProps {
 
 export function PatientEligibilitySummary({ patientId }: PatientEligibilitySummaryProps) {
   const [quizData, setQuizData] = useState<EligibilityQuizResult | null>(null);
-  const [summary, setSummary] = useState<EligibilitySummary | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -21,10 +20,7 @@ export function PatientEligibilitySummary({ patientId }: PatientEligibilitySumma
     async function fetchQuizData() {
       setLoading(true);
       const data = await getPatientEligibilityQuiz(patientId);
-      if (data) {
-        setQuizData(data);
-        setSummary(generateEligibilitySummary(data.answers));
-      }
+      setQuizData(data);
       setLoading(false);
     }
 
@@ -33,9 +29,14 @@ export function PatientEligibilitySummary({ patientId }: PatientEligibilitySumma
     }
   }, [patientId]);
 
+  const sections = useMemo(() => {
+    if (!quizData) return [];
+    return generateEligibilitySummarySections(quizData.answers, quizData.riskFlags || []);
+  }, [quizData]);
+
   if (loading) return null;
 
-  if (!quizData || !summary) {
+  if (!quizData || !sections.length) {
     return (
       <Card className="border-dashed">
         <CardContent className="pt-6 text-center text-muted-foreground">
@@ -47,6 +48,8 @@ export function PatientEligibilitySummary({ patientId }: PatientEligibilitySumma
   }
 
   const hasWarnings = (quizData.riskFlags || []).length > 0;
+  const headlineSections = sections.slice(0, 3);
+  const detailSections = sections.slice(3);
 
   return (
     <Card className={hasWarnings ? 'border-warning/50' : ''}>
@@ -64,68 +67,47 @@ export function PatientEligibilitySummary({ patientId }: PatientEligibilitySumma
           )}
         </div>
         <CardDescription>
-          Completed on {new Date(quizData.completedAt).toLocaleDateString()}
+          Completed on {new Date(quizData.completedAt).toLocaleDateString('en-AU')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-          <div className="space-y-1">
-            <p className="text-muted-foreground">Smoker declaration</p>
-            <p className="font-medium">{summary.smokerStatus}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-muted-foreground">Reason for assessment</p>
-            <p className="font-medium">{summary.smokingGoal}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-muted-foreground">Requested strength range</p>
-            <p className="font-medium">{summary.requestedPouchRange}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-muted-foreground">Daily pouch quantity</p>
-            <p className="font-medium">{summary.dailyPouchQuantity}</p>
-          </div>
+        <div className="space-y-4 text-sm">
+          {headlineSections.map((section) => (
+            <section key={section.title} className="rounded-lg border bg-muted/30 p-3">
+              <h4 className="font-medium mb-2">{section.title}</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {section.fields.map((field) => (
+                  <div key={`${section.title}-${field.label}`} className="space-y-1">
+                    <p className="text-muted-foreground">{field.label}</p>
+                    <p className="font-medium whitespace-pre-wrap">{field.value}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
         </div>
 
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
           <CollapsibleTrigger asChild>
             <Button variant="ghost" size="sm" className="w-full justify-between">
-              <span>View GP intake details</span>
+              <span>View medical review and GP attention points</span>
               {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="pt-4 space-y-3">
-            <div className="space-y-3 text-sm border-t pt-4">
-              <div>
-                <p className="text-muted-foreground">Smoking history</p>
-                <p className="font-medium">{summary.smokingHistory}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Previous cessation methods</p>
-                <p className="font-medium">{summary.previousCessation}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Medical screens</p>
-                <p className="font-medium">{summary.medicalRisk}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Current medicines/products</p>
-                <p className="font-medium whitespace-pre-wrap">{summary.medicines}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Dental/oral health</p>
-                <p className="font-medium">{summary.oralHealth}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Pouch use</p>
-                <p className="font-medium">{summary.pouchUse}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Quit/reduce timeline</p>
-                <p className="font-medium">{summary.quitPouchesTimeline}</p>
-              </div>
-
-            </div>
+            {detailSections.map((section) => (
+              <section key={section.title} className="rounded-lg border bg-muted/30 p-3 text-sm">
+                <h4 className="font-medium mb-2">{section.title}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {section.fields.map((field) => (
+                    <div key={`${section.title}-${field.label}`} className="space-y-1">
+                      <p className="text-muted-foreground">{field.label}</p>
+                      <p className="font-medium whitespace-pre-wrap">{field.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
           </CollapsibleContent>
         </Collapsible>
       </CardContent>

@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { ClipboardList } from 'lucide-react';
 import { getPatientEligibilityQuiz } from '@/services/eligibilityService';
-import { generateEligibilitySummary, type EligibilityQuizResult } from '@/types/eligibility';
+import { generateEligibilitySummarySections, type EligibilityQuizResult } from '@/types/eligibility';
 
 function DetailRow(props: { label: string; value: string }) {
   return (
@@ -49,9 +49,9 @@ export function EligibilityQuizCard(props: { patientId: string }) {
     return <Badge className="bg-primary/10 text-primary border-primary/20">Completed</Badge>;
   })();
 
-  const summary = useMemo(() => {
-    if (!result) return null;
-    return generateEligibilitySummary(result.answers);
+  const sections = useMemo(() => {
+    if (!result) return [];
+    return generateEligibilitySummarySections(result.answers, result.riskFlags || []);
   }, [result]);
 
   return (
@@ -71,7 +71,7 @@ export function EligibilityQuizCard(props: { patientId: string }) {
 
         {error && <p className="text-sm text-destructive">{error}</p>}
 
-        {result && summary ? (
+        {result ? (
           <>
             <div className="flex items-center justify-between">
               <div className="text-muted-foreground">Completed</div>
@@ -85,36 +85,16 @@ export function EligibilityQuizCard(props: { patientId: string }) {
               </div>
             ) : null}
 
-            <div className="border rounded-lg p-3 bg-muted/30">
-              <p className="text-muted-foreground mb-2">Smoking / nicotine history</p>
-              <ul className="space-y-1">
-                <DetailRow label="Age" value={summary.age} />
-                <DetailRow label="Smoker declaration" value={summary.smokerStatus} />
-                <DetailRow label="Reason for assessment" value={summary.smokingGoal} />
-                <DetailRow label="Smoking history" value={summary.smokingHistory} />
-                <DetailRow label="Previous cessation methods" value={summary.previousCessation} />
-              </ul>
-            </div>
-
-            <div className="border rounded-lg p-3 bg-muted/30">
-              <p className="text-muted-foreground mb-2">Medical / oral-health review</p>
-              <ul className="space-y-1">
-                <DetailRow label="Medical screens" value={summary.medicalRisk} />
-                <DetailRow label="Current medicines/products" value={summary.medicines} />
-                <DetailRow label="Dental/oral health" value={summary.oralHealth} />
-              </ul>
-            </div>
-
-            <div className="border rounded-lg p-3 bg-muted/30">
-              <p className="text-muted-foreground mb-2">Pouch request context</p>
-              <ul className="space-y-1">
-                <DetailRow label="Pouch history" value={summary.pouchUse} />
-                <DetailRow label="Requested strength range" value={summary.requestedPouchRange} />
-                <DetailRow label="Daily pouch quantity" value={summary.dailyPouchQuantity} />
-                <DetailRow label="Quit/reduce timeline" value={summary.quitPouchesTimeline} />
-              </ul>
-            </div>
-
+            {sections.map((section) => (
+              <div key={section.title} className="border rounded-lg p-3 bg-muted/30">
+                <p className="text-muted-foreground mb-2">{section.title}</p>
+                <ul className="space-y-1">
+                  {section.fields.map((field) => (
+                    <DetailRow key={`${section.title}-${field.label}`} label={field.label} value={field.value} />
+                  ))}
+                </ul>
+              </div>
+            ))}
           </>
         ) : (
           <p className="text-muted-foreground">No quiz results on file for this patient.</p>

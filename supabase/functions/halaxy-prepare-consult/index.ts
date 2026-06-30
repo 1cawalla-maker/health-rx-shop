@@ -69,7 +69,7 @@ serve(async (req) => {
     if (!(profile as any).phone_verified_at) throw new Error("Please verify your mobile number before booking.");
     if (!(profile as any).date_of_birth) throw new Error("Please enter your date of birth before booking.");
     if (!(profile as any).age_attested_at || (profile as any).age_attestation_version !== AGE_ATTESTATION_VERSION) {
-      throw new Error("Please confirm you are 18 or over before booking.");
+      throw new Error("Please confirm you are 21 or over before booking.");
     }
     if (
       !(profile as any).privacy_notice_accepted_at ||
@@ -78,6 +78,18 @@ serve(async (req) => {
     ) {
       throw new Error("Please accept the privacy and collection notice before booking.");
     }
+
+    const { data: linkedQuiz, error: linkedQuizError } = await supabaseAdmin
+      .from("eligibility_quiz_sessions")
+      .select("id")
+      .eq("patient_id", user.id)
+      .eq("result", "completed")
+      .order("completed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (linkedQuizError) throw new Error(linkedQuizError.message);
+    if (!linkedQuiz) throw new Error("Please complete the PouchCare intake questionnaire before booking.");
 
     // Halaxy-ready pre-GP behaviour:
     // - Do not require a public Halaxy booking URL yet because no GP may be onboarded.
@@ -116,7 +128,8 @@ serve(async (req) => {
             scaffold: true,
             minimal_halaxy_onboarding: true,
             gp_onboarding_pending: !bookingUrl,
-            halaxy_clinical_intake_owner: "halaxy",
+            halaxy_clinical_intake_owner: "pouchcare_website",
+            website_intake_quiz_session_id: (linkedQuiz as any).id,
             live_halaxy_config_present: liveConfigPresent,
           },
         })
