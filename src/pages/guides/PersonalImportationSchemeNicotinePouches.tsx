@@ -88,7 +88,7 @@ export default function GuidePersonalImportationSchemeNicotinePouches() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Button asChild size="lg">
-                <Link to="/start-consult">Start consultation</Link>
+                <Link to="/eligibility">Start consultation</Link>
               </Button>
               <Button asChild variant="outline" size="lg">
                 <Link to="/guides/zyn-australia">Read: Zyn in Australia</Link>
@@ -193,7 +193,7 @@ export default function GuidePersonalImportationSchemeNicotinePouches() {
                   clinical assessment.
                 </p>
                 <Button asChild size="lg" className="w-full sm:w-auto">
-                  <Link to="/start-consult">Start consultation</Link>
+                  <Link to="/eligibility">Start consultation</Link>
                 </Button>
               </CardContent>
             </Card>

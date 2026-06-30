@@ -545,7 +545,7 @@ export default function FAQPage() {
                 className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10"
                 asChild
               >
-                <Link to="/start-consult">
+                <Link to="/eligibility">
                   Start Consultation
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>

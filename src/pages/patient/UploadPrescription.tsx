@@ -263,7 +263,7 @@ export default function UploadPrescription() {
               </p>
             </div>
             <Button asChild variant="outline">
-              <Link to="/start-consult">
+              <Link to="/patient/start-consult">
                 <Calendar className="h-4 w-4 mr-2" />
                 Start consultation
               </Link>

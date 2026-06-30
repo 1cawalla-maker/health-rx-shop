@@ -255,7 +255,7 @@ export default function FAQ() {
                   </Link>
                 </Button>
                 <Button variant="outline" size="lg" asChild>
-                  <Link to="/start-consult">
+                  <Link to="/eligibility">
                     Start Consultation
                   </Link>
                 </Button>

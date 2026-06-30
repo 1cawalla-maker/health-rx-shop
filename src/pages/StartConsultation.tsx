@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import Seo from "@/components/seo/Seo";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -26,8 +26,6 @@ export default function StartConsultation() {
       setPreparing(true);
       setError(null);
       try {
-        // Recover the old/new browser-stored quiz handoff for patients who
-        // completed intake before account creation or before this page loaded.
         if (getQuizFromSession()) {
           await persistQuizToProfile(user.id);
         }
@@ -53,28 +51,7 @@ export default function StartConsultation() {
   }, [loading, user]);
 
   if (!loading && !user) {
-    return (
-      <PublicLayout>
-        <Seo title="Start Consultation" description="Start your PouchCare pre-consultation intake." canonicalPath="/start-consult" noIndex />
-        <section className="py-16 md:py-24 gradient-section min-h-[70vh]">
-          <div className="container max-w-2xl">
-            <Card>
-              <CardHeader className="text-center">
-                <CardTitle className="text-2xl">Start your consultation request</CardTitle>
-                <CardDescription>
-                  Complete the pre-consultation questionnaire first, then create your account and continue to booking.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex justify-center">
-                <Button asChild size="lg">
-                  <Link to="/eligibility">Start questionnaire</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
-      </PublicLayout>
-    );
+    return <Navigate to="/phone-login?role=patient&next=/patient/start-consult" replace />;
   }
 
   return (

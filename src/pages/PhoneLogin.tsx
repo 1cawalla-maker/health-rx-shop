@@ -654,7 +654,7 @@ export default function PhoneLogin() {
                       </p>
                       <p>
                         Need a prescription?{" "}
-                        <Link className="underline" to="/start-consult">
+                        <Link className="underline" to="/eligibility">
                           Start a consult
                         </Link>
                       </p>

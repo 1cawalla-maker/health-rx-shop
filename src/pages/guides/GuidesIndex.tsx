@@ -111,7 +111,7 @@ export default function GuidesIndex() {
               “are Zyns legal in Australia”.
             </p>
             <p className="text-muted-foreground">
-              Want the fastest start? <Link className="text-primary underline underline-offset-4" to="/start-consult">Start a consultation</Link>.
+              Want the fastest start? <Link className="text-primary underline underline-offset-4" to="/eligibility">Start a consultation</Link>.
             </p>
           </header>
 

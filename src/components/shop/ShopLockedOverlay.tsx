@@ -24,7 +24,7 @@ export function ShopLockedOverlay() {
             </Link>
           </Button>
           <Button asChild variant="outline" className="w-full" size="lg">
-            <Link to="/start-consult">
+            <Link to="/patient/start-consult">
               <Calendar className="h-4 w-4 mr-2" />
               Need a prescription? Start consultation
             </Link>

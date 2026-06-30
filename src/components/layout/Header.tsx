@@ -41,7 +41,7 @@ export function Header() {
           <Link to="/phone-login" onClick={() => isMobile && setIsMenuOpen(false)}>Log in</Link>
         </Button>
         <Button asChild className={isMobile ? "w-full" : undefined}>
-          <Link to="/start-consult" onClick={() => isMobile && setIsMenuOpen(false)}>Start consult</Link>
+          <Link to="/eligibility" onClick={() => isMobile && setIsMenuOpen(false)}>Start consult</Link>
         </Button>
       </>
     );

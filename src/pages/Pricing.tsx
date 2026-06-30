@@ -100,7 +100,7 @@ export default function Pricing() {
                     ))}
                   </ul>
                   <Button variant="hero" size="lg" className="w-full" asChild>
-                    <Link to="/start-consult">
+                    <Link to="/eligibility">
                       Book Consultation
                       <ArrowRight className="h-5 w-5" />
                     </Link>
@@ -244,7 +244,7 @@ export default function Pricing() {
 
           <div className="max-w-4xl mx-auto mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button variant="hero" size="lg" asChild>
-              <Link to="/start-consult">
+              <Link to="/eligibility">
                 Start Consultation
                 <ArrowRight className="h-5 w-5" />
               </Link>
