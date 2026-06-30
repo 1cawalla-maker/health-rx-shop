@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Stethoscope } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { getQuizFromSession, persistQuizToProfile } from "@/services/eligibilityService";
 import { halaxyConsultationService } from "@/services/halaxyConsultationService";
 import type { PrepareHalaxyConsultResponse } from "@/types/halaxy";
 
@@ -25,6 +26,12 @@ export default function StartConsultation() {
       setPreparing(true);
       setError(null);
       try {
+        // Recover the old/new browser-stored quiz handoff for patients who
+        // completed intake before account creation or before this page loaded.
+        if (getQuizFromSession()) {
+          await persistQuizToProfile(user.id);
+        }
+
         const res = await halaxyConsultationService.prepareConsult();
         if (cancelled) return;
         setResponse(res);
@@ -113,9 +120,12 @@ export default function StartConsultation() {
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 {error ? (
-                  <Button asChild>
-                    <Link to="/eligibility">Complete questionnaire</Link>
-                  </Button>
+                  <>
+                    <Button onClick={() => window.location.reload()}>Try again</Button>
+                    <Button asChild variant="outline">
+                      <Link to="/eligibility">Complete questionnaire</Link>
+                    </Button>
+                  </>
                 ) : null}
                 <Button asChild variant="outline">
                   <Link to="/patient/dashboard">Go to dashboard</Link>
