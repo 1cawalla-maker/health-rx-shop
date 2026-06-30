@@ -7,8 +7,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const PRIVACY_POLICY_VERSION = "2026-06-18-minimal-halaxy-consult";
-const COLLECTION_NOTICE_VERSION = "2026-06-18-minimal-halaxy-consult";
 const AGE_ATTESTATION_VERSION = "2026-06-18-adult-only";
 
 const logStep = (step: string, details?: unknown) => {
@@ -73,8 +71,8 @@ serve(async (req) => {
     }
     if (
       !(profile as any).privacy_notice_accepted_at ||
-      (profile as any).privacy_policy_version !== PRIVACY_POLICY_VERSION ||
-      (profile as any).collection_notice_version !== COLLECTION_NOTICE_VERSION
+      !(profile as any).privacy_policy_version ||
+      !(profile as any).collection_notice_version
     ) {
       throw new Error("Please accept the privacy and collection notice before booking.");
     }
@@ -126,7 +124,7 @@ serve(async (req) => {
           booking_return_token: crypto.randomUUID(),
           booking_metadata: {
             scaffold: true,
-            minimal_halaxy_onboarding: true,
+            website_first_intake: true,
             gp_onboarding_pending: !bookingUrl,
             halaxy_clinical_intake_owner: "pouchcare_website",
             website_intake_quiz_session_id: (linkedQuiz as any).id,
