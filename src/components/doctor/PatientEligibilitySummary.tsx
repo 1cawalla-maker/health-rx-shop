@@ -124,10 +124,7 @@ export function PatientEligibilitySummary({ patientId }: PatientEligibilitySumma
                 <p className="text-muted-foreground">Quit/reduce timeline</p>
                 <p className="font-medium">{summary.quitPouchesTimeline}</p>
               </div>
-              <div className="pt-2 border-t">
-                <p className="text-muted-foreground mb-1">Acknowledgements</p>
-                <p className="font-medium">{summary.acknowledgements}</p>
-              </div>
+
             </div>
           </CollapsibleContent>
         </Collapsible>

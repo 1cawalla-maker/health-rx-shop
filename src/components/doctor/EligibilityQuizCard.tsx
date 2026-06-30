@@ -5,10 +5,6 @@ import { ClipboardList } from 'lucide-react';
 import { getPatientEligibilityQuiz } from '@/services/eligibilityService';
 import { generateEligibilitySummary, type EligibilityQuizResult } from '@/types/eligibility';
 
-function yesNo(value: unknown): string {
-  return value === true ? 'Yes' : value === false ? 'No' : '—';
-}
-
 function DetailRow(props: { label: string; value: string }) {
   return (
     <li className="flex justify-between gap-3">
@@ -119,13 +115,6 @@ export function EligibilityQuizCard(props: { patientId: string }) {
               </ul>
             </div>
 
-            <div className="border rounded-lg p-3 bg-muted/30">
-              <p className="text-muted-foreground mb-2">Acknowledgements</p>
-              <ul className="space-y-1">
-                <DetailRow label="Declarations" value={summary.acknowledgements} />
-                <DetailRow label="Collection notice" value={yesNo(result.answers.collection_notice_acknowledged)} />
-              </ul>
-            </div>
           </>
         ) : (
           <p className="text-muted-foreground">No quiz results on file for this patient.</p>
