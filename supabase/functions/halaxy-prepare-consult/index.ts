@@ -15,12 +15,47 @@ const logStep = (step: string, details?: unknown) => {
 };
 
 
-function withPouchCareReturnParams(bookingUrl: string | null, consultationId: string, returnToken: string | null): string | null {
+function splitName(fullName: string | null | undefined): { given: string | null; family: string | null } {
+  const parts = String(fullName || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { given: null, family: null };
+  if (parts.length === 1) return { given: parts[0], family: null };
+  return { given: parts.slice(0, -1).join(" "), family: parts[parts.length - 1] };
+}
+
+function normalisePhone(phone: string | null | undefined): string | null {
+  const value = String(phone || "").trim();
+  return value || null;
+}
+
+function setIfPresent(url: URL, keys: string[], value: string | null | undefined) {
+  const clean = String(value || "").trim();
+  if (!clean) return;
+  for (const key of keys) url.searchParams.set(key, clean);
+}
+
+function withPouchCareReturnParams(
+  bookingUrl: string | null,
+  consultationId: string,
+  returnToken: string | null,
+  profile?: Record<string, any> | null,
+): string | null {
   if (!bookingUrl) return null;
   try {
     const url = new URL(bookingUrl);
-    url.searchParams.set('pouchcare_consultation_id', consultationId);
-    if (returnToken) url.searchParams.set('booking_return_token', returnToken);
+    url.searchParams.set("pouchcare_consultation_id", consultationId);
+    if (returnToken) url.searchParams.set("booking_return_token", returnToken);
+
+    // Halaxy does not clearly document public-booking prefill query params.
+    // Include common patient identity aliases so supported fields can prefill,
+    // while unsupported params are harmlessly ignored by Halaxy.
+    const { given, family } = splitName(profile?.full_name);
+    const phone = normalisePhone(profile?.phone);
+    setIfPresent(url, ["name", "fullName", "patientName"], profile?.full_name);
+    setIfPresent(url, ["given", "firstName", "givenName"], given);
+    setIfPresent(url, ["family", "lastName", "familyName", "surname"], family);
+    setIfPresent(url, ["email", "patientEmail"], profile?.email);
+    setIfPresent(url, ["phone", "mobile", "patientPhone"], phone);
+    setIfPresent(url, ["birthdate", "dateOfBirth", "dob"], profile?.date_of_birth);
     return url.toString();
   } catch {
     return bookingUrl;
@@ -55,7 +90,7 @@ serve(async (req) => {
 
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
-      .select("user_id, full_name, phone, phone_verified_at, date_of_birth, shipping_address_line1, shipping_address_line2, shipping_suburb, shipping_state, shipping_postcode, shipping_country, halaxy_patient_id, age_attested_at, age_attestation_version, privacy_notice_accepted_at, privacy_policy_version, collection_notice_version")
+      .select("user_id, full_name, email, phone, phone_verified_at, date_of_birth, shipping_address_line1, shipping_address_line2, shipping_suburb, shipping_state, shipping_postcode, shipping_country, halaxy_patient_id, age_attested_at, age_attestation_version, privacy_notice_accepted_at, privacy_policy_version, collection_notice_version")
       .eq("user_id", user.id)
       .maybeSingle();
 
@@ -142,6 +177,7 @@ serve(async (req) => {
       (consultation as any).halaxy_booking_url ?? bookingUrl,
       (consultation as any).id,
       (consultation as any).booking_return_token ?? null,
+      profile as any,
     );
 
     if (consultationBookingUrl && consultationBookingUrl !== (consultation as any).halaxy_booking_url) {
