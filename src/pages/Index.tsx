@@ -111,8 +111,8 @@ export default function Index() {
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up animation-delay-200">
-              <Button variant="hero" size="xl" disabled>
-                Consultations coming soon
+              <Button variant="hero" size="xl" asChild>
+                <Link to="/eligibility">Start consultation</Link>
               </Button>
               <Button variant="hero-outline" size="xl" asChild>
                 <Link to="/phone-login">Log In</Link>
@@ -152,7 +152,7 @@ export default function Index() {
               Already have a prescription?
             </h2>
             <p className="text-lg text-muted-foreground">
-              Choose the path that matches where you are now. Existing prescriptions can be uploaded for review. New consultation requests are coming soon.
+              Choose the path that matches where you are now. Existing prescriptions can be uploaded for review, or you can complete the pre-consultation intake to request a new consultation.
             </p>
           </div>
 
@@ -190,10 +190,10 @@ export default function Index() {
               </div>
               <h3 className="font-display text-2xl font-bold text-foreground mb-3">I need a prescription</h3>
               <p className="text-muted-foreground mb-5">
-                New consultation requests are coming soon. A prescription is not guaranteed and depends on the doctor's assessment.
+                Complete the pre-consultation intake, create a patient account, and request a GP review. A prescription is not guaranteed and depends on the doctor's assessment.
               </p>
-              <Button variant="outline" size="lg" className="w-full sm:w-auto" disabled>
-                Consultations coming soon
+              <Button variant="outline" size="lg" className="w-full sm:w-auto" asChild>
+                <Link to="/eligibility">Start consultation</Link>
               </Button>
             </div>
           </div>
