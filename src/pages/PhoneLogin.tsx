@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { getDashboardPathForRole } from "@/lib/roleRoutes";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDobForStorage, validateDob } from "@/lib/validation";
+import { getQuizFromSession, persistQuizToProfile } from "@/services/eligibilityService";
 
 const PRIVACY_POLICY_VERSION = "2026-06-18-existing-prescription-upload";
 const COLLECTION_NOTICE_VERSION = "2026-06-18-existing-prescription-upload";
@@ -138,6 +139,14 @@ export default function PhoneLogin() {
     if ((data as any)?.error) throw new Error((data as any).error);
   };
 
+  const linkPendingQuizSession = async (userId: string) => {
+    if (!getQuizFromSession()) return;
+    const linked = await persistQuizToProfile(userId);
+    if (!linked) {
+      throw new Error("Your questionnaire was completed, but could not be linked to your patient account. Please contact support before continuing.");
+    }
+  };
+
   const savePatientAccount = async (userId: string, phoneE164: string) => {
     const now = new Date().toISOString();
 
@@ -227,6 +236,7 @@ export default function PhoneLogin() {
           typeof (user as any).phone === "string" ? (user as any).phone : "";
         if (existingPhone === phoneE164) {
           await savePatientAccount(user.id, phoneE164);
+          await linkPendingQuizSession(user.id);
           const path =
             nextPath ||
             getDashboardPathForRole("patient") ||
@@ -394,6 +404,10 @@ export default function PhoneLogin() {
         throw new Error("This account is not approved yet.");
       if (requestedRole && roleRow.role !== requestedRole)
         throw new Error(`This mobile is not registered as a ${requestedRole}.`);
+
+      if (roleRow.role === "patient") {
+        await linkPendingQuizSession(userId);
+      }
 
       const path = nextPath || getDashboardPathForRole(roleRow.role) || "/";
       window.location.assign(path);
