@@ -1,92 +1,141 @@
 // Eligibility Quiz Types
 
-export const ELIGIBILITY_COLLECTION_NOTICE_VERSION = '2026-05-22-v1';
+export const ELIGIBILITY_COLLECTION_NOTICE_VERSION = '2026-06-30-pouch-intake-v1';
 export const ELIGIBILITY_PRIVACY_POLICY_VERSION = '2026-05-22-v1';
 
-export type NicotineUseType =
-  | 'cigarettes'
-  | 'nicotine_vaping'
-  | 'nicotine_pouches'
-  | 'oral_nrt'
-  | 'no_nicotine';
+export type AgeConfirmation = 'over_21' | 'under_21';
 
-export type PreviousNRTUse =
-  | 'yes_helpful'
-  | 'yes_not_helpful'
-  | 'no';
+export type SmokerDeclaration = 'current_smoker' | 'previous_smoker' | 'never_smoked';
 
-export type PreferredCessationProduct =
-  | 'nicotine_pouches'
-  | 'oral_nrt'
+export type SmokingCessationIntention =
+  | 'quit_smoking'
+  | 'reduce_smoking'
+  | 'stay_off_smoking'
+  | 'stop_reduce_vaping'
+  | 'discuss_pouches'
+  | 'not_sure_doctor_guidance';
+
+export type CigarettesPerDay =
+  | 'current_1_5'
+  | 'current_6_10'
+  | 'current_11_20'
+  | 'current_21_40'
+  | 'current_more_than_40'
+  | 'ex_1_5'
+  | 'ex_6_10'
+  | 'ex_11_20'
+  | 'ex_21_40'
+  | 'ex_more_than_40'
+  | 'not_sure';
+
+export type YearsSmoked = 'less_than_1' | '1_5' | '6_10' | '11_20' | 'more_than_20' | 'not_sure';
+
+export type LastTobaccoUse =
+  | 'today'
+  | 'past_week'
+  | 'past_1_4_weeks'
+  | '1_6_months'
+  | '6_12_months'
+  | '1_2_years'
+  | '2_5_years'
+  | 'more_than_5_years'
+  | 'not_sure';
+
+export type QuitAttempts = 'none' | '1_2' | '3_5' | '6_10' | 'more_than_10' | 'not_sure';
+
+export type PreviousCessationMethod =
+  | 'cold_turkey'
+  | 'quitline'
+  | 'counselling_behavioural_support'
   | 'nicotine_patches'
-  | 'prescription_medicine'
-  | 'not_sure'
+  | 'nicotine_gum'
+  | 'nicotine_lozenges'
+  | 'nicotine_mouth_spray'
+  | 'nicotine_inhalator'
+  | 'combination_nrt'
+  | 'varenicline_champix'
+  | 'bupropion_zyban'
+  | 'nicotine_vaping_product'
+  | 'nicotine_pouches'
+  | 'none_tried'
   | 'other';
 
-export type MedicalSafetyFlag =
-  | 'heart_stroke_blood_vessel'
-  | 'uncontrolled_bp'
-  | 'lung_disease_breathing'
-  | 'seizures_epilepsy'
-  | 'mental_health_severe'
-  | 'diabetes_kidney_liver_serious'
-  | 'pregnant_breastfeeding'
-  | 'prefer_discuss'
-  | 'none';
+export type RecentCardioScreen = 'no_conditions' | 'stable_controlled' | 'recent_or_uncontrolled' | 'not_sure' | 'prefer_discuss';
+export type RecentLungScreen = 'no_condition' | 'stable_controlled' | 'recent_or_uncontrolled' | 'not_sure' | 'prefer_discuss';
+export type PregnancyBreastfeedingScreen = 'pregnant' | 'trying_to_conceive' | 'breastfeeding' | 'none' | 'not_applicable';
 
-export type AgeConfirmation =
-  | 'over_18'
-  | 'under_18';
-
-export type CurrentMedicationUse = 'no' | 'yes';
 export type AllergyReactionAnswer = 'no' | 'yes' | 'not_sure';
 
-export type CurrentPouchStrength =
-  | '3mg'
-  | '6mg'
-  | '9mg'
-  | '12mg'
-  | 'other'
+export type DentalGumHealth =
+  | 'good_seen_dentist_12_months'
+  | 'good_not_seen_dentist_12_months'
+  | 'poor_seen_dentist_12_months'
+  | 'poor_not_seen_dentist_12_months'
   | 'not_sure';
 
-export type CurrentPouchDailyUse =
-  | '1_5'
-  | '6_10'
-  | '11_20'
-  | 'more_than_20'
+export type OralHealthIssue =
+  | 'mouth_ulcers_sores_cuts_bleeding'
+  | 'gum_disease_or_dental_infection'
+  | 'severe_tooth_pain'
+  | 'unexplained_mouth_or_throat_pain'
+  | 'patches_lumps_swelling_numbness_non_healing'
+  | 'recent_dental_or_oral_surgery'
+  | 'swallowing_or_choking_risk'
+  | 'none'
   | 'not_sure';
 
-export type OralHealthScreenAnswer = 'no' | 'yes' | 'not_sure';
+export type PouchDuration = 'new_to_pouches' | 'days_to_weeks' | 'months_to_1_year' | '1_2_years' | 'more_than_2_years' | 'never_used';
+export type PouchHelpfulness = 'yes_helpful' | 'somewhat_helpful' | 'not_helpful' | 'not_sure' | 'not_tried_yet';
 
-export type OralNicotineReactionAnswer =
-  | 'no'
-  | 'yes'
-  | 'not_sure'
-  | 'never_used';
+export type PouchStrength = '3mg' | '6mg' | '9mg' | '12mg' | 'other' | 'not_sure_doctor_advise';
+export type DailyPouchQuantity = 'zero_unsure' | '1_5' | '6_10' | '11_20' | 'more_than_20' | 'not_sure';
+
+export type PrescriptionTimingAcknowledgement = 'understand_no_backdating';
+
+export type QuitPouchesTimeline = 'within_3_months' | 'within_6_months' | 'within_12_months' | 'yes_not_sure_when' | 'no_not_currently' | 'discuss_with_doctor';
+
+export type PersonalUseDeclaration = 'confirm' | 'do_not_confirm';
+export type PatientAuthorityDeclaration = 'confirm' | 'not_applicable';
 
 export interface EligibilityAnswers {
   collection_notice_acknowledged: boolean;
   collection_notice_version: string;
   privacy_policy_version: string;
-  nicotine_use: NicotineUseType[];
-  current_pouch_strength?: CurrentPouchStrength;
-  current_pouch_strength_other?: string;
-  current_pouch_daily_use?: CurrentPouchDailyUse;
-  previous_nrt_use: PreviousNRTUse;
-  preferred_cessation_product: PreferredCessationProduct;
-  preferred_cessation_product_other?: string;
-  medical_safety: MedicalSafetyFlag[];
+
+  age_confirmation: AgeConfirmation;
+  smoker_declaration: SmokerDeclaration;
+  smoking_cessation_intention: SmokingCessationIntention;
+  cigarettes_per_day: CigarettesPerDay;
+  years_smoked: YearsSmoked;
+  last_tobacco_use: LastTobaccoUse;
+  quit_attempts: QuitAttempts;
+  previous_cessation_methods: PreviousCessationMethod[];
+  previous_cessation_methods_other?: string;
+
+  recent_cardio_screen: RecentCardioScreen;
+  recent_lung_screen: RecentLungScreen;
+  pregnancy_breastfeeding_screen: PregnancyBreastfeedingScreen;
+  medical_conditions: string;
+  current_medications: string;
   allergies_reactions: AllergyReactionAnswer;
   allergies_reactions_details?: string;
-  oral_current_issues: OralHealthScreenAnswer;
-  oral_unusual_changes: OralHealthScreenAnswer;
-  oral_recent_dental_work: OralHealthScreenAnswer;
-  oral_nicotine_reaction: OralNicotineReactionAnswer;
-  oral_swallowing_choking_risk: OralHealthScreenAnswer;
-  current_medications: CurrentMedicationUse;
-  current_medications_details?: string;
-  age_confirmation: AgeConfirmation;
-  import_compliance_acknowledgement: boolean;
+
+  dental_gum_health: DentalGumHealth;
+  oral_health_issues: OralHealthIssue[];
+
+  pouch_duration: PouchDuration;
+  pouch_helpfulness: PouchHelpfulness;
+  pouch_max_strength: PouchStrength;
+  pouch_max_strength_other?: string;
+  pouch_min_strength: PouchStrength;
+  pouch_min_strength_other?: string;
+  daily_pouch_quantity: DailyPouchQuantity;
+  prescription_timing_acknowledgement: PrescriptionTimingAcknowledgement;
+  quit_pouches_timeline: QuitPouchesTimeline;
+
+  personal_use_declaration: PersonalUseDeclaration;
+  patient_authority_declaration: PatientAuthorityDeclaration;
+  final_truth_accuracy_contact_consent: boolean;
 }
 
 export type EligibilityQuizResultStatus = 'completed';
@@ -102,29 +151,13 @@ export interface EligibilityQuizResult {
 }
 
 export interface EligibilityQuizQuestion {
-  id: keyof Pick<
-    EligibilityAnswers,
-    | 'nicotine_use'
-    | 'current_pouch_strength'
-    | 'current_pouch_daily_use'
-    | 'previous_nrt_use'
-    | 'preferred_cessation_product'
-    | 'medical_safety'
-    | 'allergies_reactions'
-    | 'oral_current_issues'
-    | 'oral_unusual_changes'
-    | 'oral_recent_dental_work'
-    | 'oral_nicotine_reaction'
-    | 'oral_swallowing_choking_risk'
-    | 'current_medications'
-    | 'age_confirmation'
-  >;
+  id: keyof EligibilityAnswers;
   question: string;
   description?: string;
-  inputType?: 'single' | 'multi';
+  inputType?: 'single' | 'multi' | 'text';
   exclusiveOptions?: string[];
   showWhen?: (answers: Partial<EligibilityAnswers>) => boolean;
-  options: {
+  options?: {
     value: string;
     label: string;
     flag?: 'warning' | 'block';
@@ -134,99 +167,253 @@ export interface EligibilityQuizQuestion {
     textAnswerKey?: keyof EligibilityAnswers;
     textRequired?: boolean;
   }[];
+  textInputLabel?: string;
+  textInputPlaceholder?: string;
+  textRequired?: boolean;
 }
 
-// Summary for doctor view
 export interface EligibilitySummary {
-  currentUse: string;
-  priorNRTUse: string;
-  safetyFlags: string;
-  pouchStrength: string;
-  pouchDailyUse: string;
-  preferredProduct: string;
-  medications: string;
+  age: string;
+  smokerStatus: string;
+  smokingGoal: string;
+  smokingHistory: string;
+  previousCessation: string;
+  medicalRisk: string;
+  medicines: string;
+  oralHealth: string;
+  pouchUse: string;
+  requestedPouchRange: string;
+  dailyPouchQuantity: string;
+  quitPouchesTimeline: string;
+  acknowledgements: string;
+}
+
+export const eligibilityAnswerLabels = {
+  age_confirmation: {
+    over_21: 'Yes, I am 21 years or older',
+    under_21: 'No, I am under 21'
+  },
+  smoker_declaration: {
+    current_smoker: 'Yes, I currently smoke cigarettes',
+    previous_smoker: 'Yes, I previously smoked cigarettes',
+    never_smoked: 'No, I have never smoked cigarettes'
+  },
+  smoking_cessation_intention: {
+    quit_smoking: 'I want to quit smoking',
+    reduce_smoking: 'I want to reduce smoking',
+    stay_off_smoking: 'I have already quit smoking and want help staying off cigarettes',
+    stop_reduce_vaping: 'I want to stop or reduce vaping',
+    discuss_pouches: 'I want to discuss nicotine pouches as part of smoking cessation',
+    not_sure_doctor_guidance: 'I am not sure and want doctor guidance'
+  },
+  cigarettes_per_day: {
+    current_1_5: 'Current smoker: 1–5 cigarettes/day',
+    current_6_10: 'Current smoker: 6–10 cigarettes/day',
+    current_11_20: 'Current smoker: 11–20 cigarettes/day',
+    current_21_40: 'Current smoker: 21–40 cigarettes/day',
+    current_more_than_40: 'Current smoker: more than 40 cigarettes/day',
+    ex_1_5: 'Ex-smoker: 1–5 cigarettes/day',
+    ex_6_10: 'Ex-smoker: 6–10 cigarettes/day',
+    ex_11_20: 'Ex-smoker: 11–20 cigarettes/day',
+    ex_21_40: 'Ex-smoker: 21–40 cigarettes/day',
+    ex_more_than_40: 'Ex-smoker: more than 40 cigarettes/day',
+    not_sure: 'Not sure'
+  },
+  years_smoked: {
+    less_than_1: 'Less than 1 year',
+    '1_5': '1–5 years',
+    '6_10': '6–10 years',
+    '11_20': '11–20 years',
+    more_than_20: 'More than 20 years',
+    not_sure: 'Not sure'
+  },
+  last_tobacco_use: {
+    today: 'Today',
+    past_week: 'Within the past week',
+    past_1_4_weeks: 'Within the past 1–4 weeks',
+    '1_6_months': '1–6 months ago',
+    '6_12_months': '6–12 months ago',
+    '1_2_years': '1–2 years ago',
+    '2_5_years': '2–5 years ago',
+    more_than_5_years: 'More than 5 years ago',
+    not_sure: 'Not sure'
+  },
+  quit_attempts: {
+    none: 'I have not tried before',
+    '1_2': '1–2 times',
+    '3_5': '3–5 times',
+    '6_10': '6–10 times',
+    more_than_10: 'More than 10 times',
+    not_sure: 'Not sure'
+  },
+  previous_cessation_methods: {
+    cold_turkey: 'Cold turkey',
+    quitline: 'Quitline',
+    counselling_behavioural_support: 'Counselling, psychologist, or behavioural support',
+    nicotine_patches: 'Nicotine patches',
+    nicotine_gum: 'Nicotine gum',
+    nicotine_lozenges: 'Nicotine lozenges',
+    nicotine_mouth_spray: 'Nicotine mouth spray',
+    nicotine_inhalator: 'Nicotine inhalator',
+    combination_nrt: 'Combination nicotine replacement therapy',
+    varenicline_champix: 'Varenicline / Champix',
+    bupropion_zyban: 'Bupropion / Zyban',
+    nicotine_vaping_product: 'Nicotine vaping product',
+    nicotine_pouches: 'Nicotine pouches',
+    none_tried: 'I have not tried any cessation methods before',
+    other: 'Other'
+  },
+  recent_cardio_screen: {
+    no_conditions: 'No, I do not have these conditions',
+    stable_controlled: 'No, I have one of these conditions but it is stable/well controlled',
+    recent_or_uncontrolled: 'Yes, I have had one of these issues recently or it is not well controlled',
+    not_sure: 'Not sure',
+    prefer_discuss: 'Prefer to discuss with doctor'
+  },
+  recent_lung_screen: {
+    no_condition: 'No, I do not have this',
+    stable_controlled: 'No, I have a lung condition but it is stable/well controlled',
+    recent_or_uncontrolled: 'Yes, I have had recent or uncontrolled symptoms',
+    not_sure: 'Not sure',
+    prefer_discuss: 'Prefer to discuss with doctor'
+  },
+  pregnancy_breastfeeding_screen: {
+    pregnant: 'I am pregnant',
+    trying_to_conceive: 'I am trying to become pregnant',
+    breastfeeding: 'I am breastfeeding',
+    none: 'None of the above',
+    not_applicable: 'Not applicable'
+  },
+  allergies_reactions: {
+    no: 'No',
+    yes: 'Yes — I will provide details',
+    not_sure: 'Not sure'
+  },
+  dental_gum_health: {
+    good_seen_dentist_12_months: 'Good dental/gum health and seen dentist in past 12 months',
+    good_not_seen_dentist_12_months: 'Good dental/gum health but not seen dentist in past 12 months',
+    poor_seen_dentist_12_months: 'Poor dental/gum health and seen dentist in past 12 months',
+    poor_not_seen_dentist_12_months: 'May have poor dental/gum health and not seen dentist in past 12 months',
+    not_sure: 'Not sure'
+  },
+  oral_health_issues: {
+    mouth_ulcers_sores_cuts_bleeding: 'Mouth ulcers, sores, cuts, or bleeding gums',
+    gum_disease_or_dental_infection: 'Gum disease or dental infection',
+    severe_tooth_pain: 'Severe tooth pain',
+    unexplained_mouth_or_throat_pain: 'Unexplained mouth or throat pain',
+    patches_lumps_swelling_numbness_non_healing: 'White/red patches, lumps, swelling, numbness, or non-healing areas in the mouth',
+    recent_dental_or_oral_surgery: 'Recent dental/oral surgery, tooth extraction, or gum treatment',
+    swallowing_or_choking_risk: 'Difficulty swallowing or choking risk',
+    none: 'None of the above',
+    not_sure: 'Not sure'
+  },
+  pouch_duration: {
+    new_to_pouches: 'I am completely new to nicotine pouches',
+    days_to_weeks: 'A few days to weeks',
+    months_to_1_year: 'A few months to 1 year',
+    '1_2_years': '1–2 years',
+    more_than_2_years: 'More than 2 years',
+    never_used: 'I have never used nicotine pouches before'
+  },
+  pouch_helpfulness: {
+    yes_helpful: 'Yes, they have been helpful',
+    somewhat_helpful: 'Somewhat helpful',
+    not_helpful: 'No, they have not been helpful',
+    not_sure: 'I am not sure',
+    not_tried_yet: 'I have not tried them yet'
+  },
+  pouch_strength: {
+    '3mg': '3mg per pouch',
+    '6mg': '6mg per pouch',
+    '9mg': '9mg per pouch',
+    '12mg': '12mg per pouch',
+    other: 'Other',
+    not_sure_doctor_advise: 'Not sure / doctor to advise'
+  },
+  daily_pouch_quantity: {
+    zero_unsure: '0 — I have not used them before / unsure',
+    '1_5': '1–5 per day',
+    '6_10': '6–10 per day',
+    '11_20': '11–20 per day',
+    more_than_20: 'More than 20 per day',
+    not_sure: 'Not sure'
+  },
+  prescription_timing_acknowledgement: {
+    understand_no_backdating: 'I understand prescriptions cannot be backdated'
+  },
+  quit_pouches_timeline: {
+    within_3_months: 'Yes, within the next 3 months',
+    within_6_months: 'Yes, within the next 6 months',
+    within_12_months: 'Yes, within the next 12 months',
+    yes_not_sure_when: 'Yes, but I am not sure when',
+    no_not_currently: 'No, not currently',
+    discuss_with_doctor: 'I want to discuss this with the doctor'
+  },
+  personal_use_declaration: {
+    confirm: 'I confirm',
+    do_not_confirm: 'I do not confirm'
+  },
+  patient_authority_declaration: {
+    confirm: 'I confirm',
+    not_applicable: 'Not applicable'
+  }
+} as const;
+
+function labelFromMap<T extends string>(map: Record<string, string>, value?: T): string {
+  if (!value) return 'Not specified';
+  return map[value] || value;
+}
+
+function labelArray(map: Record<string, string>, values?: string[], otherText?: string): string {
+  if (!values?.length) return 'Not specified';
+  return values.map(value => value === 'other' && otherText ? `Other: ${otherText}` : map[value] || value).join(', ');
+}
+
+function pouchStrengthLabel(value?: PouchStrength, other?: string): string {
+  if (value === 'other' && other) return `Other: ${other}`;
+  return labelFromMap(eligibilityAnswerLabels.pouch_strength, value);
 }
 
 export function generateEligibilitySummary(answers: EligibilityAnswers): EligibilitySummary {
-  const nicotineUseLabels: Record<NicotineUseType, string> = {
-    cigarettes: 'Cigarettes',
-    nicotine_vaping: 'Nicotine vaping',
-    nicotine_pouches: 'Nicotine pouches',
-    oral_nrt: 'Nicotine replacement therapy (gum, lozenges, spray or similar)',
-    no_nicotine: 'No current nicotine use'
-  };
-
-  const nrtLabels: Record<PreviousNRTUse, string> = {
-    yes_helpful: 'Tried, helpful',
-    yes_not_helpful: 'Tried, not helpful',
-    no: 'No prior NRT use'
-  };
-
-  const pouchStrengthLabels: Record<CurrentPouchStrength, string> = {
-    '3mg': '3 mg',
-    '6mg': '6 mg',
-    '9mg': '9 mg',
-    '12mg': '12 mg',
-    other: 'Other strength',
-    not_sure: 'Not sure'
-  };
-
-  const pouchDailyUseLabels: Record<CurrentPouchDailyUse, string> = {
-    '1_5': '1–5 pouches/day',
-    '6_10': '6–10 pouches/day',
-    '11_20': '11–20 pouches/day',
-    more_than_20: 'More than 20 pouches/day',
-    not_sure: 'Not sure'
-  };
-
-  const safetyLabels: Record<MedicalSafetyFlag, string> = {
-    heart_stroke_blood_vessel: 'Heart disease, stroke, blood vessel disease, or recent heart event',
-    uncontrolled_bp: 'Uncontrolled high blood pressure',
-    lung_disease_breathing: 'Significant lung disease or severe breathing symptoms',
-    seizures_epilepsy: 'Seizures or epilepsy',
-    mental_health_severe: 'Significant mental-health history or current severe symptoms',
-    diabetes_kidney_liver_serious: 'Diabetes, kidney/liver disease, or another serious condition',
-    pregnant_breastfeeding: 'Pregnant or breastfeeding',
-    prefer_discuss: 'Prefer to discuss with the doctor',
-    none: 'None declared'
-  };
-
-  const preferredProductLabels: Record<PreferredCessationProduct, string> = {
-    nicotine_pouches: 'Nicotine pouches',
-    oral_nrt: 'Nicotine replacement therapy such as gum, lozenges or spray',
-    nicotine_patches: 'Nicotine patches',
-    prescription_medicine: 'Prescription medicine to help stop smoking/vaping',
-    not_sure: 'Not sure — wants doctor guidance',
-    other: 'Other'
-  };
+  const labels = eligibilityAnswerLabels;
+  const medicalFlags = [
+    labelFromMap(labels.recent_cardio_screen, answers.recent_cardio_screen),
+    labelFromMap(labels.recent_lung_screen, answers.recent_lung_screen),
+    labelFromMap(labels.pregnancy_breastfeeding_screen, answers.pregnancy_breastfeeding_screen),
+    answers.allergies_reactions === 'yes'
+      ? `Allergies/reactions: ${answers.allergies_reactions_details || 'Yes — details not provided'}`
+      : `Allergies/reactions: ${labelFromMap(labels.allergies_reactions, answers.allergies_reactions)}`,
+    `Conditions: ${answers.medical_conditions || 'Not specified'}`
+  ];
 
   return {
-    currentUse: answers.nicotine_use?.length
-      ? answers.nicotine_use.map(use => nicotineUseLabels[use] || use).join(', ')
-      : 'Not specified',
-    priorNRTUse: nrtLabels[answers.previous_nrt_use] || 'Not specified',
-    safetyFlags: answers.medical_safety?.length
-      ? answers.medical_safety.map(flag => safetyLabels[flag] || flag).join(', ')
-      : 'None declared',
-    pouchStrength: answers.nicotine_use?.includes('nicotine_pouches')
-      ? answers.current_pouch_strength === 'other' && answers.current_pouch_strength_other
-        ? `Other: ${answers.current_pouch_strength_other}`
-        : answers.current_pouch_strength
-          ? pouchStrengthLabels[answers.current_pouch_strength] || 'Not specified'
-          : 'Not specified'
-      : 'Not applicable',
-    pouchDailyUse: answers.nicotine_use?.includes('nicotine_pouches')
-      ? answers.current_pouch_daily_use
-        ? pouchDailyUseLabels[answers.current_pouch_daily_use] || 'Not specified'
-        : 'Not specified'
-      : 'Not applicable',
-    preferredProduct: answers.preferred_cessation_product === 'other' && answers.preferred_cessation_product_other
-      ? `Other: ${answers.preferred_cessation_product_other}`
-      : preferredProductLabels[answers.preferred_cessation_product] || 'Not specified',
-    medications: answers.current_medications === 'yes'
-      ? (answers.current_medications_details || 'Yes — details not provided')
-      : answers.current_medications === 'no'
-        ? 'No current medicines/products declared'
-        : 'Not specified'
+    age: labelFromMap(labels.age_confirmation, answers.age_confirmation),
+    smokerStatus: labelFromMap(labels.smoker_declaration, answers.smoker_declaration),
+    smokingGoal: labelFromMap(labels.smoking_cessation_intention, answers.smoking_cessation_intention),
+    smokingHistory: [
+      labelFromMap(labels.cigarettes_per_day, answers.cigarettes_per_day),
+      labelFromMap(labels.years_smoked, answers.years_smoked),
+      `Last tobacco use: ${labelFromMap(labels.last_tobacco_use, answers.last_tobacco_use)}`,
+      `Quit attempts: ${labelFromMap(labels.quit_attempts, answers.quit_attempts)}`
+    ].join(' • '),
+    previousCessation: labelArray(labels.previous_cessation_methods, answers.previous_cessation_methods, answers.previous_cessation_methods_other),
+    medicalRisk: medicalFlags.join(' • '),
+    medicines: answers.current_medications || 'Not specified',
+    oralHealth: [
+      labelFromMap(labels.dental_gum_health, answers.dental_gum_health),
+      labelArray(labels.oral_health_issues, answers.oral_health_issues)
+    ].join(' • '),
+    pouchUse: [
+      `Duration: ${labelFromMap(labels.pouch_duration, answers.pouch_duration)}`,
+      `Helpfulness: ${labelFromMap(labels.pouch_helpfulness, answers.pouch_helpfulness)}`
+    ].join(' • '),
+    requestedPouchRange: `${pouchStrengthLabel(answers.pouch_min_strength, answers.pouch_min_strength_other)} to ${pouchStrengthLabel(answers.pouch_max_strength, answers.pouch_max_strength_other)}`,
+    dailyPouchQuantity: labelFromMap(labels.daily_pouch_quantity, answers.daily_pouch_quantity),
+    quitPouchesTimeline: labelFromMap(labels.quit_pouches_timeline, answers.quit_pouches_timeline),
+    acknowledgements: [
+      answers.prescription_timing_acknowledgement === 'understand_no_backdating' ? 'No-backdating acknowledgement accepted' : 'No-backdating acknowledgement missing',
+      answers.personal_use_declaration === 'confirm' ? 'Personal-use declaration accepted' : 'Personal-use declaration not confirmed',
+      answers.final_truth_accuracy_contact_consent ? 'Final truth/accuracy/contact consent accepted' : 'Final consent missing'
+    ].join(' • ')
   };
 }

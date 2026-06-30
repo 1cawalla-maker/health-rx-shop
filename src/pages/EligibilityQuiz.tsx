@@ -41,11 +41,11 @@ export default function EligibilityQuiz() {
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Partial<EligibilityAnswers>>({});
   const [textAnswers, setTextAnswers] = useState<Partial<Record<keyof EligibilityAnswers, string>>>({});
-  const [importAcknowledged, setImportAcknowledged] = useState(false);
+  const [finalConsentAccepted, setFinalConsentAccepted] = useState(false);
   const [complete, setComplete] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showConsent, setShowConsent] = useState(false);
-  const [blockedUnder18, setBlockedUnder18] = useState(false);
+  const [blockedUnder21, setBlockedUnder21] = useState(false);
 
   const visibleQuestions = eligibilityQuestions.filter(question => !question.showWhen || question.showWhen(answers));
   const totalSteps = visibleQuestions.length + 2; // collection notice + questions + acknowledgement
@@ -55,13 +55,7 @@ export default function EligibilityQuiz() {
   const handleAnswer = (value: string) => {
     if (!currentQuestion) return;
     setAnswers(prev => {
-      const next = { ...prev, [currentQuestion.id]: value };
-      if (currentQuestion.id === 'nicotine_use' && value !== 'nicotine_pouches') {
-        delete next.current_pouch_strength;
-        delete next.current_pouch_strength_other;
-        delete next.current_pouch_daily_use;
-      }
-      return next;
+      return { ...prev, [currentQuestion.id]: value };
     });
   };
 
@@ -79,29 +73,44 @@ export default function EligibilityQuiz() {
 
       nextValues = Array.from(new Set(nextValues));
 
-      const next = { ...prev, [currentQuestion.id]: nextValues };
-      if (currentQuestion.id === 'nicotine_use' && !nextValues.includes('nicotine_pouches')) {
-        delete next.current_pouch_strength;
-        delete next.current_pouch_strength_other;
-        delete next.current_pouch_daily_use;
-      }
-      return next;
+      return { ...prev, [currentQuestion.id]: nextValues };
     });
   };
 
-  const currentSelectedOption = currentQuestion?.options.find(opt => opt.value === answers[currentQuestion.id]);
+  const currentSelectedOption = currentQuestion?.options?.find(opt => opt.value === answers[currentQuestion.id]);
   const currentTextKey = currentSelectedOption?.textAnswerKey;
   const currentTextValue = currentTextKey ? (textAnswers[currentTextKey] || '') : '';
+  const currentQuestionTextValue = currentQuestion ? (textAnswers[currentQuestion.id] || '') : '';
 
   const handleNext = () => {
     if (!currentQuestion) return;
 
-    if (currentQuestion.inputType === 'multi') {
+    if (currentQuestion.inputType === 'text') {
+      if (currentQuestion.textRequired && !currentQuestionTextValue.trim()) {
+        toast.error('Please provide the requested details before continuing.');
+        return;
+      }
+      setAnswers(prev => ({ ...prev, [currentQuestion.id]: currentQuestionTextValue.trim() }));
+    } else if (currentQuestion.inputType === 'multi') {
       const values = answers[currentQuestion.id];
       if (!Array.isArray(values) || values.length === 0) {
         toast.error('Please select at least one option before continuing.');
         return;
       }
+      const selectedTextOptions = currentQuestion.options?.filter(option => option.textRequired && values.includes(option.value)) || [];
+      for (const option of selectedTextOptions) {
+        if (option.textAnswerKey && !textAnswers[option.textAnswerKey]?.trim()) {
+          toast.error('Please provide the requested details before continuing.');
+          return;
+        }
+      }
+      const extraTextEntries = selectedTextOptions.reduce<Partial<EligibilityAnswers>>((acc, option) => {
+        if (option.textAnswerKey) {
+          return { ...acc, [option.textAnswerKey]: textAnswers[option.textAnswerKey]?.trim() || undefined };
+        }
+        return acc;
+      }, {});
+      setAnswers(prev => ({ ...prev, ...extraTextEntries }));
     }
 
     if (currentSelectedOption?.textRequired && currentTextKey && !currentTextValue.trim()) {
@@ -110,7 +119,7 @@ export default function EligibilityQuiz() {
     }
 
     if (currentSelectedOption?.flag === 'block') {
-      setBlockedUnder18(true);
+      setBlockedUnder21(true);
       return;
     }
 
@@ -141,40 +150,25 @@ export default function EligibilityQuiz() {
     setCurrentStep(0);
     setAnswers({});
     setTextAnswers({});
-    setImportAcknowledged(false);
+    setFinalConsentAccepted(false);
     setComplete(false);
     setShowConsent(false);
-    setBlockedUnder18(false);
+    setBlockedUnder21(false);
   };
 
   const handleSubmitConsent = async () => {
-    if (!importAcknowledged) return;
+    if (!finalConsentAccepted) return;
 
     const fullAnswers: EligibilityAnswers = {
+      ...(answers as EligibilityAnswers),
       collection_notice_acknowledged: true,
       collection_notice_version: ELIGIBILITY_COLLECTION_NOTICE_VERSION,
       privacy_policy_version: ELIGIBILITY_PRIVACY_POLICY_VERSION,
-      nicotine_use: answers.nicotine_use!,
-      current_pouch_strength: answers.nicotine_use?.includes('nicotine_pouches') ? answers.current_pouch_strength : undefined,
-      current_pouch_strength_other: answers.nicotine_use?.includes('nicotine_pouches')
-        ? (textAnswers.current_pouch_strength_other || answers.current_pouch_strength_other || undefined) as string | undefined
-        : undefined,
-      current_pouch_daily_use: answers.nicotine_use?.includes('nicotine_pouches') ? answers.current_pouch_daily_use : undefined,
-      previous_nrt_use: answers.previous_nrt_use!,
-      preferred_cessation_product: answers.preferred_cessation_product!,
-      preferred_cessation_product_other: (textAnswers.preferred_cessation_product_other || answers.preferred_cessation_product_other || undefined) as string | undefined,
-      medical_safety: answers.medical_safety!,
-      allergies_reactions: answers.allergies_reactions!,
-      allergies_reactions_details: (textAnswers.allergies_reactions_details || answers.allergies_reactions_details || undefined) as string | undefined,
-      oral_current_issues: answers.oral_current_issues!,
-      oral_unusual_changes: answers.oral_unusual_changes!,
-      oral_recent_dental_work: answers.oral_recent_dental_work!,
-      oral_nicotine_reaction: answers.oral_nicotine_reaction!,
-      oral_swallowing_choking_risk: answers.oral_swallowing_choking_risk!,
-      current_medications: answers.current_medications!,
-      current_medications_details: (textAnswers.current_medications_details || answers.current_medications_details || undefined) as string | undefined,
-      age_confirmation: answers.age_confirmation!,
-      import_compliance_acknowledgement: importAcknowledged
+      previous_cessation_methods_other: textAnswers.previous_cessation_methods_other || answers.previous_cessation_methods_other,
+      allergies_reactions_details: textAnswers.allergies_reactions_details || answers.allergies_reactions_details,
+      pouch_max_strength_other: textAnswers.pouch_max_strength_other || answers.pouch_max_strength_other,
+      pouch_min_strength_other: textAnswers.pouch_min_strength_other || answers.pouch_min_strength_other,
+      final_truth_accuracy_contact_consent: finalConsentAccepted
     };
 
     const quizData: EligibilityQuizResult = {
@@ -202,7 +196,7 @@ export default function EligibilityQuiz() {
     navigate('/start-consult');
   };
 
-  if (blockedUnder18) {
+  if (blockedUnder21) {
     return (
       <PublicLayout>
         <section className="py-16 md:py-24 gradient-section min-h-[70vh]">
@@ -211,7 +205,7 @@ export default function EligibilityQuiz() {
               <CardHeader className="text-center">
                 <CardTitle className="text-2xl">Unable to Continue Online</CardTitle>
                 <CardDescription className="text-base">
-                  PouchCare can only provide this service to adults aged 18 and over.
+                  PouchCare’s nicotine pouch pathway is only available to patients aged 21 and over.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -219,7 +213,7 @@ export default function EligibilityQuiz() {
                   <Info className="h-4 w-4" />
                   <AlertTitle>If you need support</AlertTitle>
                   <AlertDescription>
-                    Please speak with a parent/guardian, GP, pharmacist, Quitline or another appropriate health professional.
+                    Please speak with your GP, pharmacist, Quitline or another appropriate health professional about approved smoking cessation options.
                   </AlertDescription>
                 </Alert>
                 <div className="flex gap-4 justify-center pt-4">
@@ -364,8 +358,8 @@ export default function EligibilityQuiz() {
                   <div key={item.id} className="flex items-start space-x-3 rounded-lg border p-4">
                     <Checkbox
                       id={item.id}
-                      checked={importAcknowledged}
-                      onCheckedChange={(checked) => setImportAcknowledged(checked === true)}
+                      checked={finalConsentAccepted}
+                      onCheckedChange={(checked) => setFinalConsentAccepted(checked === true)}
                     />
                     <Label htmlFor={item.id} className="text-sm leading-relaxed cursor-pointer">
                       {item.label}
@@ -378,7 +372,7 @@ export default function EligibilityQuiz() {
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back
                   </Button>
-                  <Button onClick={handleSubmitConsent} disabled={!importAcknowledged || isSaving}>
+                  <Button onClick={handleSubmitConsent} disabled={!finalConsentAccepted || isSaving}>
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Continue
                     {!isSaving ? <ArrowRight className="ml-2 h-4 w-4" /> : null}
@@ -422,20 +416,44 @@ export default function EligibilityQuiz() {
                 {currentQuestion.description && <p className="text-sm text-muted-foreground mt-2">{currentQuestion.description}</p>}
               </div>
 
-              {currentQuestion.inputType === 'multi' ? (
+              {currentQuestion.inputType === 'text' ? (
+                <div className="space-y-2">
+                  {currentQuestion.textInputLabel && <Label className="text-sm text-muted-foreground">{currentQuestion.textInputLabel}</Label>}
+                  <Textarea
+                    placeholder={currentQuestion.textInputPlaceholder || 'Please provide details...'}
+                    value={textAnswers[currentQuestion.id] || ''}
+                    onChange={(e) => setTextAnswers(prev => ({ ...prev, [currentQuestion.id]: e.target.value }))}
+                    className="min-h-32"
+                  />
+                </div>
+              ) : currentQuestion.inputType === 'multi' ? (
                 <div className="space-y-3">
-                  {currentQuestion.options.map(option => {
+                  {(currentQuestion.options || []).map(option => {
                     const selected = Array.isArray(answers[currentQuestion.id]) && (answers[currentQuestion.id] as string[]).includes(option.value);
+                    const textKey = option.textAnswerKey;
                     return (
-                      <div key={option.value} className="flex items-center space-x-3">
-                        <Checkbox
-                          id={`${currentQuestion.id}-${option.value}`}
-                          checked={selected}
-                          onCheckedChange={(checked) => handleMultiAnswer(option.value, checked === true)}
-                        />
-                        <Label htmlFor={`${currentQuestion.id}-${option.value}`} className="flex-1 cursor-pointer py-2">
-                          {option.label}
-                        </Label>
+                      <div key={option.value}>
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            id={`${currentQuestion.id}-${option.value}`}
+                            checked={selected}
+                            onCheckedChange={(checked) => handleMultiAnswer(option.value, checked === true)}
+                          />
+                          <Label htmlFor={`${currentQuestion.id}-${option.value}`} className="flex-1 cursor-pointer py-2">
+                            {option.label}
+                          </Label>
+                        </div>
+                        {option.showTextInput && selected && textKey && (
+                          <div className="ml-6 mt-2 space-y-2">
+                            {option.textInputLabel && <Label className="text-xs text-muted-foreground">{option.textInputLabel}</Label>}
+                            <Textarea
+                              placeholder={option.textInputPlaceholder || 'Please specify...'}
+                              value={textAnswers[textKey] || ''}
+                              onChange={(e) => setTextAnswers(prev => ({ ...prev, [textKey]: e.target.value }))}
+                              className="min-h-24"
+                            />
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -446,7 +464,7 @@ export default function EligibilityQuiz() {
                   onValueChange={handleAnswer}
                   className="space-y-3"
                 >
-                  {currentQuestion.options.map(option => {
+                  {(currentQuestion.options || []).map(option => {
                     const textKey = option.textAnswerKey;
                     return (
                       <div key={option.value}>
@@ -478,7 +496,14 @@ export default function EligibilityQuiz() {
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
                 </Button>
-                <Button onClick={handleNext} disabled={!answers[currentQuestion.id] || (Array.isArray(answers[currentQuestion.id]) && (answers[currentQuestion.id] as string[]).length === 0)}>
+                <Button
+                  onClick={handleNext}
+                  disabled={
+                    currentQuestion.inputType === 'text'
+                      ? !textAnswers[currentQuestion.id]?.trim()
+                      : !answers[currentQuestion.id] || (Array.isArray(answers[currentQuestion.id]) && (answers[currentQuestion.id] as string[]).length === 0)
+                  }
+                >
                   Next
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>

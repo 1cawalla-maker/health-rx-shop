@@ -27,15 +27,13 @@ export function PatientEligibilitySummary({ patientId }: PatientEligibilitySumma
       }
       setLoading(false);
     }
-    
+
     if (patientId) {
-      fetchQuizData();
+      void fetchQuizData();
     }
   }, [patientId]);
 
-  if (loading) {
-    return null;
-  }
+  if (loading) return null;
 
   if (!quizData || !summary) {
     return (
@@ -56,7 +54,7 @@ export function PatientEligibilitySummary({ patientId }: PatientEligibilitySumma
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base">
             <ClipboardList className="h-5 w-5" />
-            Pre-Consultation Questionnaire
+            PouchCare Intake Summary
           </CardTitle>
           {hasWarnings && (
             <Badge variant="outline" className="border-warning text-warning">
@@ -70,92 +68,65 @@ export function PatientEligibilitySummary({ patientId }: PatientEligibilitySumma
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Quick Summary Grid */}
-        <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
           <div className="space-y-1">
-            <p className="text-muted-foreground">Current Use</p>
-            <p className="font-medium">{summary.currentUse}</p>
-          </div>
-          {quizData.answers.nicotine_use?.includes('nicotine_pouches') && (
-            <>
-              <div className="space-y-1">
-                <p className="text-muted-foreground">Pouch Strength</p>
-                <p className="font-medium">{summary.pouchStrength}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-muted-foreground">Pouches / Day</p>
-                <p className="font-medium">{summary.pouchDailyUse}</p>
-              </div>
-            </>
-          )}
-          <div className="space-y-1">
-            <p className="text-muted-foreground">Prior NRT Use</p>
-            <p className="font-medium">{summary.priorNRTUse}</p>
+            <p className="text-muted-foreground">Smoker declaration</p>
+            <p className="font-medium">{summary.smokerStatus}</p>
           </div>
           <div className="space-y-1">
-            <p className="text-muted-foreground">Safety Flags</p>
-            <p className={`font-medium ${summary.safetyFlags !== 'None declared' ? 'text-warning' : ''}`}>
-              {summary.safetyFlags}
-            </p>
+            <p className="text-muted-foreground">Reason for assessment</p>
+            <p className="font-medium">{summary.smokingGoal}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-muted-foreground">Requested strength range</p>
+            <p className="font-medium">{summary.requestedPouchRange}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-muted-foreground">Daily pouch quantity</p>
+            <p className="font-medium">{summary.dailyPouchQuantity}</p>
           </div>
         </div>
 
-        {/* Expandable Details */}
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
           <CollapsibleTrigger asChild>
             <Button variant="ghost" size="sm" className="w-full justify-between">
-              <span>View Full Responses</span>
+              <span>View GP intake details</span>
               {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="pt-4 space-y-3">
             <div className="space-y-3 text-sm border-t pt-4">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Current Nicotine Use</span>
-                <span className="font-medium">{summary.currentUse}</span>
+              <div>
+                <p className="text-muted-foreground">Smoking history</p>
+                <p className="font-medium">{summary.smokingHistory}</p>
               </div>
-              {quizData.answers.nicotine_use?.includes('nicotine_pouches') && (
-                <>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Current Pouch Strength</span>
-                    <span className="font-medium">{summary.pouchStrength}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Current Pouch Daily Use</span>
-                    <span className="font-medium">{summary.pouchDailyUse}</span>
-                  </div>
-                </>
-              )}
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Previous NRT Experience</span>
-                <span className="font-medium">{summary.priorNRTUse}</span>
+              <div>
+                <p className="text-muted-foreground">Previous cessation methods</p>
+                <p className="font-medium">{summary.previousCessation}</p>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Preferred Product</span>
-                <span className="font-medium text-right max-w-[60%]">{summary.preferredProduct}</span>
+              <div>
+                <p className="text-muted-foreground">Medical screens</p>
+                <p className="font-medium">{summary.medicalRisk}</p>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Medical Safety Check</span>
-                <span className={`font-medium ${summary.safetyFlags !== 'None declared' ? 'text-warning' : ''}`}>
-                  {summary.safetyFlags}
-                </span>
+              <div>
+                <p className="text-muted-foreground">Current medicines/products</p>
+                <p className="font-medium whitespace-pre-wrap">{summary.medicines}</p>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Current medicines/products</span>
-                <span className="font-medium text-right max-w-[60%]">{summary.medications}</span>
+              <div>
+                <p className="text-muted-foreground">Dental/oral health</p>
+                <p className="font-medium">{summary.oralHealth}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Pouch use</p>
+                <p className="font-medium">{summary.pouchUse}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Quit/reduce timeline</p>
+                <p className="font-medium">{summary.quitPouchesTimeline}</p>
               </div>
               <div className="pt-2 border-t">
-                <p className="text-muted-foreground mb-2">Acknowledgements Given:</p>
-                <ul className="space-y-1 text-xs">
-                  <li className="flex items-center gap-2">
-                    <span className="text-success">✓</span>
-                    Collection Notice and Privacy Policy
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-success">✓</span>
-                    Final import/compliance acknowledgement
-                  </li>
-                </ul>
+                <p className="text-muted-foreground mb-1">Acknowledgements</p>
+                <p className="font-medium">{summary.acknowledgements}</p>
               </div>
             </div>
           </CollapsibleContent>

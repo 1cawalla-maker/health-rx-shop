@@ -12,194 +12,336 @@ const QUIZ_SESSION_META_KEY = 'pouchcare_quiz_session_meta';
 export const eligibilityQuestions: EligibilityQuizQuestion[] = [
   {
     id: 'age_confirmation',
-    question: 'Please confirm your age',
+    question: 'Are you 21 years or older?',
+    description: 'PouchCare’s nicotine pouch pathway is only available to patients 21 years and older.',
     options: [
-      { value: 'over_18', label: 'I am 18 years or older' },
-      { value: 'under_18', label: 'I am under 18', flag: 'block' }
+      { value: 'over_21', label: 'Yes, I am 21 years or older' },
+      { value: 'under_21', label: 'No, I am under 21', flag: 'block' }
     ]
   },
   {
-    id: 'nicotine_use',
-    question: 'What is your current nicotine use?',
+    id: 'smoker_declaration',
+    question: 'Have you ever been a tobacco or cigarette smoker?',
+    description: 'This pathway is intended for current or previous smokers seeking support to quit, reduce, or remain off smoking.',
+    options: [
+      { value: 'current_smoker', label: 'Yes, I currently smoke cigarettes' },
+      { value: 'previous_smoker', label: 'Yes, I previously smoked cigarettes' },
+      { value: 'never_smoked', label: 'No, I have never smoked cigarettes', flag: 'warning' }
+    ]
+  },
+  {
+    id: 'smoking_cessation_intention',
+    question: 'What are you seeking help with?',
+    options: [
+      { value: 'quit_smoking', label: 'I want to quit smoking' },
+      { value: 'reduce_smoking', label: 'I want to reduce smoking' },
+      { value: 'stay_off_smoking', label: 'I have already quit smoking and want help staying off cigarettes' },
+      { value: 'stop_reduce_vaping', label: 'I want to stop or reduce vaping' },
+      { value: 'discuss_pouches', label: 'I want to discuss nicotine pouches as part of smoking cessation' },
+      { value: 'not_sure_doctor_guidance', label: 'I am not sure and want doctor guidance' }
+    ]
+  },
+  {
+    id: 'cigarettes_per_day',
+    question: 'How many cigarettes do you currently smoke, or did you previously smoke, per day?',
+    options: [
+      { value: 'current_1_5', label: 'Current smoker: 1–5 cigarettes/day' },
+      { value: 'current_6_10', label: 'Current smoker: 6–10 cigarettes/day' },
+      { value: 'current_11_20', label: 'Current smoker: 11–20 cigarettes/day' },
+      { value: 'current_21_40', label: 'Current smoker: 21–40 cigarettes/day' },
+      { value: 'current_more_than_40', label: 'Current smoker: more than 40 cigarettes/day' },
+      { value: 'ex_1_5', label: 'Ex-smoker: 1–5 cigarettes/day' },
+      { value: 'ex_6_10', label: 'Ex-smoker: 6–10 cigarettes/day' },
+      { value: 'ex_11_20', label: 'Ex-smoker: 11–20 cigarettes/day' },
+      { value: 'ex_21_40', label: 'Ex-smoker: 21–40 cigarettes/day' },
+      { value: 'ex_more_than_40', label: 'Ex-smoker: more than 40 cigarettes/day' },
+      { value: 'not_sure', label: 'Not sure' }
+    ]
+  },
+  {
+    id: 'years_smoked',
+    question: 'How many years have you smoked, or did you smoke, cigarettes for?',
+    options: [
+      { value: 'less_than_1', label: 'Less than 1 year' },
+      { value: '1_5', label: '1–5 years' },
+      { value: '6_10', label: '6–10 years' },
+      { value: '11_20', label: '11–20 years' },
+      { value: 'more_than_20', label: 'More than 20 years' },
+      { value: 'not_sure', label: 'Not sure' }
+    ]
+  },
+  {
+    id: 'last_tobacco_use',
+    question: 'When was your last cigarette or tobacco use?',
+    options: [
+      { value: 'today', label: 'Today' },
+      { value: 'past_week', label: 'Within the past week' },
+      { value: 'past_1_4_weeks', label: 'Within the past 1–4 weeks' },
+      { value: '1_6_months', label: '1–6 months ago' },
+      { value: '6_12_months', label: '6–12 months ago' },
+      { value: '1_2_years', label: '1–2 years ago' },
+      { value: '2_5_years', label: '2–5 years ago' },
+      { value: 'more_than_5_years', label: 'More than 5 years ago' },
+      { value: 'not_sure', label: 'Not sure' }
+    ]
+  },
+  {
+    id: 'quit_attempts',
+    question: 'How many times have you tried to quit smoking or tobacco use?',
+    options: [
+      { value: 'none', label: 'I have not tried before' },
+      { value: '1_2', label: '1–2 times' },
+      { value: '3_5', label: '3–5 times' },
+      { value: '6_10', label: '6–10 times' },
+      { value: 'more_than_10', label: 'More than 10 times' },
+      { value: 'not_sure', label: 'Not sure' }
+    ]
+  },
+  {
+    id: 'previous_cessation_methods',
+    question: 'Which smoking cessation methods have you tried before? Select all that apply.',
     inputType: 'multi',
-    exclusiveOptions: ['no_nicotine'],
+    exclusiveOptions: ['none_tried'],
     options: [
-      { value: 'nicotine_pouches', label: 'Nicotine pouches' },
-      { value: 'cigarettes', label: 'Cigarettes' },
-      { value: 'nicotine_vaping', label: 'Nicotine vaping' },
-      { value: 'oral_nrt', label: 'Nicotine replacement therapy, such as gum, lozenges, spray or similar' },
-      { value: 'no_nicotine', label: 'I do not currently use nicotine', flag: 'warning' }
-    ]
-  },
-  {
-    id: 'current_pouch_strength',
-    question: 'What nicotine pouch strength do you usually use?',
-    description: 'This helps the doctor understand your current nicotine pouch use before the consultation.',
-    showWhen: (answers) => answers.nicotine_use?.includes('nicotine_pouches') === true,
-    options: [
-      { value: '3mg', label: '3 mg per pouch' },
-      { value: '6mg', label: '6 mg per pouch' },
-      { value: '9mg', label: '9 mg per pouch' },
-      { value: '12mg', label: '12 mg per pouch' },
-      {
-        value: 'other',
-        label: 'Other strength',
-        showTextInput: true,
-        textInputLabel: 'Please tell the doctor the strength if you know it',
-        textInputPlaceholder: 'Example: 4mg, 8mg, 10mg...',
-        textAnswerKey: 'current_pouch_strength_other',
-        textRequired: true
-      },
-      { value: 'not_sure', label: 'I’m not sure' }
-    ]
-  },
-  {
-    id: 'current_pouch_daily_use',
-    question: 'On average, how many nicotine pouches do you currently use per day?',
-    description: 'An estimate is fine. The doctor can clarify this during the consultation.',
-    showWhen: (answers) => answers.nicotine_use?.includes('nicotine_pouches') === true,
-    options: [
-      { value: '1_5', label: '1–5 pouches per day' },
-      { value: '6_10', label: '6–10 pouches per day' },
-      { value: '11_20', label: '11–20 pouches per day' },
-      { value: 'more_than_20', label: 'More than 20 pouches per day' },
-      { value: 'not_sure', label: 'I’m not sure' }
-    ]
-  },
-  {
-    id: 'previous_nrt_use',
-    question: 'Have you used nicotine replacement therapy before, such as patches, gum, lozenges, sprays or inhalators?',
-    description: 'This helps the doctor understand what you have already tried and whether it helped.',
-    options: [
-      { value: 'yes_helpful', label: 'Yes, it was helpful' },
-      { value: 'yes_not_helpful', label: 'Yes, it was not helpful' },
-      { value: 'no', label: 'No, I have not used NRT before' }
-    ]
-  },
-  {
-    id: 'preferred_cessation_product',
-    question: 'Which nicotine cessation or reduction option are you most interested in discussing with the doctor?',
-    options: [
-      { value: 'nicotine_pouches', label: 'Nicotine pouches' },
-      { value: 'oral_nrt', label: 'Nicotine replacement therapy, such as gum, lozenges or spray' },
+      { value: 'cold_turkey', label: 'Cold turkey' },
+      { value: 'quitline', label: 'Quitline' },
+      { value: 'counselling_behavioural_support', label: 'Counselling, psychologist, or behavioural support' },
       { value: 'nicotine_patches', label: 'Nicotine patches' },
-      { value: 'prescription_medicine', label: 'Prescription medicine to help stop smoking/vaping' },
-      { value: 'not_sure', label: 'Not sure — I would like the doctor’s guidance' },
+      { value: 'nicotine_gum', label: 'Nicotine gum' },
+      { value: 'nicotine_lozenges', label: 'Nicotine lozenges' },
+      { value: 'nicotine_mouth_spray', label: 'Nicotine mouth spray' },
+      { value: 'nicotine_inhalator', label: 'Nicotine inhalator' },
+      { value: 'combination_nrt', label: 'Combination nicotine replacement therapy' },
+      { value: 'varenicline_champix', label: 'Varenicline / Champix' },
+      { value: 'bupropion_zyban', label: 'Bupropion / Zyban' },
+      { value: 'nicotine_vaping_product', label: 'Nicotine vaping product' },
+      { value: 'nicotine_pouches', label: 'Nicotine pouches' },
+      { value: 'none_tried', label: 'I have not tried any cessation methods before' },
       {
         value: 'other',
         label: 'Other',
         showTextInput: true,
-        textInputLabel: 'Please tell the doctor what you are interested in discussing',
-        textInputPlaceholder: 'Briefly describe what you would like to discuss...',
-        textAnswerKey: 'preferred_cessation_product_other',
+        textInputLabel: 'Please specify the other method',
+        textInputPlaceholder: 'Briefly describe the method...',
+        textAnswerKey: 'previous_cessation_methods_other',
         textRequired: true
       }
     ]
   },
   {
-    id: 'medical_safety',
-    question: 'Do any of the following apply to you?',
-    inputType: 'multi',
-    exclusiveOptions: ['none'],
+    id: 'recent_cardio_screen',
+    question: 'In the last 3 months, have you had uncontrolled high blood pressure, irregular heartbeat/arrhythmia, chest pain/angina, heart attack, stroke/TIA, or significant blood vessel disease?',
     options: [
-      { value: 'heart_stroke_blood_vessel', label: 'Heart disease, stroke, blood vessel disease, or recent heart event', flag: 'warning' },
-      { value: 'uncontrolled_bp', label: 'Uncontrolled high blood pressure', flag: 'warning' },
-      { value: 'lung_disease_breathing', label: 'Significant lung disease or severe breathing symptoms', flag: 'warning' },
-      { value: 'seizures_epilepsy', label: 'Seizures or epilepsy', flag: 'warning' },
-      { value: 'mental_health_severe', label: 'Significant mental-health history or current severe symptoms', flag: 'warning' },
-      { value: 'diabetes_kidney_liver_serious', label: 'Diabetes, kidney/liver disease, or another serious condition', flag: 'warning' },
-      { value: 'pregnant_breastfeeding', label: 'Pregnant, breastfeeding, or trying to conceive', flag: 'warning' },
-      { value: 'prefer_discuss', label: 'Prefer to discuss with the doctor', flag: 'warning' },
-      { value: 'none', label: 'None of the above' }
+      { value: 'no_conditions', label: 'No, I do not have these conditions' },
+      { value: 'stable_controlled', label: 'No, I have one of these conditions but it is stable/well controlled' },
+      { value: 'recent_or_uncontrolled', label: 'Yes, I have had one of these issues recently or it is not well controlled', flag: 'warning' },
+      { value: 'not_sure', label: 'Not sure', flag: 'warning' },
+      { value: 'prefer_discuss', label: 'Prefer to discuss with doctor', flag: 'warning' }
     ]
   },
   {
-    id: 'allergies_reactions',
-    question: 'Do you have any allergies or previous serious reactions to medicines, supplements, nicotine products, adhesives/patches, or oral products?',
+    id: 'recent_lung_screen',
+    question: 'In the last 3 months, have you had uncontrolled or severe lung disease?',
+    description: 'Examples: asthma flare, emphysema, COPD, pneumonia, or unexplained shortness of breath.',
     options: [
-      { value: 'no', label: 'No' },
-      {
-        value: 'yes',
-        label: 'Yes — I will list them',
-        showTextInput: true,
-        textInputLabel: 'Please list the allergy or reaction, including what caused it if known',
-        textInputPlaceholder: 'Example: rash from nicotine patches, mouth irritation from lozenges, medicine allergy...',
-        textAnswerKey: 'allergies_reactions_details',
-        textRequired: true
-      },
-      { value: 'not_sure', label: 'Not sure' }
+      { value: 'no_condition', label: 'No, I do not have this' },
+      { value: 'stable_controlled', label: 'No, I have a lung condition but it is stable/well controlled' },
+      { value: 'recent_or_uncontrolled', label: 'Yes, I have had recent or uncontrolled symptoms', flag: 'warning' },
+      { value: 'not_sure', label: 'Not sure', flag: 'warning' },
+      { value: 'prefer_discuss', label: 'Prefer to discuss with doctor', flag: 'warning' }
     ]
   },
   {
-    id: 'oral_current_issues',
-    question: 'Do you currently have any mouth ulcers, sores, cuts, bleeding gums, gum disease, dental infection, severe tooth pain, or unexplained mouth/throat pain?',
-    description: 'This helps the doctor understand whether oral nicotine products may need extra review.',
+    id: 'pregnancy_breastfeeding_screen',
+    question: 'Does any of the following apply to you?',
+    description: 'Nicotine may not be suitable during pregnancy or breastfeeding. The doctor may recommend alternative care or GP/specialist review.',
     options: [
-      { value: 'no', label: 'No' },
-      { value: 'yes', label: 'Yes' },
-      { value: 'not_sure', label: 'Not sure' }
+      { value: 'pregnant', label: 'I am pregnant', flag: 'warning' },
+      { value: 'trying_to_conceive', label: 'I am trying to become pregnant', flag: 'warning' },
+      { value: 'breastfeeding', label: 'I am breastfeeding', flag: 'warning' },
+      { value: 'none', label: 'None of the above' },
+      { value: 'not_applicable', label: 'Not applicable' }
     ]
   },
   {
-    id: 'oral_unusual_changes',
-    question: 'Have you noticed any white or red patches, lumps, swelling, numbness, or non-healing areas in your mouth, lips, tongue, gums, or throat?',
-    options: [
-      { value: 'no', label: 'No' },
-      { value: 'yes', label: 'Yes' },
-      { value: 'not_sure', label: 'Not sure' }
-    ]
-  },
-  {
-    id: 'oral_recent_dental_work',
-    question: 'Have you recently had dental or oral surgery, a tooth extraction, gum treatment, or major dental work?',
-    options: [
-      { value: 'no', label: 'No' },
-      { value: 'yes', label: 'Yes' },
-      { value: 'not_sure', label: 'Not sure' }
-    ]
-  },
-  {
-    id: 'oral_nicotine_reaction',
-    question: 'Have nicotine pouches, lozenges, gum, sprays, or similar oral products caused burning, irritation, nausea, hiccups, mouth pain, rash, or allergic-type reactions for you?',
-    options: [
-      { value: 'no', label: 'No' },
-      { value: 'yes', label: 'Yes' },
-      { value: 'not_sure', label: 'Not sure' },
-      { value: 'never_used', label: 'I have not used oral nicotine products before' }
-    ]
-  },
-  {
-    id: 'oral_swallowing_choking_risk',
-    question: 'Do you have difficulty swallowing, choking risk, or any condition that makes it unsafe to keep a pouch in your mouth?',
-    options: [
-      { value: 'no', label: 'No' },
-      { value: 'yes', label: 'Yes' },
-      { value: 'not_sure', label: 'Not sure' }
-    ]
+    id: 'medical_conditions',
+    question: 'Please list any diagnosed medical conditions the doctor should know about.',
+    description: 'Examples: high blood pressure, heart disease, lung disease, diabetes, kidney/liver disease, seizures, mental health conditions, cancer treatment, immune suppression, alcohol or drug dependence.',
+    inputType: 'text',
+    textInputPlaceholder: 'Write “none” if you do not have any diagnosed medical conditions.',
+    textRequired: true
   },
   {
     id: 'current_medications',
-    question: 'Are you currently taking any prescription medicines, over-the-counter medicines, or supplements?',
-    description: 'Please include anything relevant so the doctor can assess your overall health context and product suitability.',
+    question: 'What regular medications, over-the-counter medicines, supplements, or nicotine products do you currently take?',
+    inputType: 'text',
+    textInputPlaceholder: 'Write “none” if you do not take any regular medicines or supplements.',
+    textRequired: true
+  },
+  {
+    id: 'allergies_reactions',
+    question: 'Do you have allergies or previous serious reactions to medicines, nicotine products, patches/adhesives, or oral products?',
     options: [
       { value: 'no', label: 'No' },
       {
         value: 'yes',
-        label: 'Yes — I will list them',
+        label: 'Yes — I will provide details',
         showTextInput: true,
-        textInputLabel: 'List all medicines and supplements, including dose if known',
-        textInputPlaceholder: 'Example: blood pressure medicine, heart medicine, diabetes medicine, mental health medicine, vitamins or supplements...',
-        textAnswerKey: 'current_medications_details',
+        textInputLabel: 'Please describe the allergy or reaction',
+        textInputPlaceholder: 'Example: medicine allergy, rash from patches, mouth irritation from lozenges...',
+        textAnswerKey: 'allergies_reactions_details',
         textRequired: true
-      }
+      },
+      { value: 'not_sure', label: 'Not sure', flag: 'warning' }
+    ]
+  },
+  {
+    id: 'dental_gum_health',
+    question: 'Which best describes your dental and gum health?',
+    options: [
+      { value: 'good_seen_dentist_12_months', label: 'I have good dental/gum health and have seen a dentist in the past 12 months' },
+      { value: 'good_not_seen_dentist_12_months', label: 'I have good dental/gum health but have not seen a dentist in the past 12 months' },
+      { value: 'poor_seen_dentist_12_months', label: 'I have poor dental/gum health and have seen a dentist in the past 12 months', flag: 'warning' },
+      { value: 'poor_not_seen_dentist_12_months', label: 'I may have poor dental/gum health and have not seen a dentist in the past 12 months', flag: 'warning' },
+      { value: 'not_sure', label: 'Not sure', flag: 'warning' }
+    ]
+  },
+  {
+    id: 'oral_health_issues',
+    question: 'Do you currently have any of the following? Select all that apply.',
+    inputType: 'multi',
+    exclusiveOptions: ['none'],
+    options: [
+      { value: 'mouth_ulcers_sores_cuts_bleeding', label: 'Mouth ulcers, sores, cuts, or bleeding gums', flag: 'warning' },
+      { value: 'gum_disease_or_dental_infection', label: 'Gum disease or dental infection', flag: 'warning' },
+      { value: 'severe_tooth_pain', label: 'Severe tooth pain', flag: 'warning' },
+      { value: 'unexplained_mouth_or_throat_pain', label: 'Unexplained mouth or throat pain', flag: 'warning' },
+      { value: 'patches_lumps_swelling_numbness_non_healing', label: 'White/red patches, lumps, swelling, numbness, or non-healing areas in the mouth', flag: 'warning' },
+      { value: 'recent_dental_or_oral_surgery', label: 'Recent dental/oral surgery, tooth extraction, or gum treatment', flag: 'warning' },
+      { value: 'swallowing_or_choking_risk', label: 'Difficulty swallowing or choking risk', flag: 'warning' },
+      { value: 'none', label: 'None of the above' },
+      { value: 'not_sure', label: 'Not sure', flag: 'warning' }
+    ]
+  },
+  {
+    id: 'pouch_duration',
+    question: 'If you currently or previously use nicotine pouches, how long have you used them for?',
+    options: [
+      { value: 'new_to_pouches', label: 'I am completely new to nicotine pouches' },
+      { value: 'days_to_weeks', label: 'A few days to weeks' },
+      { value: 'months_to_1_year', label: 'A few months to 1 year' },
+      { value: '1_2_years', label: '1–2 years' },
+      { value: 'more_than_2_years', label: 'More than 2 years' },
+      { value: 'never_used', label: 'I have never used nicotine pouches before' }
+    ]
+  },
+  {
+    id: 'pouch_helpfulness',
+    question: 'Have nicotine pouches helped you reduce or quit smoking?',
+    options: [
+      { value: 'yes_helpful', label: 'Yes, they have been helpful' },
+      { value: 'somewhat_helpful', label: 'Somewhat helpful' },
+      { value: 'not_helpful', label: 'No, they have not been helpful' },
+      { value: 'not_sure', label: 'I am not sure' },
+      { value: 'not_tried_yet', label: 'I have not tried them yet' }
+    ]
+  },
+  {
+    id: 'pouch_max_strength',
+    question: 'What is the highest nicotine pouch strength you currently use or would like to discuss with the doctor?',
+    description: 'This is a preference/request only. The doctor may recommend a lower strength, a different treatment, or no prescription.',
+    options: [
+      { value: '3mg', label: '3mg per pouch' },
+      { value: '6mg', label: '6mg per pouch' },
+      { value: '9mg', label: '9mg per pouch' },
+      { value: '12mg', label: '12mg per pouch' },
+      {
+        value: 'other',
+        label: 'Other',
+        showTextInput: true,
+        textInputLabel: 'Please specify the highest strength',
+        textInputPlaceholder: 'Example: 16mg, 20mg...',
+        textAnswerKey: 'pouch_max_strength_other',
+        textRequired: true
+      },
+      { value: 'not_sure_doctor_advise', label: 'Not sure / doctor to advise' }
+    ]
+  },
+  {
+    id: 'pouch_min_strength',
+    question: 'What is the lowest nicotine pouch strength you currently use or would like to discuss with the doctor?',
+    options: [
+      { value: '3mg', label: '3mg per pouch' },
+      { value: '6mg', label: '6mg per pouch' },
+      { value: '9mg', label: '9mg per pouch' },
+      { value: '12mg', label: '12mg per pouch' },
+      {
+        value: 'other',
+        label: 'Other',
+        showTextInput: true,
+        textInputLabel: 'Please specify the lowest strength',
+        textInputPlaceholder: 'Example: 2mg, 4mg...',
+        textAnswerKey: 'pouch_min_strength_other',
+        textRequired: true
+      },
+      { value: 'not_sure_doctor_advise', label: 'Not sure / doctor to advise' }
+    ]
+  },
+  {
+    id: 'daily_pouch_quantity',
+    question: 'How many nicotine pouches do you currently use or expect to use per day?',
+    options: [
+      { value: 'zero_unsure', label: '0 — I have not used them before / unsure' },
+      { value: '1_5', label: '1–5 per day' },
+      { value: '6_10', label: '6–10 per day' },
+      { value: '11_20', label: '11–20 per day' },
+      { value: 'more_than_20', label: 'More than 20 per day' },
+      { value: 'not_sure', label: 'Not sure' }
+    ]
+  },
+  {
+    id: 'prescription_timing_acknowledgement',
+    question: 'Important prescription timing acknowledgement',
+    description: 'I understand that prescriptions cannot be backdated. If I ordered or imported nicotine pouches before having a valid prescription, PouchCare cannot guarantee that a doctor can issue a prescription that will satisfy Border Force, customs, suppliers, or any other authority for that earlier order.',
+    options: [
+      { value: 'understand_no_backdating', label: 'I understand' }
+    ]
+  },
+  {
+    id: 'quit_pouches_timeline',
+    question: 'Are you planning to quit or reduce nicotine pouches/nicotine use?',
+    options: [
+      { value: 'within_3_months', label: 'Yes, within the next 3 months' },
+      { value: 'within_6_months', label: 'Yes, within the next 6 months' },
+      { value: 'within_12_months', label: 'Yes, within the next 12 months' },
+      { value: 'yes_not_sure_when', label: 'Yes, but I am not sure when' },
+      { value: 'no_not_currently', label: 'No, not currently' },
+      { value: 'discuss_with_doctor', label: 'I want to discuss this with the doctor' }
+    ]
+  },
+  {
+    id: 'personal_use_declaration',
+    question: 'Please confirm that any prescribed treatment is for your own personal use only.',
+    description: 'If treatment is prescribed, it is for my own personal use only. I will not share, sell, or supply prescribed nicotine products to another person.',
+    options: [
+      { value: 'confirm', label: 'I confirm' },
+      { value: 'do_not_confirm', label: 'I do not confirm', flag: 'warning' }
+    ]
+  },
+  {
+    id: 'patient_authority_declaration',
+    question: 'If completing this form for someone else, please confirm you have authority or consent.',
+    options: [
+      { value: 'confirm', label: 'I confirm the information is about the patient and I have their consent or authority to complete this form' },
+      { value: 'not_applicable', label: 'Not applicable — I am completing this for myself' }
     ]
   }
 ];
 
 export const consentItems = [
   {
-    id: 'import_compliance_acknowledgement',
-    label: 'I understand that submitting this questionnaire does not guarantee a prescription, treatment, supply or importation approval; a doctor may recommend a different option or no treatment; nicotine products are not risk-free; and any supply/importation must comply with applicable Australian laws and requirements.'
+    id: 'final_truth_accuracy_contact_consent',
+    label: 'I confirm the information I provided is true, accurate, and complete to the best of my knowledge. I understand withholding information may affect safe clinical assessment. I understand this form does not guarantee a prescription, treatment, supply, delivery, or import approval. I understand the doctor may decline, defer, request more information, or recommend another treatment. I understand nicotine is addictive and may be harmful. I understand nicotine products must be kept away from children and pets. I have read and agree to the Privacy Policy and Collection Notice. I consent to PouchCare contacting me by phone, SMS, or email about my assessment.'
   }
 ] as const;
 
@@ -221,7 +363,6 @@ export function getQuizFromSession(): Pick<EligibilityQuizResult, 'completedAt' 
     return { completedAt: new Date().toISOString(), result: 'completed' };
   }
 
-  // Legacy fallback: existing users may have completed a quiz before this migration.
   const legacy = sessionStorage.getItem(LEGACY_SESSION_STORAGE_KEY) || localStorage.getItem(LEGACY_LOCAL_STORAGE_KEY);
   if (!legacy) return null;
   try {
@@ -244,18 +385,24 @@ export function clearQuizFromSession(): void {
 
 export function calculateQuizRiskFlags(answers: Partial<EligibilityAnswers>): string[] {
   const flags: string[] = [];
-  if (answers.age_confirmation === 'under_18') flags.push('age_under_18');
-  if (answers.nicotine_use?.includes('no_nicotine')) flags.push('no_current_nicotine_use');
-  answers.medical_safety?.forEach(flag => {
-    if (flag !== 'none') flags.push(`medical_safety_${flag}`);
-  });
+  if (answers.age_confirmation === 'under_21') flags.push('age_under_21');
+  if (answers.smoker_declaration === 'never_smoked') flags.push('never_smoked_declared');
+  if (answers.recent_cardio_screen === 'recent_or_uncontrolled') flags.push('recent_or_uncontrolled_cardiovascular_issue');
+  if (answers.recent_cardio_screen === 'not_sure' || answers.recent_cardio_screen === 'prefer_discuss') flags.push('cardiovascular_clarification_needed');
+  if (answers.recent_lung_screen === 'recent_or_uncontrolled') flags.push('recent_or_uncontrolled_lung_issue');
+  if (answers.recent_lung_screen === 'not_sure' || answers.recent_lung_screen === 'prefer_discuss') flags.push('lung_clarification_needed');
+  if (answers.pregnancy_breastfeeding_screen && !['none', 'not_applicable'].includes(answers.pregnancy_breastfeeding_screen)) flags.push('pregnancy_breastfeeding_or_trying');
   if (answers.allergies_reactions === 'yes') flags.push('allergies_or_reactions_declared');
   if (answers.allergies_reactions === 'not_sure') flags.push('allergies_or_reactions_not_sure');
-  if (answers.current_medications === 'yes') flags.push('current_medicines_declared');
-  return flags;
+  if (answers.dental_gum_health?.startsWith('poor')) flags.push('dental_gum_health_review');
+  answers.oral_health_issues?.forEach(issue => {
+    if (issue !== 'none') flags.push(`oral_health_${issue}`);
+  });
+  if (answers.daily_pouch_quantity === 'more_than_20') flags.push('high_daily_pouch_quantity');
+  if (answers.personal_use_declaration === 'do_not_confirm') flags.push('personal_use_not_confirmed');
+  return Array.from(new Set(flags));
 }
 
-// Kept for compatibility with older imports. Patient-facing code must not display this as an eligibility judgement.
 export function calculateQuizResult(_answers: Partial<EligibilityAnswers>): 'completed' {
   return 'completed';
 }
@@ -297,7 +444,6 @@ export async function saveQuizToSession(result: EligibilityQuizResult): Promise<
   localStorage.setItem(QUIZ_SESSION_ID_KEY, id);
   localStorage.setItem(QUIZ_SESSION_META_KEY, meta);
 
-  // Ensure no health answers remain in browser storage after Supabase save.
   sessionStorage.removeItem(LEGACY_SESSION_STORAGE_KEY);
   sessionStorage.removeItem(LEGACY_SESSION_STORAGE_KEY_V2);
   localStorage.removeItem(LEGACY_LOCAL_STORAGE_KEY);
@@ -323,7 +469,6 @@ export async function persistQuizToProfile(userId: string): Promise<boolean> {
     return true;
   }
 
-  // Legacy fallback: persist old browser-stored quiz into the profile only if still present.
   const legacyRaw = sessionStorage.getItem(LEGACY_SESSION_STORAGE_KEY) || localStorage.getItem(LEGACY_LOCAL_STORAGE_KEY);
   if (!legacyRaw) return false;
 
@@ -370,7 +515,6 @@ export async function getPatientEligibilityQuiz(userId: string): Promise<Eligibi
       };
     }
 
-    // Backwards-compatible fallback for older profile-stored quiz responses.
     const { data: profileData, error: profileError } = await supabase
       .from('patient_profiles')
       .select('additional_notes')
