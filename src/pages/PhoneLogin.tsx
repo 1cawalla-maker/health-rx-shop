@@ -88,7 +88,9 @@ export default function PhoneLogin() {
   const destinationDescription =
     nextPath === "/patient/upload-prescription"
       ? "After verification, you will go straight to prescription upload."
-      : "After verification, you will continue to your patient account.";
+      : nextPath === "/start-consult"
+        ? "After verification, you will continue to consultation booking."
+        : "After verification, you will continue to your patient account.";
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -603,7 +605,7 @@ export default function PhoneLogin() {
                             setAgeConfirmed(checked === true)
                           }
                         />
-                        <span>I confirm I am 18 years or older.</span>
+                        <span>I confirm I am 21 years or older.</span>
                       </label>
                       <label className="flex items-start gap-3">
                         <Checkbox
