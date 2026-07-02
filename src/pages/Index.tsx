@@ -116,15 +116,10 @@ export default function Index() {
                 alt="PouchCare online clinical pathway visual"
                 className="h-full w-full object-cover object-center"
               />
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0)_45%,hsl(var(--pc-bg-soft-blue))_100%)]" />
-              <div className="absolute left-8 top-5 inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/90 px-3 py-2 text-xs font-bold text-primary shadow-md backdrop-blur">
-                <ShieldCheck className="h-4 w-4" />
-                Australian telehealth pathway
-              </div>
             </div>
 
-            <div className="relative z-10 -mt-12 rounded-[2rem] border border-white/80 bg-white p-5 shadow-2xl shadow-primary/10">
-              <div className="mb-4 inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">Eligibility first</div>
+            <div className="relative z-10 -mt-6 rounded-[2rem] border border-white/80 bg-white p-5 shadow-2xl shadow-primary/10">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary"><ShieldCheck className="h-4 w-4" /> Eligibility first</div>
               <div className="space-y-3">
                 <h1 className="font-display text-[2.35rem] font-bold leading-[0.98] tracking-tight text-foreground">
                   Start with a clearer clinical pathway.
