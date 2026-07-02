@@ -104,9 +104,9 @@ export default function Index() {
       />
 
       <section className="relative isolate overflow-hidden bg-[linear-gradient(135deg,hsl(var(--pc-bg-soft-blue))_0%,hsl(var(--background))_45%,hsl(var(--pc-sky))_100%)]">
-        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-white/80 to-transparent" />
-        <div className="absolute -left-24 top-20 h-72 w-72 rounded-full bg-primary/10 blur-3xl animate-blob" />
-        <div className="absolute -right-24 bottom-10 h-80 w-80 rounded-full bg-info/15 blur-3xl animate-blob animation-delay-500" />
+        <div className="absolute inset-x-0 top-0 hidden h-32 bg-gradient-to-b from-white/80 to-transparent md:block" />
+        <div className="absolute -left-24 top-20 hidden h-72 w-72 rounded-full bg-primary/10 blur-3xl animate-blob md:block" />
+        <div className="absolute -right-24 bottom-10 hidden h-80 w-80 rounded-full bg-info/15 blur-3xl animate-blob animation-delay-500 md:block" />
 
         <div className="container relative py-4 pb-24 md:grid md:min-h-[calc(100svh-4rem)] md:grid-cols-[1.02fr_0.98fr] md:items-center md:gap-10 md:py-16 lg:gap-16">
           <div className="md:hidden">
@@ -118,7 +118,7 @@ export default function Index() {
               />
             </div>
 
-            <div className="relative z-10 -mt-6 rounded-[2rem] border border-white/80 bg-white p-5 shadow-2xl shadow-primary/10">
+            <div className="relative z-10 mt-4 rounded-[2rem] border border-white/80 bg-white p-5 shadow-2xl shadow-primary/10">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary"><ShieldCheck className="h-4 w-4" /> Eligibility first</div>
               <div className="space-y-3">
                 <h1 className="font-display text-[2.35rem] font-bold leading-[0.98] tracking-tight text-foreground">
