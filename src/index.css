@@ -6,31 +6,40 @@
 
 @layer base {
   :root {
-    /* Healthcare Teal Palette */
-    --background: 180 20% 99%;
-    --foreground: 200 25% 15%;
+    /* PouchCare premium blue telehealth palette */
+    --background: 211 100% 99%;
+    --foreground: 221 70% 13%;
 
     --card: 0 0% 100%;
-    --card-foreground: 200 25% 15%;
+    --card-foreground: 221 70% 13%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 200 25% 15%;
+    --popover-foreground: 221 70% 13%;
 
-    /* Primary: Calm Teal */
-    --primary: 174 58% 39%;
+    /* Primary: bright clinical blue */
+    --primary: 216 100% 50%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Soft Sage */
-    --secondary: 165 25% 94%;
-    --secondary-foreground: 200 25% 20%;
+    /* Secondary: soft blue wash */
+    --secondary: 211 100% 96%;
+    --secondary-foreground: 221 70% 16%;
 
-    /* Muted: Light Gray */
-    --muted: 180 15% 95%;
-    --muted-foreground: 200 15% 45%;
+    /* Muted: blue-grey */
+    --muted: 214 54% 95%;
+    --muted-foreground: 218 22% 42%;
 
-    /* Accent: Warm Gold */
-    --accent: 38 70% 55%;
-    --accent-foreground: 200 25% 15%;
+    /* Accent: restrained cyan */
+    --accent: 196 88% 56%;
+    --accent-foreground: 221 70% 13%;
+
+    --pc-bg-soft-blue: 211 100% 95%;
+    --pc-blue: 216 100% 50%;
+    --pc-blue-dark: 218 85% 35%;
+    --pc-navy: 221 70% 13%;
+    --pc-cyan: 196 88% 56%;
+    --pc-sky: 204 100% 97%;
+    --pc-border: 215 48% 87%;
+    --pc-muted: 218 22% 42%;
 
     /* Status Colors */
     --destructive: 0 72% 51%;
@@ -45,32 +54,32 @@
     --info: 200 80% 50%;
     --info-foreground: 0 0% 100%;
 
-    --border: 180 15% 90%;
-    --input: 180 15% 90%;
-    --ring: 174 58% 39%;
+    --border: 215 48% 87%;
+    --input: 215 48% 87%;
+    --ring: 216 100% 50%;
 
-    --radius: 0.75rem;
+    --radius: 0.9rem;
 
     /* Custom Design Tokens */
-    --gradient-hero: linear-gradient(135deg, hsl(174, 58%, 39%) 0%, hsl(180, 45%, 45%) 50%, hsl(165, 40%, 50%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(0, 0%, 100%) 0%, hsl(180, 20%, 98%) 100%);
-    --gradient-section: linear-gradient(180deg, hsl(180, 20%, 99%) 0%, hsl(165, 25%, 96%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(216, 100%, 50%) 0%, hsl(209, 92%, 54%) 48%, hsl(196, 88%, 56%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0, 0%, 100%) 0%, hsl(211, 100%, 98%) 100%);
+    --gradient-section: linear-gradient(180deg, hsl(211, 100%, 99%) 0%, hsl(211, 100%, 95%) 100%);
     
-    --shadow-sm: 0 1px 2px 0 hsl(200 25% 15% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(200 25% 15% / 0.1), 0 2px 4px -2px hsl(200 25% 15% / 0.1);
-    --shadow-lg: 0 10px 15px -3px hsl(200 25% 15% / 0.1), 0 4px 6px -4px hsl(200 25% 15% / 0.1);
-    --shadow-xl: 0 20px 25px -5px hsl(200 25% 15% / 0.1), 0 8px 10px -6px hsl(200 25% 15% / 0.1);
-    --shadow-glow: 0 0 30px hsl(174, 58%, 39%, 0.15);
+    --shadow-sm: 0 1px 2px 0 hsl(221 70% 13% / 0.05);
+    --shadow-md: 0 4px 14px -4px hsl(221 70% 13% / 0.12), 0 2px 6px -3px hsl(221 70% 13% / 0.08);
+    --shadow-lg: 0 16px 32px -18px hsl(221 70% 13% / 0.28), 0 10px 18px -12px hsl(216 100% 50% / 0.18);
+    --shadow-xl: 0 28px 60px -28px hsl(221 70% 13% / 0.34), 0 18px 30px -22px hsl(216 100% 50% / 0.24);
+    --shadow-glow: 0 18px 45px -18px hsl(216 100% 50% / 0.55);
 
     /* Sidebar */
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 200 25% 25%;
-    --sidebar-primary: 174 58% 39%;
+    --sidebar-primary: 216 100% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 165 25% 94%;
-    --sidebar-accent-foreground: 200 25% 20%;
-    --sidebar-border: 180 15% 90%;
-    --sidebar-ring: 174 58% 39%;
+    --sidebar-accent: 211 100% 96%;
+    --sidebar-accent-foreground: 221 70% 16%;
+    --sidebar-border: 215 48% 87%;
+    --sidebar-ring: 216 100% 50%;
   }
 
   .dark {
@@ -184,6 +193,14 @@
     animation: scaleIn 0.5s ease-out forwards;
   }
 
+  .animate-float-slow {
+    animation: floatSlow 5s ease-in-out infinite;
+  }
+
+  .animate-blob {
+    animation: blobDrift 12s ease-in-out infinite;
+  }
+
   .animate-slide-in-left {
     animation: slideInLeft 0.6s ease-out forwards;
   }
@@ -210,6 +227,36 @@
 
   .animation-delay-500 {
     animation-delay: 500ms;
+  }
+}
+
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes blobDrift {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    transform: translate3d(18px, -12px, 0) scale(1.06);
+  }
+  66% {
+    transform: translate3d(-12px, 10px, 0) scale(0.96);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }
 

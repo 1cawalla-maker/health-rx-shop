@@ -1,331 +1,291 @@
 import { Link } from "react-router-dom";
+import {
+  ArrowRight,
+  CalendarCheck,
+  CheckCircle2,
+  ClipboardCheck,
+  FileCheck,
+  LockKeyhole,
+  ShieldCheck,
+  Sparkles,
+  UploadCloud,
+} from "lucide-react";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Button } from "@/components/ui/button";
 import Seo, { SITE_ORIGIN } from "@/components/seo/Seo";
 import { breadcrumbSchema, serviceSchema, webPageSchema } from "@/components/seo/schema";
-import { CONSULTATION_FEE_CENTS } from "@/config/consultations";
-import { formatAudFromCents } from "@/lib/money";
-import { 
-  Calendar, 
-  ClipboardCheck, 
-  Package, 
-  Shield, 
-  UserCheck, 
-  Clock,
-  CheckCircle,
-  ArrowRight,
-  Upload,
-  FileText
-} from "lucide-react";
 
-const steps = [
-  {
-    icon: Calendar,
-    title: "Book a Consultation",
-    description: "Schedule a phone consultation with a registered Australian doctor.",
-  },
+const processSteps = [
   {
     icon: ClipboardCheck,
-    title: "Medical Assessment",
-    description: "Your doctor will review your health history and determine if nicotine pouches are right for you.",
+    title: "Start with eligibility",
+    description: "A guided first step helps eligible Australian adults understand whether the pathway may be relevant before anything else happens.",
   },
   {
-    icon: UserCheck,
-    title: "Receive Prescription",
-    description: "If clinically appropriate, your doctor will issue a prescription through our secure platform.",
+    icon: CalendarCheck,
+    title: "Book clinical review",
+    description: "Where relevant, continue through the existing booking flow for clinician or GP assessment. No outcome is guaranteed.",
   },
   {
-    icon: Package,
-    title: "Order Products",
-    description: "Access our product shop and order eligible nicotine pouches under the Personal Importation Scheme.",
+    icon: FileCheck,
+    title: "Prescription only if appropriate",
+    description: "A prescription is only issued by the practitioner if clinically appropriate after assessment.",
+  },
+  {
+    icon: LockKeyhole,
+    title: "Prescription-gated access",
+    description: "Ordering can only unlock when prescription entitlement requirements are met and verified by PouchCare.",
   },
 ];
 
-const benefits = [
+const trustCards = [
   {
-    icon: Shield,
-    title: "Doctor Supervised",
-    description: "All prescriptions issued by AHPRA-registered Australian doctors.",
+    title: "Australian pathway",
+    description: "Built around eligibility, clinical review where relevant, and controlled access requirements.",
   },
   {
-    icon: Clock,
-    title: "Quick & Convenient",
-    description: "Consultations from the comfort of your home, no travel required.",
+    title: "Privacy-conscious",
+    description: "Designed for careful handling of eligibility, account, prescription, and order information.",
   },
   {
-    icon: CheckCircle,
-    title: "Fully Compliant",
-    description: "Operating legally under Australia's Personal Importation Scheme.",
+    title: "No open catalogue",
+    description: "Public pages stay process-led rather than presenting nicotine pouch products as ordinary ecommerce.",
   },
 ];
+
+const learnLinks = [
+  {
+    title: "Nicotine pouches in Australia",
+    description: "Understand the prescription-gated pathway and why public ecommerce is not the right framing.",
+    to: "/guides/nicotine-pouches-australia",
+  },
+  {
+    title: "Are nicotine pouches legal?",
+    description: "A plain-English guide to the access process and important limitations.",
+    to: "/guides/are-nicotine-pouches-legal-in-australia",
+  },
+  {
+    title: "How PouchCare works",
+    description: "Eligibility, clinical booking, practitioner assessment, upload, verification, and gated ordering.",
+    to: "/how-it-works",
+  },
+];
+
+const disclaimer =
+  "General information only. Not medical or legal advice. PouchCare does not guarantee a prescription, product access, stock, supplier availability, importation outcome, customs outcome, or delivery timeframe.";
 
 export default function Index() {
   return (
     <PublicLayout>
       <Seo
-        title="Nicotine Pouches in Australia (Zyn): Consult with Australian Doctors"
-        description="Doctor-supervised telehealth consultations for nicotine pouches in Australia. If clinically appropriate, receive a prescription and access nicotine pouches legally."
+        title="PouchCare | Eligibility-first online pathway for Australians"
+        description="A clear eligibility-first online pathway for Australian adults, clinical review where relevant, and prescription-gated ordering only where requirements are met."
         canonicalPath="/"
         ogImagePath="/og/home.png"
         ogType="website"
         jsonLd={[
           webPageSchema({
             url: `${SITE_ORIGIN}/`,
-            name: 'PouchCare: Nicotine pouches in Australia',
+            name: "PouchCare | Eligibility-first online pathway for Australians",
             description:
-              'Doctor-supervised telehealth consultations for nicotine pouches in Australia. If clinically appropriate, receive a prescription and access nicotine pouches legally.',
-            dateModified: '2026-03-30',
+              "A clear eligibility-first online pathway for Australian adults, clinical review where relevant, and prescription-gated ordering only where requirements are met.",
+            dateModified: "2026-07-02",
             siteOrigin: SITE_ORIGIN,
           }),
           serviceSchema({
             url: `${SITE_ORIGIN}/`,
-            name: 'Telehealth consultation for nicotine pouches',
+            name: "PouchCare: eligibility-first online pathway",
             description:
-              'Doctor-supervised telehealth consultations for nicotine pouches in Australia, including clinical assessment and next steps if clinically appropriate.',
+              "PouchCare helps eligible Australian adults start with eligibility, continue to clinical booking where relevant, and access prescription-gated ordering only if requirements are met.",
             providerUrl: SITE_ORIGIN,
           }),
-          breadcrumbSchema({
-            items: [{ name: 'Home', url: `${SITE_ORIGIN}/` }],
-          }),
+          breadcrumbSchema({ items: [{ name: "Home", url: `${SITE_ORIGIN}/` }] }),
         ]}
       />
-      {/* Hero Section */}
-      <section className="relative overflow-hidden gradient-section">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent" />
-        <div className="container relative py-20 md:py-32">
-          <div className="max-w-3xl mx-auto text-center space-y-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium animate-fade-in">
-              <Shield className="h-4 w-4" />
-              <span>Trusted Australian Telehealth Service</span>
-            </div>
-            
-            <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight animate-fade-in-up">
-              Your Path to{" "}
-              <span className="text-gradient">Nicotine Pouches</span>{" "}
-              Starts Here
-            </h1>
-            
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto animate-fade-in-up animation-delay-100">
-              Consult with registered Australian doctors online. If clinically appropriate, 
-              receive a prescription and access nicotine pouches legally under the Personal Importation Scheme.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up animation-delay-200">
-              <Button variant="hero" size="xl" asChild>
-                <Link to="/eligibility">Start consultation</Link>
-              </Button>
-              <Button variant="hero-outline" size="xl" asChild>
-                <Link to="/phone-login">Log In</Link>
-              </Button>
+
+      <section className="relative isolate overflow-hidden bg-[linear-gradient(135deg,hsl(var(--pc-bg-soft-blue))_0%,hsl(var(--background))_45%,hsl(var(--pc-sky))_100%)]">
+        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-white/80 to-transparent" />
+        <div className="absolute -left-24 top-20 h-72 w-72 rounded-full bg-primary/10 blur-3xl animate-blob" />
+        <div className="absolute -right-24 bottom-10 h-80 w-80 rounded-full bg-info/15 blur-3xl animate-blob animation-delay-500" />
+
+        <div className="container relative grid min-h-[calc(100svh-4rem)] items-center gap-10 py-10 md:grid-cols-[1.02fr_0.98fr] md:py-16 lg:gap-16">
+          <div className="max-w-2xl space-y-7 animate-fade-in-up">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-white/80 px-3 py-2 text-sm font-semibold text-primary shadow-sm backdrop-blur">
+              <ShieldCheck className="h-4 w-4" />
+              Eligibility-first Australian telehealth pathway
             </div>
 
-            <p className="text-sm text-muted-foreground animate-fade-in-up animation-delay-300">
-              Consultations from {formatAudFromCents(CONSULTATION_FEE_CENTS)} AUD • No commitment required
-            </p>
-
-            <div className="pt-2">
-              <div className="space-y-2">
-                <Link
-                  to="/guides/zyn-australia"
-                  className="text-sm text-primary underline underline-offset-4 hover:text-primary/80 block"
-                >
-                  Looking for Zyns in Australia? Read our guide
-                </Link>
-                <Link
-                  to="/guides"
-                  className="text-sm text-primary underline underline-offset-4 hover:text-primary/80 block"
-                >
-                  Browse all guides
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-
-      {/* Prescription Pathways Section */}
-      <section className="py-16 md:py-20 bg-background">
-        <div className="container">
-          <div className="text-center max-w-2xl mx-auto mb-10">
-            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Already have a prescription?
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              Choose the path that matches where you are now. Existing prescriptions can be uploaded for review, or you can complete the pre-consultation intake to request a new consultation.
-            </p>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="rounded-2xl border bg-card p-6 shadow-sm">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary mb-5">
-                <Upload className="h-6 w-6" />
-              </div>
-              <h3 className="font-display text-2xl font-bold text-foreground mb-3">I already have a prescription</h3>
-              <p className="text-muted-foreground mb-5">
-                Create a patient account, upload a clear copy of your prescription, and PouchCare will review it before ordering access is enabled.
+            <div className="space-y-5">
+              <h1 className="font-display text-4xl font-bold leading-[1.02] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+                A clearer, calmer path through eligibility and clinical review.
+              </h1>
+              <p className="max-w-xl text-base leading-8 text-muted-foreground sm:text-lg">
+                PouchCare helps eligible Australian adults move through a structured online pathway: eligibility first, clinical review where relevant, and prescription-gated ordering only where requirements are met.
               </p>
-              <div className="rounded-lg bg-muted/50 p-4 mb-5">
-                <p className="font-medium text-sm mb-2">Your prescription should clearly show:</p>
-                <ul className="space-y-1 text-sm text-muted-foreground list-disc pl-5">
-                  <li>your name and the prescriber or clinic details</li>
-                  <li>the date issued</li>
-                  <li>the prescribed product/category details</li>
-                  <li>the maximum strength in mg</li>
-                  <li>the total quantity, units, or cans allowed</li>
-                </ul>
-              </div>
-              <Button asChild size="lg" className="w-full sm:w-auto">
-                <Link to="/phone-login?role=patient&mode=signup&next=/patient/upload-prescription">
-                  Upload prescription
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button variant="hero" size="xl" asChild className="rounded-2xl bg-primary px-7 shadow-glow sm:px-9">
+                <Link to="/start-consult">
+                  Start eligibility check
                   <ArrowRight className="h-5 w-5" />
                 </Link>
               </Button>
-              <p className="text-xs text-muted-foreground mt-3">Patient status will show as Reviewing prescription, Approved, or Rejected.</p>
+              <Button variant="hero-outline" size="xl" asChild className="rounded-2xl border-primary/20 bg-white/80 px-7 sm:px-9">
+                <Link to="/how-it-works">How it works</Link>
+              </Button>
             </div>
 
-            <div className="rounded-2xl border bg-card p-6 shadow-sm">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary mb-5">
-                <FileText className="h-6 w-6" />
+            <div className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-3">
+              {[
+                "No guaranteed prescription",
+                "Prescription-gated ordering",
+                "Privacy-conscious support",
+              ].map((item) => (
+                <div key={item} className="flex items-center gap-2 rounded-2xl border border-white/70 bg-white/70 px-3 py-3 shadow-sm backdrop-blur">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+
+            <p className="max-w-xl text-xs leading-6 text-muted-foreground">{disclaimer}</p>
+          </div>
+
+          <div className="relative mx-auto w-full max-w-lg animate-fade-in-up animation-delay-200 md:max-w-none">
+            <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-primary/20 via-info/10 to-white blur-2xl" />
+            <div className="relative overflow-hidden rounded-[2rem] border border-white/80 bg-white p-3 shadow-2xl shadow-primary/10">
+              <img
+                src="/images/pouchcare-doctor-hero-blue.jpg"
+                alt="PouchCare online clinical pathway visual"
+                className="aspect-[4/5] w-full rounded-[1.5rem] object-cover object-center"
+              />
+              <div className="absolute bottom-6 left-6 right-6 rounded-2xl border border-white/70 bg-white/90 p-4 shadow-lg backdrop-blur animate-float-slow">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <Sparkles className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="font-display text-sm font-bold text-foreground">Built for a more organised experience</p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      Clear next steps, careful wording, and a pathway designed around eligibility and review.
+                    </p>
+                  </div>
+                </div>
               </div>
-              <h3 className="font-display text-2xl font-bold text-foreground mb-3">I need a prescription</h3>
-              <p className="text-muted-foreground mb-5">
-                Complete the pre-consultation intake, create a patient account, and request a GP review. A prescription is not guaranteed and depends on the doctor's assessment.
-              </p>
-              <Button variant="outline" size="lg" className="w-full sm:w-auto" asChild>
-                <Link to="/eligibility">Start consultation</Link>
-              </Button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* How It Works Section */}
-      <section className="py-20 md:py-28 bg-background">
+      <section className="border-y border-border/70 bg-white/80 py-5">
+        <div className="container grid gap-3 text-center text-sm font-medium text-muted-foreground sm:grid-cols-3">
+          <span>Australian adults only</span>
+          <span>Clinical review where relevant</span>
+          <span>Prescription-gated access only</span>
+        </div>
+      </section>
+
+      <section className="bg-background py-16 md:py-24">
         <div className="container">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-              How It Works
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              A simple, secure process from consultation to doorstep delivery.
+          <div className="mx-auto mb-12 max-w-2xl text-center">
+            <p className="mb-3 text-sm font-bold uppercase tracking-[0.2em] text-primary">How the pathway works</p>
+            <h2 className="font-display text-3xl font-bold text-foreground md:text-5xl">Simple steps, strict gates.</h2>
+            <p className="mt-4 text-lg text-muted-foreground">
+              The experience is designed to be clear for patients while keeping clinical assessment and prescription requirements in the right order.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {steps.map((step, index) => (
-              <div 
-                key={step.title}
-                className="relative group"
-              >
-                <div className="bg-card rounded-xl p-6 border border-border shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 h-full">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                      <step.icon className="h-6 w-6" />
-                    </div>
-                    <span className="font-display text-4xl font-bold text-muted-foreground/30">
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+            {processSteps.map((step, index) => (
+              <div key={step.title} className="group relative rounded-3xl border border-border bg-card p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+                <div className="mb-6 flex items-center justify-between">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                    <step.icon className="h-6 w-6" />
                   </div>
-                  <h3 className="font-display text-lg font-semibold text-foreground mb-2">
-                    {step.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {step.description}
-                  </p>
+                  <span className="font-display text-4xl font-bold text-primary/15">{String(index + 1).padStart(2, "0")}</span>
                 </div>
-                {index < steps.length - 1 && (
-                  <div className="hidden lg:block absolute top-1/2 -right-4 transform -translate-y-1/2 text-border">
-                    <ArrowRight className="h-6 w-6" />
-                  </div>
-                )}
+                <h3 className="font-display text-xl font-bold text-foreground">{step.title}</h3>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">{step.description}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Benefits Section */}
-      <section className="py-20 md:py-28 gradient-section">
-        <div className="container">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-6">
-                Why Choose PouchCare?
-              </h2>
-              <p className="text-lg text-muted-foreground mb-8">
-                We combine the convenience of telehealth with the oversight of registered medical 
-                professionals to provide a safe, legal pathway to nicotine pouches in Australia.
-              </p>
-              
-              <div className="space-y-6">
-                {benefits.map((benefit) => (
-                  <div key={benefit.title} className="flex gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
-                      <benefit.icon className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-display font-semibold text-foreground mb-1">
-                        {benefit.title}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {benefit.description}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="relative">
-              <div className="aspect-square rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                <div className="text-center p-8">
-                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary text-primary-foreground mx-auto mb-6 shadow-glow">
-                    <Shield className="h-10 w-10" />
-                  </div>
-                  <p className="font-display text-2xl font-bold text-foreground mb-2">
-                    100% Australian
-                  </p>
-                  <p className="text-muted-foreground">
-                    AHPRA-registered doctors and TGA-compliant processes
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 md:py-28 bg-primary">
-        <div className="container">
-          <div className="max-w-3xl mx-auto text-center space-y-8">
-            <h2 className="font-display text-3xl md:text-4xl font-bold text-primary-foreground">
-              Ready to Get Started?
-            </h2>
-            <p className="text-lg text-primary-foreground/80">
-              Consultation requests are coming soon. Existing prescription uploads remain available for review.
+      <section className="bg-[linear-gradient(180deg,hsl(var(--pc-bg-soft-blue))_0%,hsl(var(--background))_100%)] py-16 md:py-24">
+        <div className="container grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <div className="space-y-5">
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">Why it feels different</p>
+            <h2 className="font-display text-3xl font-bold text-foreground md:text-5xl">Healthcare-style clarity, not open online retail.</h2>
+            <p className="text-lg leading-8 text-muted-foreground">
+              Public PouchCare pages should explain the pathway without product hype, strength/flavour promotion, or guaranteed outcomes. The aim is trust, compliance-readiness, and a smoother handoff into booking and verification.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button 
-                size="xl" 
-                className="bg-background text-primary hover:bg-background/90 shadow-lg"
-                disabled
-              >
-                Consultations coming soon
-              </Button>
-              <Button 
-                variant="outline" 
-                size="xl" 
-                className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
-                asChild
-              >
-                <Link to="/how-it-works">Learn More</Link>
-              </Button>
-            </div>
+            <Button variant="hero-outline" size="lg" asChild className="rounded-2xl bg-white/80">
+              <Link to="/faq">Read common questions</Link>
+            </Button>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
+            {trustCards.map((card) => (
+              <div key={card.title} className="rounded-3xl border border-white/80 bg-white/85 p-6 shadow-sm backdrop-blur">
+                <h3 className="font-display text-lg font-bold text-foreground">{card.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{card.description}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
+
+      <section className="bg-background py-16 md:py-24">
+        <div className="container">
+          <div className="mx-auto mb-10 max-w-3xl text-center">
+            <p className="mb-3 text-sm font-bold uppercase tracking-[0.2em] text-primary">Learn before you proceed</p>
+            <h2 className="font-display text-3xl font-bold text-foreground md:text-5xl">Understand the process first.</h2>
+            <p className="mt-4 text-lg text-muted-foreground">
+              If you are researching nicotine pouch access in Australia, start with process, prescription requirements, and limitations — not product claims.
+            </p>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-3">
+            {learnLinks.map((link) => (
+              <Link key={link.to} to={link.to} className="group rounded-3xl border border-border bg-card p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+                <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                  <UploadCloud className="h-5 w-5" />
+                </div>
+                <p className="font-display text-xl font-bold text-foreground group-hover:text-primary">{link.title}</p>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">{link.description}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-primary py-16 pb-28 text-primary-foreground md:py-20">
+        <div className="container">
+          <div className="mx-auto max-w-4xl rounded-[2rem] border border-white/15 bg-white/10 p-8 text-center shadow-2xl shadow-primary/20 backdrop-blur md:p-12">
+            <h2 className="font-display text-3xl font-bold md:text-5xl">Ready to check the pathway?</h2>
+            <p className="mx-auto mt-4 max-w-2xl text-base leading-8 text-primary-foreground/80 md:text-lg">
+              Start with eligibility and continue through the existing booking flow where relevant. A prescription is never guaranteed.
+            </p>
+            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+              <Button size="xl" asChild className="rounded-2xl bg-white text-primary hover:bg-white/90">
+                <Link to="/start-consult">Start eligibility check</Link>
+              </Button>
+              <Button variant="outline" size="xl" asChild className="rounded-2xl border-white/30 bg-transparent text-primary-foreground hover:bg-white/10 hover:text-primary-foreground">
+                <Link to="/contact">Contact support</Link>
+              </Button>
+            </div>
+            <p className="mx-auto mt-6 max-w-2xl text-xs leading-6 text-primary-foreground/70">{disclaimer}</p>
+          </div>
+        </div>
+      </section>
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/40 bg-white/90 p-3 shadow-2xl backdrop-blur md:hidden">
+        <Button variant="hero" size="lg" asChild className="w-full rounded-2xl">
+          <Link to="/start-consult">Start eligibility check</Link>
+        </Button>
+      </div>
     </PublicLayout>
   );
 }

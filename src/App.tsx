@@ -20,6 +20,7 @@ import Disclaimer from "./pages/Disclaimer";
 import Contact from "./pages/Contact";
 import PhoneLogin from "./pages/PhoneLogin";
 import StartConsultation from "./pages/StartConsultation";
+import SocialLanding from "./pages/SocialLanding";
 import EligibilityQuiz from "./pages/EligibilityQuiz";
 import ImportationBasis from "./pages/ImportationBasis";
 import NotFound from "./pages/NotFound";
@@ -102,6 +103,7 @@ const App = () => (
               <Route path="/auth/callback" element={<Navigate to="/phone-login" replace />} />
               <Route path="/phone-login" element={<PhoneLogin />} />
               <Route path="/start-consult" element={<StartConsultation />} />
+              <Route path="/start" element={<SocialLanding />} />
               <Route path="/patient/start-consult" element={<ProtectedRoute allowedRoles={['patient']}><StartConsultation /></ProtectedRoute>} />
               <Route path="/eligibility" element={<EligibilityQuiz />} />
               <Route path="/patient/book" element={<Navigate to="/start-consult" replace />} />
