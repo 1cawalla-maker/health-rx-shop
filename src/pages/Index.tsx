@@ -304,7 +304,7 @@ export default function Index() {
         </div>
       </section>
 
-      <section className="bg-primary py-16 pb-28 text-primary-foreground md:py-20">
+      <section className="bg-primary py-16 text-primary-foreground md:py-20">
         <div className="container">
           <div className="mx-auto max-w-4xl rounded-[2rem] border border-white/15 bg-white/10 p-8 text-center shadow-2xl shadow-primary/20 backdrop-blur md:p-12">
             <h2 className="font-display text-3xl font-bold md:text-5xl">Ready to check the pathway?</h2>
@@ -324,11 +324,6 @@ export default function Index() {
         </div>
       </section>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/40 bg-white/90 p-3 shadow-2xl backdrop-blur md:hidden">
-        <Button variant="hero" size="lg" asChild className="w-full rounded-2xl">
-          <Link to="/start-consult">Start eligibility check</Link>
-        </Button>
-      </div>
     </PublicLayout>
   );
 }
