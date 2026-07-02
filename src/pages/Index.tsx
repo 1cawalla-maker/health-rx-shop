@@ -40,16 +40,40 @@ const processSteps = [
 
 const trustCards = [
   {
-    title: "Australian pathway",
-    description: "Built around eligibility, clinical review where relevant, and controlled access requirements.",
+    title: "Doctor consultation pathway",
+    description: "Eligible adults can move from online eligibility into clinical review where relevant. A prescription is never guaranteed.",
   },
   {
-    title: "Privacy-conscious",
-    description: "Designed for careful handling of eligibility, account, prescription, and order information.",
+    title: "From $10 per can",
+    description: "Where ordering is unlocked, pouch pricing starts from $10 per can, subject to prescription entitlement, stock, supplier availability, and checkout requirements.",
   },
   {
-    title: "No open catalogue",
-    description: "Public pages stay process-led rather than presenting nicotine pouch products as ordinary ecommerce.",
+    title: "Overseas supplier partner",
+    description: "Fulfilment support can involve an overseas supplier partner after prescription requirements are met and PouchCare checks are complete.",
+  },
+];
+
+const valuePoints = [
+  "Nicotine pouch access pathway for eligible Australian adults",
+  "Designed for adults looking for a smoke-free alternative pathway",
+  "Doctor consultation step where clinical review is relevant",
+  "Prescription-gated ordering with clear entitlement checks",
+  "Partner overseas supplier fulfilment support where requirements are met",
+  "Pouches from $10 per can where ordering is unlocked",
+];
+
+const reviewStandards = [
+  {
+    title: "Clear next steps",
+    description: "Patients should understand what happens after eligibility, booking, review, prescription upload, and ordering access.",
+  },
+  {
+    title: "Responsive support",
+    description: "Support should be available for account, upload, ordering, fulfilment, privacy, and complaint questions.",
+  },
+  {
+    title: "Transparent conditions",
+    description: "Pricing, supplier fulfilment, stock, prescription limits, and delivery expectations should be shown with the right caveats.",
   },
 ];
 
@@ -78,25 +102,25 @@ export default function Index() {
   return (
     <PublicLayout>
       <Seo
-        title="PouchCare | Eligibility-first online pathway for Australians"
-        description="A clear eligibility-first online pathway for Australian adults, clinical review where relevant, and prescription-gated ordering only where requirements are met."
+        title="PouchCare | Nicotine pouch access pathway for eligible Australians"
+        description="A nicotine pouch access pathway for eligible Australian adults with eligibility checks, doctor consultation where relevant, prescription-gated ordering, and supplier fulfilment support where requirements are met."
         canonicalPath="/"
         ogImagePath="/og/home.png"
         ogType="website"
         jsonLd={[
           webPageSchema({
             url: `${SITE_ORIGIN}/`,
-            name: "PouchCare | Eligibility-first online pathway for Australians",
+            name: "PouchCare | Nicotine pouch access pathway for eligible Australians",
             description:
-              "A clear eligibility-first online pathway for Australian adults, clinical review where relevant, and prescription-gated ordering only where requirements are met.",
+              "A nicotine pouch access pathway for eligible Australian adults with eligibility checks, doctor consultation where relevant, prescription-gated ordering, and supplier fulfilment support where requirements are met.",
             dateModified: "2026-07-02",
             siteOrigin: SITE_ORIGIN,
           }),
           serviceSchema({
             url: `${SITE_ORIGIN}/`,
-            name: "PouchCare: eligibility-first online pathway",
+            name: "PouchCare: nicotine pouch access pathway",
             description:
-              "PouchCare helps eligible Australian adults start with eligibility, continue to clinical booking where relevant, and access prescription-gated ordering only if requirements are met.",
+              "PouchCare helps eligible Australian adults start with eligibility, continue to doctor consultation where relevant, and access prescription-gated nicotine pouch ordering only if requirements are met.",
             providerUrl: SITE_ORIGIN,
           }),
           breadcrumbSchema({ items: [{ name: "Home", url: `${SITE_ORIGIN}/` }] }),
@@ -122,10 +146,10 @@ export default function Index() {
               <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary"><ShieldCheck className="h-4 w-4" /> Eligibility first</div>
               <div className="space-y-3">
                 <h1 className="font-display text-[2.35rem] font-bold leading-[0.98] tracking-tight text-foreground">
-                  Start with a clearer clinical pathway.
+                  Nicotine pouch access, handled properly.
                 </h1>
                 <p className="text-sm leading-6 text-muted-foreground">
-                  Check eligibility, then continue to clinical review where relevant. Ordering only unlocks if prescription requirements are met.
+                  Check eligibility, continue to doctor consultation where relevant, then access pouches from $10 per can only if prescription requirements are met.
                 </p>
               </div>
 
@@ -160,10 +184,10 @@ export default function Index() {
 
             <div className="space-y-5">
               <h1 className="font-display text-5xl font-bold leading-[1.02] tracking-tight text-foreground lg:text-6xl">
-                A clearer path through eligibility and clinical review.
+                Nicotine pouch access, handled properly.
               </h1>
               <p className="max-w-xl text-lg leading-8 text-muted-foreground">
-                Start with eligibility, continue to clinical review where relevant, and only access ordering where prescription requirements are met.
+                Check eligibility, continue to doctor consultation where relevant, and access nicotine pouch ordering from $10 per can only if prescription requirements are met.
               </p>
             </div>
 
@@ -224,8 +248,29 @@ export default function Index() {
       <section className="border-y border-border/70 bg-white/80 py-5">
         <div className="container grid gap-3 text-center text-sm font-medium text-muted-foreground sm:grid-cols-3">
           <span>Australian adults only</span>
-          <span>Clinical review where relevant</span>
-          <span>Prescription-gated access only</span>
+          <span>Doctor consultation where relevant</span>
+          <span>From $10 per can where unlocked</span>
+        </div>
+      </section>
+
+      <section className="bg-background py-16 md:py-24">
+        <div className="container">
+          <div className="mx-auto mb-12 max-w-2xl text-center">
+            <p className="mb-3 text-sm font-bold uppercase tracking-[0.2em] text-primary">What PouchCare offers</p>
+            <h2 className="font-display text-3xl font-bold text-foreground md:text-5xl">A practical access pathway, not open retail.</h2>
+            <p className="mt-4 text-lg text-muted-foreground">
+              PouchCare is built for eligible adults who want a structured pathway for nicotine pouch access, doctor consultation where relevant, and supplier fulfilment support after prescription requirements are met.
+            </p>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {valuePoints.map((point) => (
+              <div key={point} className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                <p className="text-sm font-medium leading-6 text-foreground">{point}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -260,9 +305,9 @@ export default function Index() {
         <div className="container grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <div className="space-y-5">
             <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">Why it feels different</p>
-            <h2 className="font-display text-3xl font-bold text-foreground md:text-5xl">Healthcare-style clarity, not open online retail.</h2>
+            <h2 className="font-display text-3xl font-bold text-foreground md:text-5xl">Nicotine pouches, with the gates in the right order.</h2>
             <p className="text-lg leading-8 text-muted-foreground">
-              Public PouchCare pages should explain the pathway without product hype, strength/flavour promotion, or guaranteed outcomes. The aim is trust, compliance-readiness, and a smoother handoff into booking and verification.
+              PouchCare can support eligible adults looking for a smoke-free alternative pathway, but it is not open online retail. Doctor consultation, prescription entitlement, supplier availability, and fulfilment checks all matter before ordering access can happen.
             </p>
             <Button variant="hero-outline" size="lg" asChild className="rounded-2xl bg-white/80">
               <Link to="/faq">Read common questions</Link>
@@ -274,6 +319,27 @@ export default function Index() {
               <div key={card.title} className="rounded-3xl border border-white/80 bg-white/85 p-6 shadow-sm backdrop-blur">
                 <h3 className="font-display text-lg font-bold text-foreground">{card.title}</h3>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">{card.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-background py-16 md:py-24">
+        <div className="container">
+          <div className="mx-auto mb-10 max-w-3xl text-center">
+            <p className="mb-3 text-sm font-bold uppercase tracking-[0.2em] text-primary">Service experience</p>
+            <h2 className="font-display text-3xl font-bold text-foreground md:text-5xl">Built around clarity, support, and fulfilment checks.</h2>
+            <p className="mt-4 text-lg text-muted-foreground">
+              We will only publish real customer reviews once they are available. Until then, these are the service standards the front page should make clear.
+            </p>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-3">
+            {reviewStandards.map((item) => (
+              <div key={item.title} className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+                <h3 className="font-display text-xl font-bold text-foreground">{item.title}</h3>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">{item.description}</p>
               </div>
             ))}
           </div>
