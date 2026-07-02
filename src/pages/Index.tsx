@@ -108,23 +108,67 @@ export default function Index() {
         <div className="absolute -left-24 top-20 h-72 w-72 rounded-full bg-primary/10 blur-3xl animate-blob" />
         <div className="absolute -right-24 bottom-10 h-80 w-80 rounded-full bg-info/15 blur-3xl animate-blob animation-delay-500" />
 
-        <div className="container relative grid min-h-[calc(100svh-4rem)] items-start gap-6 py-4 pb-24 md:grid-cols-[1.02fr_0.98fr] md:items-center md:gap-10 md:py-16 lg:gap-16">
-          <div className="order-2 max-w-2xl space-y-5 animate-fade-in-up md:order-1 md:space-y-7">
-            <div className="hidden items-center gap-2 rounded-full border border-primary/15 bg-white/80 px-3 py-2 text-sm font-semibold text-primary shadow-sm backdrop-blur md:inline-flex">
+        <div className="container relative py-4 pb-24 md:grid md:min-h-[calc(100svh-4rem)] md:grid-cols-[1.02fr_0.98fr] md:items-center md:gap-10 md:py-16 lg:gap-16">
+          <div className="relative overflow-hidden rounded-[2rem] border border-white/80 bg-primary shadow-2xl shadow-primary/15 md:hidden">
+            <img
+              src="/images/pouchcare-doctor-hero-blue.jpg"
+              alt="PouchCare online clinical pathway visual"
+              className="h-[610px] w-full object-cover object-center"
+            />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,22,54,0.06)_0%,rgba(4,22,54,0.16)_38%,rgba(4,22,54,0.88)_100%)]" />
+            <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/90 px-3 py-2 text-xs font-bold text-primary shadow-md backdrop-blur">
+              <ShieldCheck className="h-4 w-4" />
+              Australian telehealth pathway
+            </div>
+            <div className="absolute inset-x-0 bottom-0 space-y-4 p-5 text-white">
+              <div className="inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold backdrop-blur">Eligibility first. Clinical review where relevant.</div>
+              <div className="space-y-3">
+                <h1 className="font-display text-[2.45rem] font-bold leading-[0.98] tracking-tight">
+                  A clearer path through clinical review.
+                </h1>
+                <p className="text-sm leading-6 text-white/85">
+                  Start with eligibility. Ordering only unlocks where prescription requirements are met.
+                </p>
+              </div>
+              <div className="grid gap-2">
+                <Button variant="secondary" size="lg" asChild className="rounded-2xl bg-white text-primary hover:bg-white/90">
+                  <Link to="/start-consult">
+                    Start eligibility check
+                    <ArrowRight className="h-5 w-5" />
+                  </Link>
+                </Button>
+                <Button variant="outline" size="lg" asChild className="rounded-2xl border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white">
+                  <Link to="/how-it-works">How it works</Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-2 text-xs text-muted-foreground md:hidden">
+            {["No guaranteed prescription", "Prescription-gated ordering", "Privacy-conscious support"].map((item) => (
+              <div key={item} className="flex items-center gap-2 rounded-2xl border border-white/70 bg-white/80 px-3 py-3 shadow-sm backdrop-blur">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="hidden max-w-2xl space-y-7 animate-fade-in-up md:block">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-white/80 px-3 py-2 text-sm font-semibold text-primary shadow-sm backdrop-blur">
               <ShieldCheck className="h-4 w-4" />
               Eligibility-first Australian telehealth pathway
             </div>
 
-            <div className="space-y-3 md:space-y-5">
-              <h1 className="font-display text-3xl font-bold leading-[1.03] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+            <div className="space-y-5">
+              <h1 className="font-display text-5xl font-bold leading-[1.02] tracking-tight text-foreground lg:text-6xl">
                 A clearer path through eligibility and clinical review.
               </h1>
-              <p className="max-w-xl text-sm leading-7 text-muted-foreground sm:text-base md:text-lg md:leading-8">
+              <p className="max-w-xl text-lg leading-8 text-muted-foreground">
                 Start with eligibility, continue to clinical review where relevant, and only access ordering where prescription requirements are met.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:flex sm:flex-row">
+            <div className="flex flex-row gap-3">
               <Button variant="hero" size="xl" asChild className="rounded-2xl bg-primary px-7 shadow-glow sm:px-9">
                 <Link to="/start-consult">
                   Start eligibility check
@@ -136,7 +180,7 @@ export default function Index() {
               </Button>
             </div>
 
-            <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3 sm:text-sm">
+            <div className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-3">
               {[
                 "No guaranteed prescription",
                 "Prescription-gated ordering",
@@ -149,10 +193,10 @@ export default function Index() {
               ))}
             </div>
 
-            <p className="hidden max-w-xl text-xs leading-6 text-muted-foreground sm:block">{disclaimer}</p>
+            <p className="max-w-xl text-xs leading-6 text-muted-foreground">{disclaimer}</p>
           </div>
 
-          <div className="relative order-1 mx-auto w-full max-w-lg animate-fade-in-up animation-delay-200 md:order-2 md:max-w-none">
+          <div className="relative hidden w-full max-w-lg animate-fade-in-up animation-delay-200 md:block md:max-w-none">
             <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-primary/20 via-info/10 to-white blur-2xl" />
             <div className="relative overflow-hidden rounded-[1.75rem] border border-white/80 bg-white p-2 shadow-2xl shadow-primary/10 md:rounded-[2rem] md:p-3">
               <img
@@ -160,18 +204,14 @@ export default function Index() {
                 alt="PouchCare online clinical pathway visual"
                 className="aspect-[16/11] w-full rounded-[1.25rem] object-cover object-center md:aspect-[4/5] md:rounded-[1.5rem]"
               />
-              <div className="absolute left-5 top-5 inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/90 px-3 py-2 text-xs font-bold text-primary shadow-md backdrop-blur md:hidden">
-                <ShieldCheck className="h-4 w-4" />
-                Australian telehealth pathway
-              </div>
-              <div className="absolute bottom-4 left-4 right-4 rounded-2xl border border-white/70 bg-white/90 p-3 shadow-lg backdrop-blur animate-float-slow md:bottom-6 md:left-6 md:right-6 md:p-4">
+              <div className="absolute bottom-6 left-6 right-6 rounded-2xl border border-white/70 bg-white/90 p-4 shadow-lg backdrop-blur animate-float-slow">
                 <div className="flex items-start gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <Sparkles className="h-5 w-5" />
                   </div>
                   <div>
                     <p className="font-display text-sm font-bold text-foreground">Organised from the first step</p>
-                    <p className="mt-1 hidden text-xs leading-5 text-muted-foreground sm:block">
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
                       Clear next steps, careful wording, and a pathway designed around eligibility and review.
                     </p>
                   </div>
