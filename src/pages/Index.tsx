@@ -195,7 +195,7 @@ export default function Index() {
                   Alternative Smoking Cessation Care.
                 </h1>
                 <p className="text-sm leading-6 text-muted-foreground">
-                  Check eligibility, continue to doctor consultation where relevant, then access pouches from $10 per can only if prescription requirements are met.
+                  Quit smoking the way you prefer. Discuss your cessation plans with our practitioners and begin your journey for $10 per can.
                 </p>
               </div>
 
@@ -213,7 +213,7 @@ export default function Index() {
             </div>
 
             <div className="mt-4 grid gap-2 text-xs text-muted-foreground">
-              {["No guaranteed prescription", "Prescription-gated ordering", "Privacy-conscious support"].map((item) => (
+              {["Online doctors consultation", "Overseas supplier", "Guaranteed prescription fulfilment"].map((item) => (
                 <div key={item} className="flex items-center gap-2 rounded-2xl border border-white/70 bg-white/80 px-3 py-3 shadow-sm backdrop-blur">
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
                   <span>{item}</span>
@@ -233,7 +233,7 @@ export default function Index() {
                 Alternative Smoking Cessation Care.
               </h1>
               <p className="max-w-xl text-lg leading-8 text-muted-foreground">
-                Check eligibility, continue to doctor consultation where relevant, and access nicotine pouch ordering from $10 per can only if prescription requirements are met.
+                Quit smoking the way you prefer. Discuss your cessation plans with our practitioners and begin your journey for $10 per can.
               </p>
             </div>
 
@@ -251,9 +251,9 @@ export default function Index() {
 
             <div className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-3">
               {[
-                "No guaranteed prescription",
-                "Prescription-gated ordering",
-                "Privacy-conscious support",
+                "Online doctors consultation",
+                "Overseas supplier",
+                "Guaranteed prescription fulfilment",
               ].map((item) => (
                 <div key={item} className="flex items-center gap-2 rounded-2xl border border-white/70 bg-white/70 px-3 py-3 shadow-sm backdrop-blur">
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
@@ -262,7 +262,6 @@ export default function Index() {
               ))}
             </div>
 
-            <p className="max-w-xl text-xs leading-6 text-muted-foreground">{disclaimer}</p>
           </div>
 
           <div className="relative hidden w-full max-w-lg animate-fade-in-up animation-delay-200 md:block md:max-w-none">
@@ -447,7 +446,7 @@ export default function Index() {
                 <Link to="/contact">Contact support</Link>
               </Button>
             </div>
-            <p className="mx-auto mt-6 max-w-2xl text-xs leading-6 text-primary-foreground/70">{disclaimer}</p>
+
           </div>
         </div>
       </section>
