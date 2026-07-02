@@ -95,9 +95,6 @@ const learnLinks = [
   },
 ];
 
-const disclaimer =
-  "General information only. Not medical or legal advice. PouchCare does not guarantee a prescription, product access, stock, supplier availability, importation outcome, customs outcome, or delivery timeframe.";
-
 function BreathingLungsVisual() {
   return (
     <div className="relative mx-auto aspect-square w-full max-w-sm rounded-[2rem] border border-white/80 bg-[radial-gradient(circle_at_50%_35%,hsl(var(--pc-sky))_0%,white_54%,hsl(var(--pc-bg-soft-blue))_100%)] p-6 shadow-2xl shadow-primary/10">
