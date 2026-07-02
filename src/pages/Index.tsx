@@ -175,7 +175,7 @@ export default function Index() {
         <div className="absolute -left-24 top-20 hidden h-72 w-72 rounded-full bg-primary/10 blur-3xl animate-blob md:block" />
         <div className="absolute -right-24 bottom-10 hidden h-80 w-80 rounded-full bg-info/15 blur-3xl animate-blob animation-delay-500 md:block" />
 
-        <div className="container relative py-4 pb-24 md:grid md:min-h-[calc(100svh-4rem)] md:grid-cols-[1.02fr_0.98fr] md:items-center md:gap-10 md:py-16 lg:gap-16">
+        <div className="container relative py-4 pb-6 md:grid md:min-h-[calc(100svh-4rem)] md:grid-cols-[1.02fr_0.98fr] md:items-center md:gap-10 md:py-16 lg:gap-16">
           <div className="md:hidden">
             <div className="relative -mx-8 -mt-4 h-[310px] overflow-hidden bg-primary">
               <img
@@ -287,15 +287,7 @@ export default function Index() {
         </div>
       </section>
 
-      <section className="border-y border-border/70 bg-white/80 py-5">
-        <div className="container grid gap-3 text-center text-sm font-medium text-muted-foreground sm:grid-cols-3">
-          <span>Australian adults only</span>
-          <span>Doctor consultation where relevant</span>
-          <span>From $10 per can where unlocked</span>
-        </div>
-      </section>
-
-      <section className="bg-[linear-gradient(180deg,hsl(var(--background))_0%,hsl(var(--pc-bg-soft-blue))_100%)] py-14 md:py-20">
+      <section className="bg-[linear-gradient(180deg,hsl(var(--background))_0%,hsl(var(--pc-bg-soft-blue))_100%)] py-8 md:py-20">
         <div className="container grid gap-10 md:grid-cols-[0.95fr_1.05fr] md:items-center">
           <BreathingLungsVisual />
           <div className="space-y-5">
