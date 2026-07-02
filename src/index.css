@@ -201,6 +201,21 @@
     animation: blobDrift 12s ease-in-out infinite;
   }
 
+  .animate-lung-breathe {
+    animation: lungBreathe 6.5s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .animate-lung-colour {
+    animation: lungColour 6.5s ease-in-out infinite;
+  }
+
+  .animate-air-thread {
+    animation: airThread 6.5s ease-in-out infinite;
+    stroke-dasharray: 10 14;
+  }
+
   .animate-slide-in-left {
     animation: slideInLeft 0.6s ease-out forwards;
   }
@@ -248,6 +263,46 @@
   }
   66% {
     transform: translate3d(-12px, 10px, 0) scale(0.96);
+  }
+}
+
+@keyframes lungBreathe {
+  0%, 100% {
+    transform: scale(0.965);
+    opacity: 0.82;
+  }
+  50% {
+    transform: scale(1.035);
+    opacity: 1;
+  }
+}
+
+@keyframes lungColour {
+  0%, 100% {
+    stroke: hsl(218 16% 56%);
+    fill: hsl(218 22% 92% / 0.48);
+  }
+  50% {
+    stroke: hsl(var(--primary));
+    fill: hsl(204 100% 92% / 0.7);
+  }
+}
+
+@keyframes airThread {
+  0% {
+    stroke: hsl(218 16% 62% / 0.55);
+    stroke-dashoffset: 42;
+    opacity: 0.35;
+  }
+  50% {
+    stroke: hsl(var(--pc-cyan) / 0.95);
+    stroke-dashoffset: 0;
+    opacity: 0.95;
+  }
+  100% {
+    stroke: hsl(218 16% 62% / 0.55);
+    stroke-dashoffset: -42;
+    opacity: 0.35;
   }
 }
 

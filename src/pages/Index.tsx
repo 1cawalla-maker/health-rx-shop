@@ -98,6 +98,36 @@ const learnLinks = [
 const disclaimer =
   "General information only. Not medical or legal advice. PouchCare does not guarantee a prescription, product access, stock, supplier availability, importation outcome, customs outcome, or delivery timeframe.";
 
+function BreathingLungsVisual() {
+  return (
+    <div className="relative mx-auto aspect-square w-full max-w-sm rounded-[2rem] border border-white/80 bg-[radial-gradient(circle_at_50%_35%,hsl(var(--pc-sky))_0%,white_54%,hsl(var(--pc-bg-soft-blue))_100%)] p-6 shadow-2xl shadow-primary/10">
+      <div className="absolute inset-5 rounded-[1.5rem] border border-primary/10" />
+      <div className="absolute left-6 top-6 rounded-full bg-white/80 px-3 py-1 text-xs font-bold text-primary shadow-sm backdrop-blur">Slow breathing pathway</div>
+      <svg viewBox="0 0 260 260" role="img" aria-label="Animated breathing lung outline" className="relative z-10 h-full w-full">
+        <defs>
+          <filter id="lungGlow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.04 0 0 0 0 0.42 0 0 0 0 1 0 0 0 0.28 0" />
+            <feMerge>
+              <feMergeNode />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+        <path className="animate-air-thread" d="M130 32 C130 55 130 74 130 95" fill="none" strokeWidth="8" strokeLinecap="round" />
+        <path className="animate-air-thread animation-delay-300" d="M112 102 C86 94 65 112 55 144" fill="none" strokeWidth="4" strokeLinecap="round" />
+        <path className="animate-air-thread animation-delay-300" d="M148 102 C174 94 195 112 205 144" fill="none" strokeWidth="4" strokeLinecap="round" />
+        <g filter="url(#lungGlow)">
+          <path className="animate-lung-breathe animate-lung-colour" d="M119 104 C90 92 62 108 49 139 C34 175 43 214 78 222 C101 227 116 207 119 181 C122 153 118 128 119 104 Z" strokeWidth="6" strokeLinejoin="round" />
+          <path className="animate-lung-breathe animate-lung-colour animation-delay-200" d="M141 104 C170 92 198 108 211 139 C226 175 217 214 182 222 C159 227 144 207 141 181 C138 153 142 128 141 104 Z" strokeWidth="6" strokeLinejoin="round" />
+        </g>
+        <path d="M130 32 C130 70 130 89 130 106 M130 106 C122 113 116 121 113 134 M130 106 C138 113 144 121 147 134" fill="none" stroke="hsl(var(--pc-navy) / 0.62)" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="130" cy="130" r="96" fill="none" stroke="hsl(var(--primary) / 0.08)" strokeWidth="14" />
+      </svg>
+    </div>
+  );
+}
+
 export default function Index() {
   return (
     <PublicLayout>
@@ -250,6 +280,22 @@ export default function Index() {
           <span>Australian adults only</span>
           <span>Doctor consultation where relevant</span>
           <span>From $10 per can where unlocked</span>
+        </div>
+      </section>
+
+      <section className="bg-[linear-gradient(180deg,hsl(var(--background))_0%,hsl(var(--pc-bg-soft-blue))_100%)] py-14 md:py-20">
+        <div className="container grid gap-10 md:grid-cols-[0.95fr_1.05fr] md:items-center">
+          <BreathingLungsVisual />
+          <div className="space-y-5">
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">Smoke-free alternative pathway</p>
+            <h2 className="font-display text-3xl font-bold leading-tight text-foreground md:text-5xl">A calmer way to explore a different path.</h2>
+            <p className="text-base leading-8 text-muted-foreground md:text-lg">
+              PouchCare is designed for eligible adults considering an alternative smoking cessation pathway. Start with eligibility, continue to doctor consultation where relevant, and only access ordering where prescription requirements are met.
+            </p>
+            <p className="rounded-2xl border border-primary/10 bg-white/75 p-4 text-sm leading-6 text-muted-foreground shadow-sm">
+              The breathing animation is symbolic and does not promise a health outcome. Individual suitability and next steps depend on clinical review where relevant.
+            </p>
+          </div>
         </div>
       </section>
 
