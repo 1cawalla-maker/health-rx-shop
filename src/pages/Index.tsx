@@ -146,7 +146,7 @@ export default function Index() {
               <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary"><ShieldCheck className="h-4 w-4" /> Eligibility first</div>
               <div className="space-y-3">
                 <h1 className="font-display text-[2.35rem] font-bold leading-[0.98] tracking-tight text-foreground">
-                  Nicotine pouch access, handled properly.
+                  Alternative Smoking Cessation Care.
                 </h1>
                 <p className="text-sm leading-6 text-muted-foreground">
                   Check eligibility, continue to doctor consultation where relevant, then access pouches from $10 per can only if prescription requirements are met.
@@ -184,7 +184,7 @@ export default function Index() {
 
             <div className="space-y-5">
               <h1 className="font-display text-5xl font-bold leading-[1.02] tracking-tight text-foreground lg:text-6xl">
-                Nicotine pouch access, handled properly.
+                Alternative Smoking Cessation Care.
               </h1>
               <p className="max-w-xl text-lg leading-8 text-muted-foreground">
                 Check eligibility, continue to doctor consultation where relevant, and access nicotine pouch ordering from $10 per can only if prescription requirements are met.
