@@ -202,13 +202,9 @@
   }
 
   .animate-lung-breathe {
-    animation: lungBreathe 6.5s ease-in-out infinite;
+    animation: lungBreathe 5.5s ease-in-out infinite;
     transform-box: fill-box;
     transform-origin: center;
-  }
-
-  .animate-lung-colour {
-    animation: lungColour 6.5s ease-in-out infinite;
   }
 
   .animate-air-thread {
@@ -268,41 +264,25 @@
 
 @keyframes lungBreathe {
   0%, 100% {
-    transform: scale(0.965);
-    opacity: 0.82;
+    transform: scale(0.92);
   }
   50% {
-    transform: scale(1.035);
-    opacity: 1;
-  }
-}
-
-@keyframes lungColour {
-  0%, 100% {
-    stroke: hsl(218 16% 56%);
-    fill: hsl(218 22% 92% / 0.48);
-  }
-  50% {
-    stroke: hsl(var(--primary));
-    fill: hsl(204 100% 92% / 0.7);
+    transform: scale(1.08);
   }
 }
 
 @keyframes airThread {
   0% {
-    stroke: hsl(218 16% 62% / 0.55);
-    stroke-dashoffset: 42;
-    opacity: 0.35;
+    stroke-dashoffset: 48;
+    opacity: 0.42;
   }
   50% {
-    stroke: hsl(var(--pc-cyan) / 0.95);
     stroke-dashoffset: 0;
-    opacity: 0.95;
+    opacity: 1;
   }
   100% {
-    stroke: hsl(218 16% 62% / 0.55);
-    stroke-dashoffset: -42;
-    opacity: 0.35;
+    stroke-dashoffset: -48;
+    opacity: 0.42;
   }
 }
 

@@ -105,24 +105,40 @@ function BreathingLungsVisual() {
       <div className="absolute left-6 top-6 rounded-full bg-white/80 px-3 py-1 text-xs font-bold text-primary shadow-sm backdrop-blur">Slow breathing pathway</div>
       <svg viewBox="0 0 260 260" role="img" aria-label="Animated breathing lung outline" className="relative z-10 h-full w-full">
         <defs>
-          <filter id="lungGlow" x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur stdDeviation="4" result="blur" />
-            <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.04 0 0 0 0 0.42 0 0 0 0 1 0 0 0 0.28 0" />
+          <filter id="lungGlow" x="-35%" y="-35%" width="170%" height="170%">
+            <feGaussianBlur stdDeviation="5" result="blur" />
+            <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.02 0 0 0 0 0.32 0 0 0 0 1 0 0 0 0.28 0" />
             <feMerge>
               <feMergeNode />
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
         </defs>
-        <path className="animate-air-thread" d="M130 32 C130 55 130 74 130 95" fill="none" strokeWidth="8" strokeLinecap="round" />
-        <path className="animate-air-thread animation-delay-300" d="M112 102 C86 94 65 112 55 144" fill="none" strokeWidth="4" strokeLinecap="round" />
-        <path className="animate-air-thread animation-delay-300" d="M148 102 C174 94 195 112 205 144" fill="none" strokeWidth="4" strokeLinecap="round" />
         <g filter="url(#lungGlow)">
-          <path className="animate-lung-breathe animate-lung-colour" d="M119 104 C90 92 62 108 49 139 C34 175 43 214 78 222 C101 227 116 207 119 181 C122 153 118 128 119 104 Z" strokeWidth="6" strokeLinejoin="round" />
-          <path className="animate-lung-breathe animate-lung-colour animation-delay-200" d="M141 104 C170 92 198 108 211 139 C226 175 217 214 182 222 C159 227 144 207 141 181 C138 153 142 128 141 104 Z" strokeWidth="6" strokeLinejoin="round" />
+          <g className="animate-lung-breathe">
+            <path d="M119 91 C101 78 76 80 59 102 C42 124 34 154 36 181 C38 211 55 231 81 232 C107 233 119 206 121 177 C123 151 115 124 119 91 Z" fill="hsl(var(--primary) / 0.12)" stroke="hsl(var(--primary))" strokeWidth="6" strokeLinejoin="round" />
+            <path d="M141 91 C159 78 184 80 201 102 C218 124 226 154 224 181 C222 211 205 231 179 232 C153 233 141 206 139 177 C137 151 145 124 141 91 Z" fill="hsl(var(--primary) / 0.12)" stroke="hsl(var(--primary))" strokeWidth="6" strokeLinejoin="round" />
+          </g>
+          <g className="animate-lung-breathe" fill="none" stroke="hsl(var(--primary) / 0.72)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M130 34 C130 61 130 83 130 104" strokeWidth="8" />
+            <path d="M130 104 C119 113 109 125 101 141" />
+            <path d="M101 141 C88 151 78 166 72 184" />
+            <path d="M101 141 C96 160 97 181 103 202" />
+            <path d="M101 141 C82 137 66 145 56 160" />
+            <path d="M130 104 C141 113 151 125 159 141" />
+            <path d="M159 141 C172 151 182 166 188 184" />
+            <path d="M159 141 C164 160 163 181 157 202" />
+            <path d="M159 141 C178 137 194 145 204 160" />
+          </g>
+          <g className="animate-lung-breathe" fill="none" stroke="hsl(var(--pc-cyan) / 0.95)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path className="animate-air-thread" d="M130 46 C130 68 130 84 130 104" />
+            <path className="animate-air-thread animation-delay-200" d="M116 118 C100 132 86 153 78 187" />
+            <path className="animate-air-thread animation-delay-300" d="M106 139 C91 141 73 148 61 164" />
+            <path className="animate-air-thread animation-delay-400" d="M144 118 C160 132 174 153 182 187" />
+            <path className="animate-air-thread animation-delay-500" d="M154 139 C169 141 187 148 199 164" />
+          </g>
         </g>
-        <path d="M130 32 C130 70 130 89 130 106 M130 106 C122 113 116 121 113 134 M130 106 C138 113 144 121 147 134" fill="none" stroke="hsl(var(--pc-navy) / 0.62)" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx="130" cy="130" r="96" fill="none" stroke="hsl(var(--primary) / 0.08)" strokeWidth="14" />
+        <circle cx="130" cy="135" r="100" fill="none" stroke="hsl(var(--primary) / 0.08)" strokeWidth="14" />
       </svg>
     </div>
   );
