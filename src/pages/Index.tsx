@@ -109,48 +109,52 @@ export default function Index() {
         <div className="absolute -right-24 bottom-10 h-80 w-80 rounded-full bg-info/15 blur-3xl animate-blob animation-delay-500" />
 
         <div className="container relative py-4 pb-24 md:grid md:min-h-[calc(100svh-4rem)] md:grid-cols-[1.02fr_0.98fr] md:items-center md:gap-10 md:py-16 lg:gap-16">
-          <div className="relative overflow-hidden rounded-[2rem] border border-white/80 bg-primary shadow-2xl shadow-primary/15 md:hidden">
-            <img
-              src="/images/pouchcare-doctor-hero-blue.jpg"
-              alt="PouchCare online clinical pathway visual"
-              className="h-[610px] w-full object-cover object-center"
-            />
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,22,54,0.06)_0%,rgba(4,22,54,0.16)_38%,rgba(4,22,54,0.88)_100%)]" />
-            <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/90 px-3 py-2 text-xs font-bold text-primary shadow-md backdrop-blur">
-              <ShieldCheck className="h-4 w-4" />
-              Australian telehealth pathway
+          <div className="md:hidden">
+            <div className="relative -mx-8 -mt-4 h-[310px] overflow-hidden bg-primary">
+              <img
+                src="/images/pouchcare-doctor-hero-blue.jpg"
+                alt="PouchCare online clinical pathway visual"
+                className="h-full w-full object-cover object-center"
+              />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0)_45%,hsl(var(--pc-bg-soft-blue))_100%)]" />
+              <div className="absolute left-8 top-5 inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/90 px-3 py-2 text-xs font-bold text-primary shadow-md backdrop-blur">
+                <ShieldCheck className="h-4 w-4" />
+                Australian telehealth pathway
+              </div>
             </div>
-            <div className="absolute inset-x-0 bottom-0 space-y-4 p-5 text-white">
-              <div className="inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold backdrop-blur">Eligibility first. Clinical review where relevant.</div>
+
+            <div className="relative z-10 -mt-12 rounded-[2rem] border border-white/80 bg-white p-5 shadow-2xl shadow-primary/10">
+              <div className="mb-4 inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">Eligibility first</div>
               <div className="space-y-3">
-                <h1 className="font-display text-[2.45rem] font-bold leading-[0.98] tracking-tight">
-                  A clearer path through clinical review.
+                <h1 className="font-display text-[2.35rem] font-bold leading-[0.98] tracking-tight text-foreground">
+                  Start with a clearer clinical pathway.
                 </h1>
-                <p className="text-sm leading-6 text-white/85">
-                  Start with eligibility. Ordering only unlocks where prescription requirements are met.
+                <p className="text-sm leading-6 text-muted-foreground">
+                  Check eligibility, then continue to clinical review where relevant. Ordering only unlocks if prescription requirements are met.
                 </p>
               </div>
-              <div className="grid gap-2">
-                <Button variant="secondary" size="lg" asChild className="rounded-2xl bg-white text-primary hover:bg-white/90">
+
+              <div className="mt-5 grid gap-2">
+                <Button variant="hero" size="lg" asChild className="rounded-2xl shadow-glow">
                   <Link to="/start-consult">
                     Start eligibility check
                     <ArrowRight className="h-5 w-5" />
                   </Link>
                 </Button>
-                <Button variant="outline" size="lg" asChild className="rounded-2xl border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white">
+                <Button variant="ghost" size="lg" asChild className="rounded-2xl text-primary hover:bg-primary/5 hover:text-primary">
                   <Link to="/how-it-works">How it works</Link>
                 </Button>
               </div>
             </div>
-          </div>
 
-          <div className="mt-4 grid gap-2 text-xs text-muted-foreground md:hidden">
-            {["No guaranteed prescription", "Prescription-gated ordering", "Privacy-conscious support"].map((item) => (
-              <div key={item} className="flex items-center gap-2 rounded-2xl border border-white/70 bg-white/80 px-3 py-3 shadow-sm backdrop-blur">
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
-                <span>{item}</span>
-              </div>
-            ))}
+            <div className="mt-4 grid gap-2 text-xs text-muted-foreground">
+              {["No guaranteed prescription", "Prescription-gated ordering", "Privacy-conscious support"].map((item) => (
+                <div key={item} className="flex items-center gap-2 rounded-2xl border border-white/70 bg-white/80 px-3 py-3 shadow-sm backdrop-blur">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="hidden max-w-2xl space-y-7 animate-fade-in-up md:block">
