@@ -76,6 +76,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (quizError) throw new Error(quizError.message);
+    if (!latestQuiz?.id) throw new Error("Please complete the PouchCare questionnaire before choosing a Halaxy booking time.");
 
     // Halaxy-ready pre-GP behaviour:
     // - Do not require a public Halaxy booking URL yet because no GP may be onboarded.
@@ -95,6 +96,19 @@ serve(async (req) => {
     if (existingError) throw new Error(existingError.message);
 
     let consultation = existing;
+    if (consultation) {
+      const nextMetadata = {
+        ...(((consultation as any).booking_metadata && typeof (consultation as any).booking_metadata === 'object') ? (consultation as any).booking_metadata : {}),
+        latest_quiz_session_id: (latestQuiz as any).id,
+        latest_quiz_completed_at: (latestQuiz as any).completed_at ?? null,
+        latest_quiz_risk_flags: (latestQuiz as any).risk_flags ?? [],
+      };
+      await supabaseAdmin
+        .from("consultations")
+        .update({ booking_metadata: nextMetadata })
+        .eq("id", (consultation as any).id);
+      (consultation as any).booking_metadata = nextMetadata;
+    }
     if (!consultation) {
       const { data: inserted, error: insertError } = await supabaseAdmin
         .from("consultations")
@@ -115,7 +129,9 @@ serve(async (req) => {
             minimal_halaxy_onboarding: true,
             gp_onboarding_pending: !bookingUrl,
             pre_halaxy_acknowledgement_version: (profile as any).pre_halaxy_acknowledgement_version ?? null,
-            latest_quiz_session_id: (latestQuiz as any)?.id ?? null,
+            latest_quiz_session_id: (latestQuiz as any).id,
+            latest_quiz_completed_at: (latestQuiz as any).completed_at ?? null,
+            latest_quiz_risk_flags: (latestQuiz as any).risk_flags ?? [],
             live_halaxy_config_present: liveConfigPresent,
           },
         })
