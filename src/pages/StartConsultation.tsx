@@ -34,7 +34,6 @@ export default function StartConsultation() {
   const navigate = useNavigate();
   const { user, userRole } = useAuth();
   const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
   const [dobDay, setDobDay] = useState('');
   const [dobMonth, setDobMonth] = useState('');
   const [dobYear, setDobYear] = useState('');
@@ -52,7 +51,6 @@ export default function StartConsultation() {
   useEffect(() => {
     if (!user?.id) return;
 
-    setEmail(user.email || '');
     setFullName((user.user_metadata?.full_name as string | undefined) || (user.user_metadata?.name as string | undefined) || '');
 
     let cancelled = false;
@@ -90,7 +88,7 @@ export default function StartConsultation() {
     return () => {
       cancelled = true;
     };
-  }, [navigate, user?.id, user?.email, user?.user_metadata, userRole?.role]);
+  }, [navigate, user?.id, user?.user_metadata, userRole?.role]);
 
   const validateDetails = () => {
     if (fullName.trim().length < 2) throw new Error('Please enter your full name.');
@@ -238,22 +236,6 @@ export default function StartConsultation() {
     }
   };
 
-  const handleGoogleContinue = async () => {
-    setIsBusy(true);
-    try {
-      sessionStorage.setItem('authReturnTo', '/start-consult');
-      const redirectTo = `${window.location.origin}/auth/callback`;
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo },
-      });
-      if (error) throw error;
-    } catch (error) {
-      setIsBusy(false);
-      toast.error(error instanceof Error ? error.message : 'Could not continue with Google.');
-    }
-  };
-
   return (
     <PublicLayout>
       <Seo
@@ -281,28 +263,15 @@ export default function StartConsultation() {
                     <Alert className="border-primary/30 bg-primary/5">
                       <CheckCircle2 className="h-4 w-4 text-primary" />
                       <AlertDescription>
-                        Google account connected{email ? ` as ${email}` : ''}. Finish the remaining details below so we can match your Halaxy booking and prescription.
+                        You are signed in. Finish the remaining details below so we can match your Halaxy booking and prescription.
                       </AlertDescription>
                     </Alert>
-                  ) : (
-                    <Button type="button" variant="outline" className="w-full" onClick={handleGoogleContinue} disabled={isBusy}>
-                      {isBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                      Continue with Google
-                    </Button>
-                  )}
+                  ) : null}
 
                   <div className="space-y-2">
                     <Label htmlFor="full-name">Full name</Label>
                     <Input id="full-name" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your legal name" required />
                   </div>
-
-                  {user ? (
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email address</Label>
-                      <Input id="email" value={email} readOnly className="bg-muted/30" />
-                      <p className="text-xs text-muted-foreground">This is the Google account attached to your PouchCare account.</p>
-                    </div>
-                  ) : null}
 
                   <div className="space-y-2">
                     <Label>Date of birth</Label>
