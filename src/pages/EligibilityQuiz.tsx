@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import Seo from '@/components/seo/Seo';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,8 @@ import {
   consentItems,
   saveQuizToSession,
   calculateQuizResult,
-  calculateQuizRiskFlags
+  calculateQuizRiskFlags,
+  persistQuizToProfile
 } from '@/services/eligibilityService';
 import {
   ELIGIBILITY_COLLECTION_NOTICE_VERSION,
@@ -33,9 +34,13 @@ import {
   type EligibilityQuizResult
 } from '@/types/eligibility';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function EligibilityQuiz() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { user } = useAuth();
+  const next = searchParams.get('next');
   const [noticeAccepted, setNoticeAccepted] = useState(false);
   const [showNotice, setShowNotice] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
@@ -182,6 +187,11 @@ export default function EligibilityQuiz() {
 
     setIsSaving(true);
     const sessionId = await saveQuizToSession(quizData);
+
+    if (sessionId && user?.id) {
+      await persistQuizToProfile(user.id);
+    }
+
     setIsSaving(false);
 
     if (!sessionId) {
@@ -193,7 +203,13 @@ export default function EligibilityQuiz() {
   };
 
   const handleContinueToSignup = () => {
-    navigate('/phone-login?role=patient&mode=signup&next=/patient/start-consult');
+    if (next === 'halaxy' && user?.id) {
+      navigate('/start-consult?quiz=complete');
+      return;
+    }
+
+    const returnPath = next === 'halaxy' ? '/start-consult?quiz=complete' : '/patient/start-consult';
+    navigate(`/phone-login?role=patient&mode=signup&next=${encodeURIComponent(returnPath)}`);
   };
 
   if (blockedUnder21) {
@@ -242,7 +258,7 @@ export default function EligibilityQuiz() {
                 </div>
                 <CardTitle className="text-2xl">Questionnaire Complete</CardTitle>
                 <CardDescription className="text-base mt-2">
-                  Thanks — continue to create your account and book a doctor consultation.
+                  Thanks — continue to book a doctor consultation.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -255,7 +271,7 @@ export default function EligibilityQuiz() {
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Button onClick={handleContinueToSignup} className="h-auto py-4 gap-2">
                     <UserPlus className="h-5 w-5" />
-                    Create Account & Book Consultation
+                    Continue to Booking
                   </Button>
                   <Button variant="outline" onClick={handleStartOver}>Start Over</Button>
                 </div>

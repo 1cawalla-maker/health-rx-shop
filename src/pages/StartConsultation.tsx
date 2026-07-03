@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import Seo from '@/components/seo/Seo';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { halaxyConsultationService } from '@/services/halaxyConsultationService';
+import { persistQuizToProfile } from '@/services/eligibilityService';
 import { formatDobForStorage, parseDobFromStorage, validateDob } from '@/lib/validation';
 
 const PRIVACY_POLICY_VERSION = '2026-06-18-minimal-halaxy-consult';
@@ -32,7 +33,9 @@ function normalizeAuMobile(local: string): string | null {
 
 export default function StartConsultation() {
   const navigate = useNavigate();
-  const { user, userRole } = useAuth();
+  const location = useLocation();
+  const { user } = useAuth();
+  const readyForHalaxy = new URLSearchParams(location.search).get('quiz') === 'complete';
   const [fullName, setFullName] = useState('');
   const [dobDay, setDobDay] = useState('');
   const [dobMonth, setDobMonth] = useState('');
@@ -165,6 +168,7 @@ export default function StartConsultation() {
   };
 
   const continueToHalaxy = async (halaxyTab?: Window | null) => {
+    if (user?.id) await persistQuizToProfile(user.id);
     const prepared = await halaxyConsultationService.prepareConsult();
     const bookingUrl = prepared.bookingUrl || prepared.consultation.halaxyBookingUrl;
     if (bookingUrl) {
@@ -194,8 +198,12 @@ export default function StartConsultation() {
       const { phoneE164, dateOfBirth } = validateDetails();
 
       if (user?.id) {
-        halaxyTab = window.open('', '_blank');
         await saveProfileAndRole(user.id, phoneE164, dateOfBirth, Boolean((user as any).phone === phoneE164));
+        if (!readyForHalaxy) {
+          navigate('/eligibility?next=halaxy');
+          return;
+        }
+        halaxyTab = window.open('', '_blank');
         await continueToHalaxy(halaxyTab);
         return;
       }
@@ -224,7 +232,7 @@ export default function StartConsultation() {
     }
 
     setIsBusy(true);
-    const halaxyTab = window.open('', '_blank');
+    let halaxyTab: Window | null = null;
     try {
       const { data, error } = await supabase.auth.verifyOtp({
         phone: pendingPhone,
@@ -237,7 +245,13 @@ export default function StartConsultation() {
 
       const { dateOfBirth } = validateDetails();
       await saveProfileAndRole(verifiedUserId, pendingPhone, dateOfBirth, true);
+      if (!readyForHalaxy) {
+        toast.success('Mobile verified. Continue with the PouchCare questionnaire.');
+        navigate('/eligibility?next=halaxy');
+        return;
+      }
       toast.success('Mobile verified. Opening Halaxy booking.');
+      halaxyTab = window.open('', '_blank');
       await continueToHalaxy(halaxyTab);
     } catch (error) {
       if (halaxyTab && !halaxyTab.closed) halaxyTab.close();
