@@ -43,7 +43,7 @@ export default function StartConsultation() {
   const [noGuaranteeAccepted, setNoGuaranteeAccepted] = useState(false);
   const [importComplianceAccepted, setImportComplianceAccepted] = useState(false);
   const [supplierTermsAccepted, setSupplierTermsAccepted] = useState(false);
-  const [step, setStep] = useState<'details' | 'otp'>('details');
+  const [step, setStep] = useState<'consent' | 'acknowledgements' | 'details' | 'otp'>('consent');
   const [otp, setOtp] = useState('');
   const [pendingPhone, setPendingPhone] = useState('');
   const [isBusy, setIsBusy] = useState(false);
@@ -103,6 +103,9 @@ export default function StartConsultation() {
     if (!supplierTermsAccepted) throw new Error('Please acknowledge the supplier, ordering, payment and delivery terms.');
     return { phoneE164, dateOfBirth: formatDobForStorage(dobDay, dobMonth, dobYear) };
   };
+
+  const canContinueFromConsent = ageConfirmed && privacyAccepted;
+  const canContinueFromAcknowledgements = noGuaranteeAccepted && importComplianceAccepted && supplierTermsAccepted;
 
   const saveProfileAndRole = async (userId: string, phoneE164: string, dateOfBirth: string, verified: boolean) => {
     const now = new Date().toISOString();
@@ -248,16 +251,75 @@ export default function StartConsultation() {
         <div className="container max-w-xl">
           <Card>
             <CardHeader>
+              <p className="text-sm font-medium text-primary">
+                Step {step === 'consent' ? 1 : step === 'acknowledgements' ? 2 : step === 'details' ? 3 : 4} of 4
+              </p>
               <CardTitle className="flex items-center gap-2 text-2xl">
                 <ShieldCheck className="h-6 w-6 text-primary" />
-                Book a GP consultation
+                {step === 'consent' && 'First, confirm consent'}
+                {step === 'acknowledgements' && 'Before continuing to Halaxy'}
+                {step === 'details' && 'Enter your details'}
+                {step === 'otp' && 'Verify your mobile'}
               </CardTitle>
               <CardDescription>
-                Complete PouchCare’s account, verification and pathway acknowledgements first. Halaxy then collects the clinical intake and booking details.
+                {step === 'consent' && 'Confirm the basic age, privacy and collection requirements before continuing.'}
+                {step === 'acknowledgements' && 'These PouchCare acknowledgements sit outside the Halaxy clinical form so the practitioner only sees GP-relevant clinical questions.'}
+                {step === 'details' && 'We use these details to create/link your account and match your Halaxy booking back to PouchCare.'}
+                {step === 'otp' && `Enter the SMS code sent to ${pendingPhone}.`}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {step === 'details' ? (
+              {step === 'consent' ? (
+                <div className="space-y-5">
+                  <div className="space-y-3 rounded-lg border p-4">
+                    <label className="flex items-start gap-3 text-sm">
+                      <Checkbox checked={ageConfirmed} onCheckedChange={(v) => setAgeConfirmed(v === true)} />
+                      <span>I confirm I am 18 years or older.</span>
+                    </label>
+                    <label className="flex items-start gap-3 text-sm">
+                      <Checkbox checked={privacyAccepted} onCheckedChange={(v) => setPrivacyAccepted(v === true)} />
+                      <span>
+                        I agree to PouchCare collecting these details to create my account, link my Halaxy booking, and process prescriptions under the <Link className="underline" to="/privacy">Privacy Policy</Link> and <Link className="underline" to="/terms">Terms</Link>.
+                      </span>
+                    </label>
+                  </div>
+
+                  <Button className="w-full" disabled={!canContinueFromConsent} onClick={() => setStep('acknowledgements')}>
+                    Continue
+                  </Button>
+                </div>
+              ) : step === 'acknowledgements' ? (
+                <div className="space-y-5">
+                  <Alert>
+                    <ShieldCheck className="h-4 w-4" />
+                    <AlertDescription>
+                      Halaxy will collect the clinical and booking details needed for the consultation. PouchCare handles the account, legal, ordering and prescription-upload pathway around that consultation.
+                    </AlertDescription>
+                  </Alert>
+
+                  <div className="space-y-3 rounded-lg border p-4">
+                    <label className="flex items-start gap-3 text-sm">
+                      <Checkbox checked={noGuaranteeAccepted} onCheckedChange={(v) => setNoGuaranteeAccepted(v === true)} />
+                      <span>I understand that continuing does not guarantee treatment, a prescription, product supply, ordering access, importation approval, or delivery.</span>
+                    </label>
+                    <label className="flex items-start gap-3 text-sm">
+                      <Checkbox checked={importComplianceAccepted} onCheckedChange={(v) => setImportComplianceAccepted(v === true)} />
+                      <span>I understand that any prescription, supply, importation, and use must comply with applicable Australian laws and requirements.</span>
+                    </label>
+                    <label className="flex items-start gap-3 text-sm">
+                      <Checkbox checked={supplierTermsAccepted} onCheckedChange={(v) => setSupplierTermsAccepted(v === true)} />
+                      <span>I understand that supplier fulfilment, ordering, payment, delivery, prescription upload, and entitlement checks are handled through PouchCare where relevant, and are separate from the Halaxy clinical consultation.</span>
+                    </label>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button type="button" variant="outline" className="w-full" onClick={() => setStep('consent')}>Back</Button>
+                    <Button className="w-full" disabled={!canContinueFromAcknowledgements} onClick={() => setStep('details')}>
+                      Continue
+                    </Button>
+                  </div>
+                </div>
+              ) : step === 'details' ? (
                 <form onSubmit={handleSendCode} className="space-y-5">
                   {user ? (
                     <Alert className="border-primary/30 bg-primary/5">
@@ -292,40 +354,6 @@ export default function StartConsultation() {
                     <p className="text-xs text-muted-foreground">We verify this by SMS and use it to match your Halaxy booking.</p>
                   </div>
 
-                  <div className="space-y-3 rounded-lg border p-4">
-                    <label className="flex items-start gap-3 text-sm">
-                      <Checkbox checked={ageConfirmed} onCheckedChange={(v) => setAgeConfirmed(v === true)} />
-                      <span>I confirm I am 18 years or older.</span>
-                    </label>
-                    <label className="flex items-start gap-3 text-sm">
-                      <Checkbox checked={privacyAccepted} onCheckedChange={(v) => setPrivacyAccepted(v === true)} />
-                      <span>
-                        I agree to PouchCare collecting these details to create my account, link my Halaxy booking, and process prescriptions under the <Link className="underline" to="/privacy">Privacy Policy</Link> and <Link className="underline" to="/terms">Terms</Link>.
-                      </span>
-                    </label>
-                  </div>
-
-                  <div className="space-y-3 rounded-lg border p-4">
-                    <div>
-                      <p className="text-sm font-medium">Before continuing to Halaxy</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        These PouchCare acknowledgements sit outside the Halaxy clinical form so the practitioner only sees GP-relevant clinical questions.
-                      </p>
-                    </div>
-                    <label className="flex items-start gap-3 text-sm">
-                      <Checkbox checked={noGuaranteeAccepted} onCheckedChange={(v) => setNoGuaranteeAccepted(v === true)} />
-                      <span>I understand that continuing does not guarantee treatment, a prescription, product supply, ordering access, importation approval, or delivery.</span>
-                    </label>
-                    <label className="flex items-start gap-3 text-sm">
-                      <Checkbox checked={importComplianceAccepted} onCheckedChange={(v) => setImportComplianceAccepted(v === true)} />
-                      <span>I understand that any prescription, supply, importation, and use must comply with applicable Australian laws and requirements.</span>
-                    </label>
-                    <label className="flex items-start gap-3 text-sm">
-                      <Checkbox checked={supplierTermsAccepted} onCheckedChange={(v) => setSupplierTermsAccepted(v === true)} />
-                      <span>I understand that supplier fulfilment, ordering, payment, delivery, prescription upload, and entitlement checks are handled through PouchCare where relevant, and are separate from the Halaxy clinical consultation.</span>
-                    </label>
-                  </div>
-
                   <Alert>
                     <Phone className="h-4 w-4" />
                     <AlertDescription>
@@ -333,10 +361,13 @@ export default function StartConsultation() {
                     </AlertDescription>
                   </Alert>
 
-                  <Button type="submit" className="w-full gap-2" disabled={isBusy}>
-                    {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
-                    {user ? 'Continue to Halaxy' : 'Send SMS code'}
-                  </Button>
+                  <div className="flex gap-3">
+                    <Button type="button" variant="outline" className="w-full" onClick={() => setStep('acknowledgements')} disabled={isBusy}>Back</Button>
+                    <Button type="submit" className="w-full gap-2" disabled={isBusy}>
+                      {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
+                      {user ? 'Continue to Halaxy' : 'Send SMS code'}
+                    </Button>
+                  </div>
                 </form>
               ) : (
                 <form onSubmit={handleVerifyCode} className="space-y-5">
