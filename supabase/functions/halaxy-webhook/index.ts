@@ -89,7 +89,7 @@ function findAppointmentResource(payload: any): any | null {
   return null;
 }
 
-function participantDisplay(appointment: any, type: 'Practitioner' | 'PractitionerRole' | 'Location'): { id: string | null; name: string | null } {
+function participantDisplay(appointment: any, type: 'Practitioner' | 'Location'): { id: string | null; name: string | null } {
   const participants = Array.isArray(appointment?.participant) ? appointment.participant : [];
   for (const participant of participants) {
     const actor = participant?.actor;
@@ -156,7 +156,6 @@ async function halaxyGet(path: string, token: string): Promise<any> {
 function extractAppointmentPatch(payload: any, halaxyResourceId: string | null) {
   const appointment = findAppointmentResource(payload);
   const practitioner = participantDisplay(appointment, 'Practitioner');
-  const practitionerRole = participantDisplay(appointment, 'PractitionerRole');
   const location = participantDisplay(appointment, 'Location');
 
   const appointmentId =
@@ -196,33 +195,12 @@ function extractAppointmentPatch(payload: any, halaxyResourceId: string | null) 
     appointmentStatus,
     manageUrl,
     practitionerId: practitioner.id,
-    practitionerName: practitioner.name || practitionerRole.name,
-    practitionerRoleId: practitionerRole.id,
+    practitionerName: practitioner.name,
     locationId: location.id,
     locationName: location.name,
     returnToken,
     consultationId,
   };
-}
-
-async function triggerIntakeNoteSync(consultationId: string): Promise<void> {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-  if (!supabaseUrl || !serviceKey) return;
-
-  const res = await fetch(`${supabaseUrl}/functions/v1/sync-halaxy-intake-note`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${serviceKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ consultationId }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`sync-halaxy-intake-note failed: ${res.status} ${text.slice(0, 300)}`);
-  }
 }
 
 function bookingStatusFromAppointment(status: string | null): string {
@@ -309,7 +287,6 @@ serve(async (req) => {
             manageUrl: fetchedPatch.manageUrl || appointmentPatch.manageUrl,
             practitionerId: fetchedPatch.practitionerId || appointmentPatch.practitionerId,
             practitionerName: fetchedPatch.practitionerName || appointmentPatch.practitionerName,
-            practitionerRoleId: fetchedPatch.practitionerRoleId || appointmentPatch.practitionerRoleId,
             locationId: fetchedPatch.locationId || appointmentPatch.locationId,
             locationName: fetchedPatch.locationName || appointmentPatch.locationName,
           };
@@ -363,13 +340,14 @@ serve(async (req) => {
     if (!consultationId && halaxyPatientPhone) {
       const { data: matchedProfile } = await supabaseAdmin
         .from("profiles")
-        .select("user_id, halaxy_patient_id")
+        .select("user_id, halaxy_patient_id, pre_halaxy_acknowledged_at")
         .eq("phone", halaxyPatientPhone)
         .not("phone_verified_at", "is", null)
         .maybeSingle();
 
       const matchedUserId = (matchedProfile as any)?.user_id ?? null;
-      if (matchedUserId) {
+      const completedPouchCareGate = Boolean((matchedProfile as any)?.pre_halaxy_acknowledged_at);
+      if (matchedUserId && completedPouchCareGate) {
         if (!(matchedProfile as any)?.halaxy_patient_id && halaxyPatientId) {
           await supabaseAdmin
             .from("profiles")
@@ -411,6 +389,8 @@ serve(async (req) => {
           if (insertConsultError) throw new Error(insertConsultError.message);
           consultationId = (insertedConsult as any)?.id ?? null;
         }
+      } else if (matchedUserId && !completedPouchCareGate) {
+        logStep("Matched verified phone but PouchCare pre-Halaxy gate was not completed", { matchedUserId, halaxyPatientId });
       }
     }
 
@@ -441,7 +421,6 @@ serve(async (req) => {
       if (halaxyPatientId) update.halaxy_patient_id = halaxyPatientId;
       if (appointmentPatch.practitionerId) update.halaxy_practitioner_id = appointmentPatch.practitionerId;
       if (appointmentPatch.practitionerName) update.halaxy_practitioner_name = appointmentPatch.practitionerName;
-      if (appointmentPatch.practitionerRoleId) update.halaxy_practitioner_role_id = appointmentPatch.practitionerRoleId;
       if (appointmentPatch.locationId) update.halaxy_location_id = appointmentPatch.locationId;
       if (appointmentPatch.locationName) update.halaxy_location_name = appointmentPatch.locationName;
 
@@ -455,12 +434,6 @@ serve(async (req) => {
         .from("halaxy_webhook_events")
         .update({ consultation_id: consultationId })
         .eq("id", (insertedEvent as any).id);
-
-      try {
-        await triggerIntakeNoteSync(consultationId);
-      } catch (syncError) {
-        logStep("Intake note sync trigger failed", { message: syncError instanceof Error ? syncError.message : String(syncError) });
-      }
     }
 
     await supabaseAdmin
@@ -471,7 +444,7 @@ serve(async (req) => {
       })
       .eq("id", (insertedEvent as any).id);
 
-    logStep("Webhook recorded", { halaxyEventId, resourceType, resourceReference, consultationId, appointmentId: appointmentPatch.appointmentId, halaxyPatientId, matchedByPhone: Boolean(halaxyPatientPhone && consultationId), practitionerId: appointmentPatch.practitionerId, practitionerRoleId: appointmentPatch.practitionerRoleId });
+    logStep("Webhook recorded", { halaxyEventId, resourceType, resourceReference, consultationId, appointmentId: appointmentPatch.appointmentId, halaxyPatientId, matchedByPhone: Boolean(halaxyPatientPhone && consultationId), practitionerId: appointmentPatch.practitionerId });
 
     return new Response(JSON.stringify({
       received: true,

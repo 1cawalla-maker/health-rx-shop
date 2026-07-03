@@ -7,55 +7,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const AGE_ATTESTATION_VERSION = "2026-06-18-adult-only";
-
 const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : "";
   console.log(`[HALAXY-PREPARE-CONSULT] ${step}${detailsStr}`);
 };
 
 
-function splitName(fullName: string | null | undefined): { given: string | null; family: string | null } {
-  const parts = String(fullName || "").trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return { given: null, family: null };
-  if (parts.length === 1) return { given: parts[0], family: null };
-  return { given: parts.slice(0, -1).join(" "), family: parts[parts.length - 1] };
-}
-
-function normalisePhone(phone: string | null | undefined): string | null {
-  const value = String(phone || "").trim();
-  return value || null;
-}
-
-function setIfPresent(url: URL, keys: string[], value: string | null | undefined) {
-  const clean = String(value || "").trim();
-  if (!clean) return;
-  for (const key of keys) url.searchParams.set(key, clean);
-}
-
-function withPouchCareReturnParams(
-  bookingUrl: string | null,
-  consultationId: string,
-  returnToken: string | null,
-  profile?: Record<string, any> | null,
-): string | null {
+function withPouchCareReturnParams(bookingUrl: string | null, consultationId: string, returnToken: string | null): string | null {
   if (!bookingUrl) return null;
   try {
     const url = new URL(bookingUrl);
-    url.searchParams.set("pouchcare_consultation_id", consultationId);
-    if (returnToken) url.searchParams.set("booking_return_token", returnToken);
-
-    // Halaxy does not clearly document public-booking prefill query params.
-    // Include common patient identity aliases so supported fields can prefill,
-    // while unsupported params are harmlessly ignored by Halaxy.
-    const { given, family } = splitName(profile?.full_name);
-    const phone = normalisePhone(profile?.phone);
-    setIfPresent(url, ["name", "fullName", "patientName"], profile?.full_name);
-    setIfPresent(url, ["given", "firstName", "givenName"], given);
-    setIfPresent(url, ["family", "lastName", "familyName", "surname"], family);
-    setIfPresent(url, ["email", "patientEmail"], profile?.email);
-    setIfPresent(url, ["phone", "mobile", "patientPhone"], phone);
-    setIfPresent(url, ["birthdate", "dateOfBirth", "dob"], profile?.date_of_birth);
+    url.searchParams.set('pouchcare_consultation_id', consultationId);
+    if (returnToken) url.searchParams.set('booking_return_token', returnToken);
     return url.toString();
   } catch {
     return bookingUrl;
@@ -79,7 +42,7 @@ serve(async (req) => {
     const { data: userData, error: userError } = await supabaseAnon.auth.getUser(token);
     if (userError) throw new Error(`Authentication error: ${userError.message}`);
     const user = userData.user;
-    if (!user?.id) throw new Error("User not authenticated");
+    if (!user?.id || !user.email) throw new Error("User not authenticated");
 
     const bookingUrl = (Deno.env.get("HALAXY_BOOKING_EMBED_URL") || Deno.env.get("HALAXY_BOOKING_URL") || "").trim() || null;
     const liveConfigPresent = Boolean(
@@ -90,7 +53,7 @@ serve(async (req) => {
 
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
-      .select("user_id, full_name, email, phone, phone_verified_at, date_of_birth, shipping_address_line1, shipping_address_line2, shipping_suburb, shipping_state, shipping_postcode, shipping_country, halaxy_patient_id, age_attested_at, age_attestation_version, privacy_notice_accepted_at, privacy_policy_version, collection_notice_version")
+      .select("user_id, full_name, phone, phone_verified_at, date_of_birth, shipping_address_line1, shipping_address_line2, shipping_suburb, shipping_state, shipping_postcode, shipping_country, halaxy_patient_id, age_attested_at, privacy_notice_accepted_at, pre_halaxy_acknowledged_at, pre_halaxy_acknowledgement_version, pre_halaxy_acknowledgements")
       .eq("user_id", user.id)
       .maybeSingle();
 
@@ -100,29 +63,19 @@ serve(async (req) => {
     const hasMinimalIdentity = Boolean((profile as any).full_name && (profile as any).phone);
     if (!hasMinimalIdentity) throw new Error("Please enter your name and mobile number before booking.");
     if (!(profile as any).phone_verified_at) throw new Error("Please verify your mobile number before booking.");
-    if (!(profile as any).date_of_birth) throw new Error("Please enter your date of birth before booking.");
-    if (!(profile as any).age_attested_at || (profile as any).age_attestation_version !== AGE_ATTESTATION_VERSION) {
-      throw new Error("Please confirm you are 21 or over before booking.");
-    }
-    if (
-      !(profile as any).privacy_notice_accepted_at ||
-      !(profile as any).privacy_policy_version ||
-      !(profile as any).collection_notice_version
-    ) {
-      throw new Error("Please accept the privacy and collection notice before booking.");
-    }
+    if (!(profile as any).age_attested_at) throw new Error("Please confirm you are 18 or over before booking.");
+    if (!(profile as any).privacy_notice_accepted_at) throw new Error("Please accept the privacy and collection notice before booking.");
+    if (!(profile as any).pre_halaxy_acknowledged_at) throw new Error("Please complete the PouchCare pre-Halaxy acknowledgements before booking.");
 
-    const { data: linkedQuiz, error: linkedQuizError } = await supabaseAdmin
+    const { data: latestQuiz, error: quizError } = await supabaseAdmin
       .from("eligibility_quiz_sessions")
-      .select("id")
+      .select("id, completed_at, risk_flags")
       .eq("patient_id", user.id)
-      .eq("result", "completed")
       .order("completed_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    if (linkedQuizError) throw new Error(linkedQuizError.message);
-    if (!linkedQuiz) throw new Error("Please complete the PouchCare intake questionnaire before booking.");
+    if (quizError) throw new Error(quizError.message);
 
     // Halaxy-ready pre-GP behaviour:
     // - Do not require a public Halaxy booking URL yet because no GP may be onboarded.
@@ -159,10 +112,10 @@ serve(async (req) => {
           booking_return_token: crypto.randomUUID(),
           booking_metadata: {
             scaffold: true,
-            website_first_intake: true,
+            minimal_halaxy_onboarding: true,
             gp_onboarding_pending: !bookingUrl,
-            halaxy_clinical_intake_owner: "pouchcare_website",
-            website_intake_quiz_session_id: (linkedQuiz as any).id,
+            pre_halaxy_acknowledgement_version: (profile as any).pre_halaxy_acknowledgement_version ?? null,
+            latest_quiz_session_id: (latestQuiz as any)?.id ?? null,
             live_halaxy_config_present: liveConfigPresent,
           },
         })
@@ -177,7 +130,6 @@ serve(async (req) => {
       (consultation as any).halaxy_booking_url ?? bookingUrl,
       (consultation as any).id,
       (consultation as any).booking_return_token ?? null,
-      profile as any,
     );
 
     if (consultationBookingUrl && consultationBookingUrl !== (consultation as any).halaxy_booking_url) {
