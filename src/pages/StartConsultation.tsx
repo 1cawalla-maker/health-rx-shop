@@ -69,6 +69,14 @@ export default function StartConsultation() {
       setDobMonth(dob.month);
       setDobYear(dob.year);
 
+      if (data.age_attested_at) setAgeConfirmed(true);
+      if (data.privacy_notice_accepted_at) setPrivacyAccepted(true);
+      if (data.pre_halaxy_acknowledged_at) {
+        setNoGuaranteeAccepted(true);
+        setImportComplianceAccepted(true);
+        setSupplierTermsAccepted(true);
+      }
+
       const hasCompletedConsultSetup = Boolean(
         data.full_name &&
         data.phone &&
@@ -80,15 +88,15 @@ export default function StartConsultation() {
         data.minimal_onboarding_completed_at
       );
 
-      if (userRole?.role === 'patient' && hasCompletedConsultSetup) {
-        navigate('/patient/book', { replace: true });
+      if (hasCompletedConsultSetup) {
+        setStep('details');
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [navigate, user?.id, user?.user_metadata, userRole?.role]);
+  }, [user?.id, user?.user_metadata]);
 
   const validateDetails = () => {
     if (fullName.trim().length < 2) throw new Error('Please enter your full name.');
