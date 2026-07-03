@@ -42,7 +42,7 @@ serve(async (req) => {
     const { data: userData, error: userError } = await supabaseAnon.auth.getUser(token);
     if (userError) throw new Error(`Authentication error: ${userError.message}`);
     const user = userData.user;
-    if (!user?.id || !user.email) throw new Error("User not authenticated");
+    if (!user?.id) throw new Error("User not authenticated");
 
     const bookingUrl = (Deno.env.get("HALAXY_BOOKING_EMBED_URL") || Deno.env.get("HALAXY_BOOKING_URL") || "").trim() || null;
     const liveConfigPresent = Boolean(
