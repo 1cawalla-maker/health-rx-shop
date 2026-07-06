@@ -358,3 +358,22 @@
     transform: translateX(0);
   }
 }
+
+@keyframes testimonial-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-50% - 0.5rem));
+  }
+}
+
+.animate-testimonial-marquee {
+  animation: testimonial-marquee 34s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-testimonial-marquee {
+    animation: none;
+  }
+}

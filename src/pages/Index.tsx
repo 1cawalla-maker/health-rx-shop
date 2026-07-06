@@ -52,21 +52,6 @@ const trustCards = [
   },
 ];
 
-const reviewStandards = [
-  {
-    title: "Clear next steps",
-    description: "Patients should understand what happens after eligibility, booking, review, prescription upload, and ordering access.",
-  },
-  {
-    title: "Responsive support",
-    description: "Support should be available for account, upload, ordering, fulfilment, privacy, and complaint questions.",
-  },
-  {
-    title: "Transparent conditions",
-    description: "Pricing, supplier fulfilment, stock, prescription limits, and delivery expectations should be shown with the right caveats.",
-  },
-];
-
 const learnLinks = [
   {
     title: "Nicotine pouches in Australia",
@@ -83,6 +68,14 @@ const learnLinks = [
     description: "Eligibility, clinical booking, practitioner assessment, upload, verification, and gated ordering.",
     to: "/how-it-works",
   },
+];
+
+const testimonialVideos = [
+  "/videos/testimonials/pouchcare-review-01.mp4",
+  "/videos/testimonials/pouchcare-review-02.mp4",
+  "/videos/testimonials/pouchcare-review-03.mp4",
+  "/videos/testimonials/pouchcare-review-04.mp4",
+  "/videos/testimonials/pouchcare-review-05.mp4",
 ];
 
 function BreathingLungsVisual() {
@@ -321,21 +314,29 @@ export default function Index() {
         </div>
       </section>
 
-      <section className="bg-background py-16 md:py-24">
+      <section className="overflow-hidden bg-background py-14 md:py-20">
         <div className="container">
-          <div className="mx-auto mb-10 max-w-3xl text-center">
-            <p className="mb-3 text-sm font-bold uppercase tracking-[0.2em] text-primary">Service experience</p>
-            <h2 className="font-display text-3xl font-bold text-foreground md:text-5xl">Built around clarity, support, and fulfilment checks.</h2>
-            <p className="mt-4 text-lg text-muted-foreground">
-              We will only publish real customer reviews once they are available. Until then, these are the service standards the front page should make clear.
-            </p>
+          <div className="mx-auto mb-8 max-w-3xl text-center">
+            <h2 className="font-display text-3xl font-bold text-foreground md:text-5xl">join thousands of other aussies</h2>
           </div>
+        </div>
 
-          <div className="grid gap-5 md:grid-cols-3">
-            {reviewStandards.map((item) => (
-              <div key={item.title} className="rounded-3xl border border-border bg-card p-6 shadow-sm">
-                <h3 className="font-display text-xl font-bold text-foreground">{item.title}</h3>
-                <p className="mt-3 text-sm leading-6 text-muted-foreground">{item.description}</p>
+        <div className="relative">
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-20 bg-gradient-to-r from-background to-transparent md:w-32" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-20 bg-gradient-to-l from-background to-transparent md:w-32" />
+          <div className="flex w-max gap-4 animate-testimonial-marquee md:gap-5">
+            {[...testimonialVideos, ...testimonialVideos].map((src, index) => (
+              <div key={`${src}-${index}`} className="w-36 shrink-0 overflow-hidden rounded-[1.6rem] border border-white/80 bg-white p-1.5 shadow-xl shadow-primary/10 md:w-44 md:rounded-[2rem] md:p-2">
+                <video
+                  src={src}
+                  className="aspect-[9/16] w-full rounded-[1.25rem] object-cover md:rounded-[1.5rem]"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="metadata"
+                  aria-label={`PouchCare customer review video ${((index % testimonialVideos.length) + 1)}`}
+                />
               </div>
             ))}
           </div>
