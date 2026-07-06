@@ -337,6 +337,14 @@ export default function Index() {
                   disablePictureInPicture
                   controlsList="nodownload noplaybackrate noremoteplayback"
                   preload="auto"
+                  onLoadedData={(event) => {
+                    event.currentTarget.muted = true;
+                    event.currentTarget.play().catch(() => undefined);
+                  }}
+                  onCanPlay={(event) => {
+                    event.currentTarget.muted = true;
+                    event.currentTarget.play().catch(() => undefined);
+                  }}
                   aria-label={`PouchCare customer review video ${((index % testimonialVideos.length) + 1)}`}
                 />
               </div>
