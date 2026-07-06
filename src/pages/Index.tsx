@@ -153,14 +153,13 @@ export default function Index() {
         ]}
       />
 
-      <section className="relative isolate overflow-hidden bg-[linear-gradient(135deg,hsl(var(--pc-bg-soft-blue))_0%,hsl(var(--background))_45%,hsl(var(--pc-sky))_100%)]">
-        <div className="absolute inset-x-0 top-0 hidden h-32 bg-gradient-to-b from-white/80 to-transparent md:block" />
-        <div className="absolute -left-24 top-20 hidden h-72 w-72 rounded-full bg-primary/10 blur-3xl animate-blob md:block" />
-        <div className="absolute -right-24 bottom-10 hidden h-80 w-80 rounded-full bg-info/15 blur-3xl animate-blob animation-delay-500 md:block" />
+      <section className="relative isolate overflow-hidden bg-[#50a5fa]">
+        <div className="absolute -left-24 top-20 hidden h-72 w-72 rounded-full bg-white/20 blur-3xl animate-blob md:block" />
+        <div className="absolute -right-24 bottom-10 hidden h-80 w-80 rounded-full bg-white/25 blur-3xl animate-blob animation-delay-500 md:block" />
 
         <div className="container relative py-4 pb-2 md:grid md:min-h-[calc(100svh-4rem)] md:grid-cols-[1.02fr_0.98fr] md:items-center md:gap-10 md:py-16 lg:gap-16">
           <div className="md:hidden">
-            <div className="relative -mx-8 -mt-4 h-[310px] overflow-hidden bg-primary">
+            <div className="relative -mx-8 -mt-4 h-[310px] overflow-hidden bg-[#50a5fa]">
               <img
                 src="/images/pouchcare-doctor-hero-blue.jpg"
                 alt="PouchCare online clinical pathway visual"
@@ -257,7 +256,7 @@ export default function Index() {
         </div>
       </section>
 
-      <section className="bg-[linear-gradient(180deg,hsl(var(--background))_0%,hsl(var(--pc-bg-soft-blue))_100%)] py-3 md:py-20">
+      <section className="bg-[#50a5fa] py-3 md:py-20">
         <div className="container flex justify-center">
           <BreathingLungsVisual />
         </div>
