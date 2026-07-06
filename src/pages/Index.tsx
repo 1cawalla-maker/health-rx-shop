@@ -7,7 +7,6 @@ import {
   FileCheck,
   LockKeyhole,
   ShieldCheck,
-  Sparkles,
   UploadCloud,
 } from "lucide-react";
 import { PublicLayout } from "@/components/layout/PublicLayout";
@@ -48,18 +47,9 @@ const trustCards = [
     description: "Where ordering is unlocked, pouch pricing starts from $10 per can, subject to prescription entitlement, stock, supplier availability, and checkout requirements.",
   },
   {
-    title: "Overseas supplier partner",
-    description: "Fulfilment support can involve an overseas supplier partner after prescription requirements are met and PouchCare checks are complete.",
+    title: "Overseas supplier with a variety of treatment options",
+    description: "Fulfilment support can involve a broader prescription-gated supplier pathway after prescription requirements are met and PouchCare checks are complete.",
   },
-];
-
-const valuePoints = [
-  "Nicotine pouch access pathway for eligible Australian adults",
-  "Designed for adults looking for a smoke-free alternative pathway",
-  "Doctor consultation step where clinical review is relevant",
-  "Prescription-gated ordering with clear entitlement checks",
-  "Partner overseas supplier fulfilment support where requirements are met",
-  "Pouches from $10 per can where ordering is unlocked",
 ];
 
 const reviewStandards = [
@@ -99,7 +89,7 @@ function BreathingLungsVisual() {
   return (
     <div className="relative mx-auto aspect-square w-full max-w-sm rounded-[2rem] border border-white/80 bg-[radial-gradient(circle_at_50%_35%,hsl(var(--pc-sky))_0%,white_54%,hsl(var(--pc-bg-soft-blue))_100%)] p-6 shadow-2xl shadow-primary/10">
       <div className="absolute inset-5 rounded-[1.5rem] border border-primary/10" />
-      <div className="absolute left-6 top-6 rounded-full bg-white/80 px-3 py-1 text-xs font-bold text-primary shadow-sm backdrop-blur">Slow breathing pathway</div>
+      <div className="absolute left-6 top-6 rounded-full bg-white/80 px-3 py-1 text-xs font-bold text-primary shadow-sm backdrop-blur">Smoke-free alternative pathway</div>
       <svg viewBox="0 0 260 260" role="img" aria-label="Animated breathing lung outline" className="relative z-10 h-full w-full">
         <defs>
           <filter id="lungGlow" x="-35%" y="-35%" width="170%" height="170%">
@@ -210,7 +200,7 @@ export default function Index() {
             </div>
 
             <div className="mt-4 grid gap-2 text-xs text-muted-foreground">
-              {["Online doctors consultation", "Overseas supplier", "Guaranteed prescription fulfilment"].map((item) => (
+              {["Online doctors consultation", "Overseas supplier with a variety of treatment options", "Guaranteed prescription fulfilment"].map((item) => (
                 <div key={item} className="flex items-center gap-2 rounded-2xl border border-white/70 bg-white/80 px-3 py-3 shadow-sm backdrop-blur">
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
                   <span>{item}</span>
@@ -222,7 +212,7 @@ export default function Index() {
           <div className="hidden max-w-2xl space-y-7 animate-fade-in-up md:block">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-white/80 px-3 py-2 text-sm font-semibold text-primary shadow-sm backdrop-blur">
               <ShieldCheck className="h-4 w-4" />
-              Eligibility-first Australian telehealth pathway
+              Guaranteed Australian fulfilment with a prescription
             </div>
 
             <div className="space-y-5">
@@ -249,7 +239,7 @@ export default function Index() {
             <div className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-3">
               {[
                 "Online doctors consultation",
-                "Overseas supplier",
+                "Overseas supplier with a variety of treatment options",
                 "Guaranteed prescription fulfilment",
               ].map((item) => (
                 <div key={item} className="flex items-center gap-2 rounded-2xl border border-white/70 bg-white/70 px-3 py-3 shadow-sm backdrop-blur">
@@ -269,58 +259,14 @@ export default function Index() {
                 alt="PouchCare online clinical pathway visual"
                 className="aspect-[16/11] w-full rounded-[1.25rem] object-cover object-center md:aspect-[4/5] md:rounded-[1.5rem]"
               />
-              <div className="absolute bottom-6 left-6 right-6 rounded-2xl border border-white/70 bg-white/90 p-4 shadow-lg backdrop-blur animate-float-slow">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Sparkles className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="font-display text-sm font-bold text-foreground">Organised from the first step</p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                      Clear next steps, careful wording, and a pathway designed around eligibility and review.
-                    </p>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
       </section>
 
       <section className="bg-[linear-gradient(180deg,hsl(var(--background))_0%,hsl(var(--pc-bg-soft-blue))_100%)] py-3 md:py-20">
-        <div className="container grid gap-10 md:grid-cols-[0.95fr_1.05fr] md:items-center">
+        <div className="container flex justify-center">
           <BreathingLungsVisual />
-          <div className="space-y-5">
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">Smoke-free alternative pathway</p>
-            <h2 className="font-display text-3xl font-bold leading-tight text-foreground md:text-5xl">A calmer way to explore a different path.</h2>
-            <p className="text-base leading-8 text-muted-foreground md:text-lg">
-              PouchCare is designed for eligible adults considering an alternative smoking cessation pathway. Start with eligibility, continue to doctor consultation where relevant, and only access ordering where prescription requirements are met.
-            </p>
-            <p className="rounded-2xl border border-primary/10 bg-white/75 p-4 text-sm leading-6 text-muted-foreground shadow-sm">
-              The breathing animation is symbolic and does not promise a health outcome. Individual suitability and next steps depend on clinical review where relevant.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-background py-16 md:py-24">
-        <div className="container">
-          <div className="mx-auto mb-12 max-w-2xl text-center">
-            <p className="mb-3 text-sm font-bold uppercase tracking-[0.2em] text-primary">What PouchCare offers</p>
-            <h2 className="font-display text-3xl font-bold text-foreground md:text-5xl">A practical access pathway, not open retail.</h2>
-            <p className="mt-4 text-lg text-muted-foreground">
-              PouchCare is built for eligible adults who want a structured pathway for nicotine pouch access, doctor consultation where relevant, and supplier fulfilment support after prescription requirements are met.
-            </p>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {valuePoints.map((point) => (
-              <div key={point} className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                <p className="text-sm font-medium leading-6 text-foreground">{point}</p>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
