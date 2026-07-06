@@ -317,24 +317,26 @@ export default function Index() {
       <section className="overflow-hidden bg-background py-14 md:py-20">
         <div className="container">
           <div className="mx-auto mb-8 max-w-3xl text-center">
-            <h2 className="font-display text-3xl font-bold text-foreground md:text-5xl">join thousands of other aussies</h2>
+            <h2 className="font-display text-3xl font-bold text-foreground md:text-5xl">Join Thousands of Other Aussies</h2>
           </div>
         </div>
 
         <div className="relative">
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-20 bg-gradient-to-r from-background to-transparent md:w-32" />
-          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-20 bg-gradient-to-l from-background to-transparent md:w-32" />
-          <div className="flex w-max gap-4 animate-testimonial-marquee md:gap-5">
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-background to-transparent md:w-12" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background to-transparent md:w-12" />
+          <div className="flex w-max gap-3 animate-testimonial-marquee md:gap-4">
             {[...testimonialVideos, ...testimonialVideos].map((src, index) => (
-              <div key={`${src}-${index}`} className="w-36 shrink-0 overflow-hidden rounded-[1.6rem] border border-white/80 bg-white p-1.5 shadow-xl shadow-primary/10 md:w-44 md:rounded-[2rem] md:p-2">
+              <div key={`${src}-${index}`} className="w-28 shrink-0 overflow-hidden rounded-[1.35rem] border border-white/80 bg-white p-1.5 shadow-xl shadow-primary/10 sm:w-32 md:w-36 md:rounded-[1.7rem]">
                 <video
                   src={src}
-                  className="aspect-[9/16] w-full rounded-[1.25rem] object-cover md:rounded-[1.5rem]"
+                  className="aspect-[9/16] w-full rounded-[1rem] object-cover md:rounded-[1.25rem]"
                   autoPlay
                   muted
                   loop
                   playsInline
-                  preload="metadata"
+                  disablePictureInPicture
+                  controlsList="nodownload noplaybackrate noremoteplayback"
+                  preload="auto"
                   aria-label={`PouchCare customer review video ${((index % testimonialVideos.length) + 1)}`}
                 />
               </div>

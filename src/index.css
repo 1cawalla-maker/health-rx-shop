@@ -369,7 +369,7 @@
 }
 
 .animate-testimonial-marquee {
-  animation: testimonial-marquee 34s linear infinite;
+  animation: testimonial-marquee 30s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
