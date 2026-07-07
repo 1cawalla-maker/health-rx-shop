@@ -27,7 +27,7 @@ export function Footer() {
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-4">
               <Link to="/" className="flex items-center" aria-label="Pouch Care home">
-                <img src="/brand/pouch-care-logo.svg" alt="Pouch Care" className="h-11 w-auto" />
+                <img src="/brand/pouch-care-logo.png" alt="Pouch Care" className="h-11 w-auto" />
               </Link>
               <p className="max-w-xs text-sm leading-6 text-muted-foreground">
                 An Australian eligibility-first online pathway built around clinical review where relevant, prescription requirements, and prescription-gated ordering only where requirements are met.

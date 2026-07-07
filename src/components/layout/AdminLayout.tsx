@@ -44,7 +44,7 @@ export function AdminLayout() {
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-background border-b border-border h-16 flex items-center justify-between px-4">
         <Link to="/admin/dashboard" className="flex items-center gap-2 font-display text-lg font-bold">
-          <img src="/brand/pouch-care-icon.svg" alt="" className="h-8 w-8" />
+          <img src="/brand/pouch-care-icon.png" alt="" className="h-8 w-8" />
           <span>Pouch Care</span>
         </Link>
         <button
@@ -63,7 +63,7 @@ export function AdminLayout() {
         <div className="flex flex-col h-full">
           <div className="hidden lg:flex items-center gap-2 p-6 border-b border-border">
             <Link to="/admin/dashboard" className="flex items-center gap-2 font-display text-lg font-bold">
-              <img src="/brand/pouch-care-icon.svg" alt="" className="h-9 w-9" />
+              <img src="/brand/pouch-care-icon.png" alt="" className="h-9 w-9" />
               <span>Pouch Care</span>
             </Link>
           </div>
