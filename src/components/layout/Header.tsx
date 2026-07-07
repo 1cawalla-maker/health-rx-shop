@@ -46,7 +46,7 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b border-white/60 bg-white/85 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-white/75">
       <div className="container flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center" aria-label="Pouch Care home">
-          <img src="/brand/pouch-care-logo.png" alt="Pouch Care" className="h-10 w-auto" />
+          <img src="/brand/pouch-care-logo.png" alt="Pouch Care" className="h-12 w-auto" />
         </Link>
 
         <nav className="hidden md:flex items-center gap-1 rounded-full border border-border/70 bg-white/80 p-1 shadow-sm">
