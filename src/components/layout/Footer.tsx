@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 const footerLinks = {
   pathway: [
     { href: "/how-it-works", label: "How it works" },
-    { href: "/start-consult", label: "Start eligibility" },
+    { href: "/start-consult", label: "Coming soon" },
     { href: "/faq", label: "FAQ" },
     { href: "/guides", label: "Guides" },
   ],
