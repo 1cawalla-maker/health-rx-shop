@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import {
-  ArrowRight,
   CalendarCheck,
   CheckCircle2,
   ClipboardCheck,
@@ -186,11 +185,8 @@ export default function Index() {
               </div>
 
               <div className="mt-5 grid gap-2">
-                <Button variant="hero" size="lg" asChild className="rounded-2xl shadow-glow">
-                  <Link to="/start-consult">
-                    Start eligibility check
-                    <ArrowRight className="h-5 w-5" />
-                  </Link>
+                <Button variant="hero" size="lg" disabled className="rounded-2xl shadow-glow">
+                  Coming soon
                 </Button>
                 <Button variant="ghost" size="lg" asChild className="rounded-2xl text-primary hover:bg-primary/5 hover:text-primary">
                   <Link to="/how-it-works">How it works</Link>
@@ -228,11 +224,8 @@ export default function Index() {
             </div>
 
             <div className="flex flex-row flex-wrap gap-3">
-              <Button variant="hero" size="xl" asChild className="rounded-2xl bg-primary px-7 shadow-glow sm:px-9">
-                <Link to="/start-consult">
-                  Start eligibility check
-                  <ArrowRight className="h-5 w-5" />
-                </Link>
+              <Button variant="hero" size="xl" disabled className="rounded-2xl bg-primary px-7 shadow-glow sm:px-9">
+                Coming soon
               </Button>
               <Button variant="hero-outline" size="xl" asChild className="rounded-2xl border-primary/20 bg-white/80 px-7 sm:px-9">
                 <Link to="/how-it-works">How it works</Link>
@@ -404,8 +397,8 @@ export default function Index() {
               Start with eligibility and continue through the existing booking flow where relevant. A prescription is never guaranteed.
             </p>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <Button size="xl" asChild className="rounded-2xl bg-white text-primary hover:bg-white/90">
-                <Link to="/start-consult">Start eligibility check</Link>
+              <Button size="xl" disabled className="rounded-2xl bg-white text-primary hover:bg-white/90">
+                Coming soon
               </Button>
               <Button variant="outline" size="xl" asChild className="rounded-2xl border-white/30 bg-transparent text-primary-foreground hover:bg-white/10 hover:text-primary-foreground">
                 <Link to="/contact">Contact support</Link>
