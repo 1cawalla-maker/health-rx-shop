@@ -12,7 +12,7 @@ interface SeoProps {
   ogType?: 'website' | 'article';
 }
 
-const SITE_NAME: string = (import.meta as any)?.env?.VITE_SITE_NAME || 'PouchCare';
+const SITE_NAME: string = (import.meta as any)?.env?.VITE_SITE_NAME || 'Pouch Care';
 
 // IMPORTANT: use env when available so Preview/dev don't emit incorrect canonical URLs.
 // Vite exposes env vars as import.meta.env.* at build time.

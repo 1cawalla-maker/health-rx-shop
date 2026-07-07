@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, ShieldCheck } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getDashboardPathForRole } from "@/lib/roleRoutes";
 
@@ -45,9 +45,8 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/60 bg-white/85 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-white/75">
       <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 font-display text-xl font-bold tracking-tight text-foreground">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary shadow-md shadow-primary/20"><ShieldCheck className="h-5 w-5 text-primary-foreground" /></div>
-          <span className="uppercase tracking-wide">PouchCare</span>
+        <Link to="/" className="flex items-center" aria-label="Pouch Care home">
+          <img src="/brand/pouch-care-logo.svg" alt="Pouch Care" className="h-10 w-auto" />
         </Link>
 
         <nav className="hidden md:flex items-center gap-1 rounded-full border border-border/70 bg-white/80 p-1 shadow-sm">

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import {
-  Stethoscope,
   ClipboardList,
   Menu,
   X,
@@ -32,10 +31,8 @@ export function DoctorLayout() {
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-background border-b border-border h-16 flex items-center justify-between px-4">
         <Link to="/" className="flex items-center gap-2 font-display text-lg font-bold">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Stethoscope className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <span>PouchCare</span>
+          <img src="/brand/pouch-care-icon.svg" alt="" className="h-8 w-8" />
+          <span>Pouch Care</span>
         </Link>
         <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -53,10 +50,8 @@ export function DoctorLayout() {
         <div className="flex flex-col h-full">
           <div className="hidden lg:flex items-center gap-2 p-6 border-b border-border">
             <Link to="/" className="flex items-center gap-2 font-display text-lg font-bold">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-                <Stethoscope className="h-5 w-5 text-primary-foreground" />
-              </div>
-              <span>PouchCare</span>
+              <img src="/brand/pouch-care-icon.svg" alt="" className="h-9 w-9" />
+              <span>Pouch Care</span>
             </Link>
           </div>
 
